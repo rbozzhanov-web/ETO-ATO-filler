@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1419">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ETO Filler">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" href="data:image/png;base64,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">
+<link rel="manifest" href="manifest.webmanifest">
+<title>ETO / ATO Filler — OFP</title>
+<style>
+:root{
+  --bg:#0f1419; --panel:#171d24; --panel2:#1e262f; --line:#2c3742;
+  --txt:#e6edf3; --dim:#8b98a5; --acc:#4d9fff; --acc2:#1f6feb;
+  --ok:#3fb950; --warn:#d29922; --err:#f85149;
+  --gold:#9b804d; --navy:#253168;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--txt);-webkit-tap-highlight-color:transparent;
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;
+  padding:max(20px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) 70px max(18px,env(safe-area-inset-left))}
+h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
+.sub{color:var(--dim);font-size:13px}
+
+.hd{display:flex;align-items:center;gap:18px;flex-wrap:wrap;position:relative;
+  padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--line)}
+.hd::after{content:"";position:absolute;left:0;bottom:-1px;width:72px;height:1px;background:var(--gold)}
+.brand{background:#fff;border-radius:8px;padding:9px 14px;display:flex;flex:0 0 auto}
+.logo{height:23px;width:auto;display:block}
+@media(max-width:520px){.hd{gap:12px}.logo{height:19px}}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
+.step{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.8px;
+  text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+.step i{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;
+  background:var(--acc2);color:#fff;font-style:normal;font-size:11px;font-weight:700}
+
+#drop{border:2px dashed var(--line);border-radius:8px;padding:32px 20px;text-align:center;
+  cursor:pointer;transition:.15s;background:var(--panel2)}
+#drop.over{border-color:var(--acc);background:#1b2530}
+#drop b{color:var(--acc)}
+#drop .fn{margin-top:8px;font-size:13px;color:var(--dim);word-break:break-all}
+
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
+label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px}
+input[type=text].big{background:var(--bg);border:1px solid var(--line);color:var(--txt);
+  border-radius:8px;padding:12px;font:600 24px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  width:148px;letter-spacing:3px;text-align:center}
+input:focus{outline:none;border-color:var(--acc)}
+.chk{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--txt);cursor:pointer;padding-bottom:11px}
+.chk input{width:20px;height:20px;accent-color:var(--acc)}
+
+button{background:var(--acc2);color:#fff;border:0;border-radius:8px;padding:13px 22px;
+  font-size:15px;font-weight:600;cursor:pointer;transition:.15s;touch-action:manipulation;min-height:44px}
+button:active:not(:disabled){transform:scale(.98)}
+button:disabled{opacity:.4}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--dim)}
+button.sm{padding:9px 15px;font-size:13.5px;min-height:38px}
+@media(hover:hover){button:hover:not(:disabled){background:var(--acc)}
+  button.ghost:hover:not(:disabled){background:var(--panel2);color:var(--txt)}
+  #drop:hover{border-color:var(--acc);background:#1b2530}
+  .sw:hover{transform:scale(1.12)}}
+
+.msg{margin-top:12px;font-size:13.5px;padding:11px 13px;border-radius:7px;display:none}
+.msg.show{display:block}
+.msg.ok{background:rgba(63,185,80,.12);color:var(--ok);border:1px solid rgba(63,185,80,.3)}
+.msg.err{background:rgba(248,81,73,.12);color:var(--err);border:1px solid rgba(248,81,73,.3)}
+.msg.warn{background:rgba(210,153,34,.12);color:var(--warn);border:1px solid rgba(210,153,34,.3)}
+
+.stats{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px}
+.stat b{display:block;font:700 20px/1.3 ui-monospace,Menlo,monospace;color:var(--acc)}
+.stat span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
+
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar .sep{flex:1}
+.saved{font-size:12px;color:var(--dim)}
+
+.colors{display:flex;gap:14px 24px;flex-wrap:wrap;align-items:center;
+  background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px}
+.cgrp{display:flex;align-items:center;gap:9px}
+.clab{font-size:12.5px;color:var(--dim);white-space:nowrap}
+.sgn{font:700 15px/1 ui-monospace,Menlo,monospace;color:var(--dim)}
+.sw{width:26px;height:26px;border-radius:5px;cursor:pointer;border:2px solid transparent;
+  box-shadow:0 0 0 1px #3a4650 inset;transition:.12s;touch-action:manipulation}
+.sw.on{border-color:var(--acc);box-shadow:0 0 0 1px #3a4650 inset,0 0 0 1px var(--acc)}
+input[type=color]{width:34px;height:30px;padding:0;border:1px solid var(--line);
+  border-radius:5px;background:transparent;cursor:pointer}
+input.hex{width:80px;background:var(--bg);border:1px solid var(--line);color:var(--txt);
+  border-radius:5px;padding:6px;font:16px/1 ui-monospace,Menlo,monospace;text-align:center}
+
+.tblbox{max-height:min(56vh,520px);overflow:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+th{position:sticky;top:0;z-index:2;background:var(--panel2);color:var(--dim);font-size:11px;
+  text-transform:uppercase;letter-spacing:.6px;padding:9px 8px;text-align:left;
+  border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid #232c35;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.eto{font-weight:700}
+td.num{text-align:right;color:var(--dim)}
+tr.hdr td{background:#131a21;color:var(--dim);font-size:11px;letter-spacing:.8px;
+  text-transform:uppercase;font-weight:700;padding:8px}
+tr.filled{background:rgba(63,185,80,.05)}
+td input{background:transparent;border:1px solid #2c3742;color:var(--txt);border-radius:5px;
+  padding:7px 4px;font:600 16px/1 ui-monospace,Menlo,monospace;width:78px;text-align:center}
+td input::placeholder{color:#4a5560;font-weight:400;font-size:14px}
+td input.bad{border-color:var(--err)}
+td input:focus{border-color:var(--acc);background:var(--bg)}
+td.diff{text-align:right;font-weight:700}
+.hide{display:none}
+.note{font-size:12.5px;color:var(--dim);margin-top:12px;line-height:1.7}
+.note code{background:var(--panel2);padding:1px 5px;border-radius:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hd">
+    <div class="brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 47.514785 12.039602" class="logo" role="img" aria-label="Air Astana"><g transform="translate(-89.011869,-149.48493)"><path style="fill:#9b804d" d="m 93.217326,155.50426 c 0.625828,-0.87947 1.352197,-0.7045 2.208389,-0.60572 -0.227189,-0.24271 -0.33902,-0.54892 -0.33902,-0.87771 0,-0.75741 0.628298,-1.3716 1.403703,-1.3716 1.61925,0 1.419225,1.83303 0.716845,1.83303 -0.157692,0 -0.284339,-0.11077 -0.318559,-0.242 -0.02822,-0.10831 -0.0011,-0.23566 -0.03845,-0.33832 -0.05256,-0.14322 -0.197908,-0.24835 -0.360538,-0.24835 -0.104775,0 -0.198967,0.0413 -0.268112,0.10795 -0.218016,0.21025 -0.08184,0.63112 0.06033,0.84631 0.197909,0.29845 0.545395,0.49107 0.944034,0.48719 l 0.06491,-0.002 c 1.110192,-0.12488 1.436864,-1.06997 1.154994,-1.92758 -0.122414,-0.37253 -0.549627,-0.92075 -1.030816,-1.1504 0.886177,-0.51294 1.158169,-1.69581 1.126772,-2.39784 l -9.529939,5.88716 9.529939,5.88786 c 0.0314,-0.70238 -0.240595,-1.88524 -1.126772,-2.39783 0.481189,-0.23001 0.908402,-0.77823 1.030816,-1.15076 0.28187,-0.8576 -0.0448,-1.8027 -1.154994,-1.92793 l -0.06491,-0.002 c -0.398639,-0.004 -0.746125,0.18874 -0.944034,0.48719 -0.142169,0.2152 -0.278341,0.63606 -0.06033,0.84631 0.06915,0.0667 0.163337,0.10795 0.268112,0.10795 0.16263,0 0.307975,-0.10477 0.360538,-0.24835 0.0374,-0.10266 0.01023,-0.22966 0.03845,-0.33831 0.03422,-0.13124 0.160867,-0.24201 0.318559,-0.24201 0.70238,0 0.902405,1.83303 -0.716845,1.83303 -0.775405,0 -1.403703,-0.61418 -1.403703,-1.3716 0,-0.32879 0.111831,-0.635 0.33902,-0.87771 -0.856192,0.0991 -1.582561,0.27411 -2.208389,-0.60607"/><path style="fill:#253168" d="m 104.89551,158.47514 v -3.00637 c 0,-0.0374 -0.001,-0.0741 -0.002,-0.11007 v -0.002 l -0.002,-0.0384 v -0.002 -0.003 l -7e-4,-0.007 v -0.003 c -0.0674,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.70485,0 -1.26577,0.22754 -1.5501,0.50588 v 0.56056 c 0.38346,-0.20672 0.93274,-0.40357 1.36278,-0.40357 0.53445,0 0.9084,0.16086 0.90946,0.75318 l 3.5e-4,0.005 v 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62019,1.49613 1.87008,1.49613 0.42862,0 1.30528,-0.0776 1.6577,-0.26635 m -0.96696,-0.44097 c -0.27588,0.11324 -0.76659,0.12418 -1.02906,0.0459 -0.15204,-0.0455 -0.27693,-0.11536 -0.36865,-0.21908 -0.12065,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67769,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 123.05002,158.64979 v -0.73484 c -0.0833,0.0247 -0.14958,0.0416 -0.2413,0.0416 -0.3496,0 -0.49107,-0.23318 -0.49107,-0.58279 v -2.82469 h 0.73237 v -0.64347 h -0.73237 v -1.13665 l -1.01564,0.6343 3.5e-4,0.50235 h -0.53834 v 0.64347 h 0.53834 v 2.97674 c 0,0.62406 0.3496,1.21567 1.23155,1.21567 0.24165,0 0.42439,-0.0501 0.51611,-0.0917"/><path style="fill:#253168" d="m 120.20001,157.31401 c 0,-0.54786 -0.21202,-1.01812 -1.13877,-1.38359 -0.41486,-0.1651 -0.70626,-0.35666 -0.70626,-0.73943 0,-0.3309 0.23848,-0.61806 0.67981,-0.61806 0.33549,0 0.7186,0.21837 0.89252,0.40287 v -0.57256 c -0.59796,-0.90346 -2.61373,-0.63394 -2.61373,0.83996 0,0.48719 0.18521,0.97438 1.08585,1.31375 0.48542,0.18274 0.76024,0.36512 0.76024,0.76517 0,0.85831 -1.37372,0.7546 -1.85067,0.39935 l 0.005,0.75 c 0.28081,0.14253 0.63571,0.26988 1.19169,0.26988 1.0414,0 1.69474,-0.66146 1.69474,-1.42734"/><path style="fill:#253168" d="m 131.8993,158.6141 -7.1e-4,-3.31329 c 0,-0.74612 -0.45402,-1.41464 -1.83444,-1.41464 -0.78034,0 -1.37195,0.12841 -1.80904,0.33444 l 3.5e-4,4.39349 h 1.04598 l -3.5e-4,-3.93947 c 0.1972,-0.0769 0.37712,-0.12841 0.72002,-0.12841 0.6604,0 0.83185,0.39441 0.83185,0.77152 l 3.5e-4,3.29636 z"/><path style="fill:#253168" d="m 110.42173,153.893 c -1.17016,-0.0402 -1.78682,0.0974 -2.2666,0.32879 v 4.39243 h 1.04493 v -3.92112 c 0.23954,-0.13723 0.81915,-0.2159 1.22132,-0.0526 z"/><path d="m 107.03383,153.9084 h -1.0163 v 4.7057 h 1.0163 z" style="fill:#253168"/><path style="fill:#253168" d="m 116.4726,158.47513 v -3.00637 c 0,-0.0374 -0.001,-0.0741 -0.002,-0.11007 v -0.002 l -0.002,-0.0384 v -0.002 -0.003 l -7e-4,-0.007 v -0.003 c -0.0674,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.70485,0 -1.26577,0.22754 -1.55046,0.50588 v 0.56056 c 0.38382,-0.20672 0.9331,-0.40357 1.36314,-0.40357 0.53445,0 0.9084,0.16086 0.90946,0.75318 v 0.005 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62019,1.49613 1.86972,1.49613 0.42898,0 1.30564,-0.0776 1.65806,-0.26635 m -0.96696,-0.44097 c -0.27623,0.11324 -0.76659,0.12418 -1.02906,0.0459 -0.15204,-0.0455 -0.27728,-0.11536 -0.36865,-0.21908 -0.121,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67733,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 127.13273,158.47513 v -3.00637 c 0,-0.0374 -7.1e-4,-0.0741 -0.002,-0.11007 l -3.5e-4,-0.002 -0.002,-0.0384 v -0.002 -0.003 l -3.5e-4,-0.007 -3.5e-4,-0.003 c -0.067,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.7045,0 -1.26541,0.22754 -1.5501,0.50588 v 0.56056 c 0.38382,-0.20672 0.93274,-0.40357 1.36313,-0.40357 0.53446,0 0.9084,0.16086 0.90946,0.75318 v 0.005 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62054,1.49613 1.87008,1.49613 0.42898,0 1.30563,-0.0776 1.6577,-0.26635 m -0.96696,-0.44097 c -0.27588,0.11324 -0.76624,0.12418 -1.02906,0.0459 -0.15169,-0.0455 -0.27693,-0.11536 -0.36865,-0.21908 -0.12065,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67769,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 136.26195,158.47513 v -3.00637 c 0,-0.0374 -0.001,-0.0741 -0.002,-0.11007 l -3.5e-4,-0.002 -0.002,-0.0384 v -0.002 -0.003 l -7e-4,-0.007 v -0.003 c -0.0674,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.70485,0 -1.26577,0.22754 -1.5501,0.50588 v 0.56056 c 0.38382,-0.20672 0.93274,-0.40357 1.36278,-0.40357 0.53445,0 0.9084,0.16086 0.90981,0.75318 v 0.005 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62019,1.49613 1.87008,1.49613 0.42862,0 1.30528,-0.0776 1.6577,-0.26635 m -0.96696,-0.44097 c -0.27588,0.11324 -0.76624,0.12418 -1.02906,0.0459 -0.15169,-0.0455 -0.27693,-0.11536 -0.36865,-0.21908 -0.12065,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67733,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 107.06729,152.77607 c 0,-0.28328 -0.23424,-0.50835 -0.54187,-0.50835 -0.2988,0 -0.54151,0.22507 -0.54151,0.50835 0,0.27481 0.24271,0.49953 0.54151,0.49953 0.30763,0 0.54187,-0.22472 0.54187,-0.49953"/></g></svg></div>
+    <div>
+      <h1>ETO / ATO Filler</h1>
+      <div class="sub">Заполнение ETO по времени взлёта, а также фактического времени пролёта и остатка топлива</div>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="step"><i>1</i> Загрузите PDF плана полёта</div>
+    <div id="drop">
+      Нажмите, чтобы выбрать файл<br><b>или перетащите PDF сюда</b>
+      <div class="fn" id="fname"></div>
+    </div>
+    <input type="file" id="file" accept="application/pdf,.pdf" class="hide">
+    <div class="msg" id="m1"></div>
+  </div>
+
+  <div class="card hide" id="c2">
+    <div class="step"><i>2</i> Время взлёта (airborne), UTC</div>
+    <div class="row">
+      <div><label>HHMM</label><input type="text" id="etd" class="big" placeholder="0210" maxlength="5" inputmode="numeric" enterkeyhint="go"></div>
+      <label class="chk"><input type="checkbox" id="alt"> Запасной маршрут (ALTN)</label>
+      <div style="padding-bottom:5px"><button id="calc">Рассчитать</button></div>
+    </div>
+    <div class="msg" id="m2"></div>
+  </div>
+
+  <div class="card hide" id="c3">
+    <div class="step"><i>3</i> Факт по точкам и выгрузка</div>
+    <div class="stats" id="stats"></div>
+
+    <div class="colors">
+      <div class="cgrp"><span class="clab">Цвет ETO</span>
+        <span class="sw" data-t="eto" data-c="#000000" style="background:#000"></span>
+        <span class="sw" data-t="eto" data-c="#0033cc" style="background:#0033cc"></span>
+        <span class="sw" data-t="eto" data-c="#cc0000" style="background:#cc0000"></span>
+        <span class="sw" data-t="eto" data-c="#00762e" style="background:#00762e"></span>
+        <input type="color" data-t="eto" value="#000000">
+      </div>
+      <div class="cgrp"><span class="clab">Цвет ATO</span>
+        <span class="sw" data-t="ato" data-c="#000000" style="background:#000"></span>
+        <span class="sw" data-t="ato" data-c="#0033cc" style="background:#0033cc"></span>
+        <span class="sw" data-t="ato" data-c="#cc0000" style="background:#cc0000"></span>
+        <span class="sw" data-t="ato" data-c="#00762e" style="background:#00762e"></span>
+        <input type="color" data-t="ato" value="#0033cc">
+      </div>
+      <div class="cgrp"><span class="clab">Цвет топлива</span>
+        <span class="sw" data-t="fuel" data-c="#000000" style="background:#000"></span>
+        <span class="sw" data-t="fuel" data-c="#0033cc" style="background:#0033cc"></span>
+        <span class="sw" data-t="fuel" data-c="#cc0000" style="background:#cc0000"></span>
+        <span class="sw" data-t="fuel" data-c="#00762e" style="background:#00762e"></span>
+        <input type="color" data-t="fuel" value="#0033cc">
+      </div>
+      <div class="cgrp">
+        <label class="chk" style="padding:0"><input type="checkbox" id="bySign" checked> DIFF по знаку</label>
+        <span class="sgn">+</span><input type="color" data-t="pos" value="#00762e">
+        <span class="sgn">−</span><input type="color" data-t="neg" value="#cc0000">
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button class="ghost sm" id="copyEto">ATO = ETO во всех точках</button>
+      <button class="ghost sm" id="clearAct">Очистить факт</button>
+      <span class="sep"></span>
+      <span class="saved" id="saved"></span>
+    </div>
+
+    <div class="tblbox"><table id="tbl"><thead><tr>
+      <th>Точка</th><th style="text-align:right">ET</th><th style="text-align:right">Накопл.</th>
+      <th>ETO</th><th>ATO факт</th><th style="text-align:right">REM план</th>
+      <th>Топливо факт</th><th style="text-align:right">Δ</th><th style="text-align:right">Стр.</th>
+    </tr></thead><tbody></tbody></table></div>
+
+    <div class="row" style="margin-top:16px">
+      <button id="dl">Сохранить PDF</button>
+      <button id="open" class="ghost">Открыть в новой вкладке</button>
+      <button id="reset" class="ghost">Сбросить</button>
+    </div>
+    <div class="msg" id="m3"></div>
+    <div class="note">
+      <code>ETO</code> = время взлёта + нарастающая сумма ET (сверено с колонкой T/T).<br>
+      <code>ATO</code> печатается поверх точек второй строки; пустые поля остаются точками.<br>
+      Фактическое топливо и отклонение от планового REM идут в новые колонки
+      <code>FUEL</code> / <code>DIFF</code> справа — оригинальные данные не затираются.
+      <code>DIFF</code> зелёный при остатке выше плана, красный — ниже.<br>
+      Работает полностью офлайн: разбор и запись PDF выполняются на устройстве, ничего не отправляется в сеть.
+    </div>
+  </div>
+</div>
+
+<script>/* pdfmini — минимальный PDF-движок: чтение текста с координатами и
+   дописывание слоя поверх страниц инкрементальным обновлением.
+   Без внешних зависимостей. Рассчитан на PDF без шифрования,
+   с классической таблицей xref и несжатыми объектами (OFP Air Astana). */
+
+const PDFMini = (() => {
+
+  /* ---------- байты <-> latin1-строка (1:1, индекс == смещение) ---------- */
+  function toStr(u8){
+    let s = '', C = 0x8000;
+    for (let i = 0; i < u8.length; i += C)
+      s += String.fromCharCode.apply(null, u8.subarray(i, i + C));
+    return s;
+  }
+  function toBytes(s){
+    const u = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i) & 255;
+    return u;
+  }
+
+  /* ---------- разбор объектов ---------- */
+  const WS = ' \t\r\n\f\0', DELIM = '()<>[]{}/%';
+  const isWS = c => WS.indexOf(c) >= 0;
+  const isDelim = c => DELIM.indexOf(c) >= 0;
+
+  class Lexer {
+    constructor(s, i = 0){ this.s = s; this.i = i; }
+    skip(){
+      const s = this.s;
+      for (;;){
+        while (this.i < s.length && isWS(s[this.i])) this.i++;
+        if (s[this.i] === '%'){ while (this.i < s.length && s[this.i] !== '\n' && s[this.i] !== '\r') this.i++; }
+        else return;
+      }
+    }
+    // читает один объект; ссылки "N G R" сворачиваются в {ref:N}
+    obj(){
+      this.skip();
+      const s = this.s, c = s[this.i];
+      if (c === undefined) return null;
+      if (c === '<' && s[this.i + 1] === '<') return this.dict();
+      if (c === '<') return this.hexStr();
+      if (c === '(') return this.str();
+      if (c === '[') return this.arr();
+      if (c === '/') return this.name();
+      if (c === ']' || c === '>'){ this.i++; return undefined; }
+      return this.token();
+    }
+    name(){
+      const s = this.s; this.i++; let r = '';
+      while (this.i < s.length && !isWS(s[this.i]) && !isDelim(s[this.i])){
+        let ch = s[this.i++];
+        if (ch === '#'){ ch = String.fromCharCode(parseInt(s.substr(this.i, 2), 16)); this.i += 2; }
+        r += ch;
+      }
+      return { name: r };
+    }
+    dict(){
+      this.i += 2; const d = {};
+      for (;;){
+        this.skip();
+        if (this.s[this.i] === undefined) break;
+        if (this.s[this.i] === '>' && this.s[this.i + 1] === '>'){ this.i += 2; break; }
+        if (this.s[this.i] !== '/'){ this.i++; continue; }
+        const k = this.name().name;
+        d[k] = this.obj();
+      }
+      return d;
+    }
+    arr(){
+      this.i++; const a = [];
+      for (;;){
+        this.skip();
+        if (this.s[this.i] === undefined) break;
+        if (this.s[this.i] === ']'){ this.i++; break; }
+        const v = this.obj();
+        if (v === undefined) break;
+        a.push(v);
+      }
+      return a;
+    }
+    str(){
+      const s = this.s; this.i++; let depth = 1, r = '';
+      while (this.i < s.length){
+        let ch = s[this.i++];
+        if (ch === '\\'){
+          const n = s[this.i++];
+          if (n === 'n') r += '\n'; else if (n === 'r') r += '\r';
+          else if (n === 't') r += '\t'; else if (n === 'b') r += '\b';
+          else if (n === 'f') r += '\f';
+          else if (n >= '0' && n <= '7'){
+            let o = n;
+            for (let k = 0; k < 2 && s[this.i] >= '0' && s[this.i] <= '7'; k++) o += s[this.i++];
+            r += String.fromCharCode(parseInt(o, 8));
+          }
+          else if (n === '\n') { /* перенос строки — пропуск */ }
+          else if (n === '\r'){ if (s[this.i] === '\n') this.i++; }
+          else r += n;
+        }
+        else if (ch === '('){ depth++; r += ch; }
+        else if (ch === ')'){ if (--depth === 0) break; r += ch; }
+        else r += ch;
+      }
+      return { text: r };
+    }
+    hexStr(){
+      const s = this.s; this.i++; let h = '';
+      while (this.i < s.length && s[this.i] !== '>') h += s[this.i++];
+      this.i++;
+      h = h.replace(/[^0-9a-fA-F]/g, '');
+      if (h.length & 1) h += '0';
+      let r = '';
+      for (let k = 0; k < h.length; k += 2) r += String.fromCharCode(parseInt(h.substr(k, 2), 16));
+      return { text: r };
+    }
+    token(){
+      const s = this.s; let t = '';
+      while (this.i < s.length && !isWS(s[this.i]) && !isDelim(s[this.i])) t += s[this.i++];
+      if (/^[-+.\d]/.test(t)){
+        const save = this.i, m = /^\d+$/.test(t);
+        if (m){                                   // возможна ссылка "N G R"
+          this.skip();
+          const j = this.i; let g = '';
+          while (this.i < s.length && /\d/.test(s[this.i])) g += s[this.i++];
+          if (g){
+            this.skip();
+            if (s[this.i] === 'R' && (isWS(s[this.i + 1]) || isDelim(s[this.i + 1]) || s[this.i + 1] === undefined)){
+              this.i++; return { ref: parseInt(t, 10) };
+            }
+          }
+          this.i = save;
+        }
+        return parseFloat(t);
+      }
+      if (t === 'true') return true;
+      if (t === 'false') return false;
+      if (t === 'null') return null;
+      return { op: t || s[this.i++] };
+    }
+  }
+
+  /* ---------- документ ---------- */
+  class Doc {
+    constructor(u8){
+      this.bytes = u8;
+      this.s = toStr(u8);
+      this.xref = new Map();
+      this.trailer = {};
+      this.readXref();
+    }
+    readXref(){
+      const m = /startxref\s+(\d+)\s*%%EOF\s*$/.exec(this.s.slice(-2048))
+             || /startxref\s+(\d+)/g.exec(this.s.slice(this.s.lastIndexOf('startxref')));
+      if (!m) throw new Error('не найден startxref');
+      let off = parseInt(m[1], 10);
+      const seen = new Set();
+      while (off !== undefined && !seen.has(off)){
+        seen.add(off);
+        const lx = new Lexer(this.s, off);
+        lx.skip();
+        if (this.s.substr(lx.i, 4) !== 'xref')
+          throw new Error('поддерживается только классическая таблица xref');
+        lx.i += 4;
+        for (;;){
+          lx.skip();
+          if (this.s.substr(lx.i, 7) === 'trailer'){ lx.i += 7; break; }
+          const start = lx.obj(), count = lx.obj();
+          if (typeof start !== 'number' || typeof count !== 'number') break;
+          lx.skip();
+          for (let k = 0; k < count; k++){
+            const e = this.s.substr(lx.i, 20);
+            const em = /^(\d{10})\s(\d{5})\s([nf])/.exec(e);
+            if (em){
+              const num = start + k;
+              if (em[3] === 'n' && !this.xref.has(num)) this.xref.set(num, parseInt(em[1], 10));
+              lx.i += (e[18] === '\r' || e[18] === '\n' || e[18] === ' ') ? 20 : 19;
+            } else { lx.i += 20; }
+          }
+        }
+        const tr = new Lexer(this.s, lx.i).obj();
+        for (const k in tr) if (!(k in this.trailer)) this.trailer[k] = tr[k];
+        off = typeof tr.Prev === 'number' ? tr.Prev : undefined;
+      }
+    }
+    get(o){                                        // разыменование
+      if (o && typeof o === 'object' && 'ref' in o){
+        const off = this.xref.get(o.ref);
+        if (off === undefined) return null;
+        const lx = new Lexer(this.s, off);
+        lx.obj(); lx.obj();                        // "N G"
+        lx.skip();
+        if (this.s.substr(lx.i, 3) === 'obj') lx.i += 3;
+        const v = lx.obj();
+        lx.skip();
+        if (this.s.substr(lx.i, 6) === 'stream'){
+          let p = lx.i + 6;
+          if (this.s[p] === '\r') p++;
+          if (this.s[p] === '\n') p++;
+          const len = this.get(v.Length);
+          return { dict: v, start: p, length: typeof len === 'number' ? len : 0 };
+        }
+        return v;
+      }
+      return o;
+    }
+    async stream(obj){                             // распакованные данные потока
+      const raw = this.bytes.subarray(obj.start, obj.start + obj.length);
+      const f = this.get(obj.dict.Filter);
+      const names = (Array.isArray(f) ? f : f ? [f] : []).map(x => x && x.name);
+      if (!names.length) return raw;
+      if (names.length > 1 || (names[0] !== 'FlateDecode' && names[0] !== 'Fl'))
+        throw new Error('фильтр потока не поддерживается: ' + names.join(','));
+      const ds = new DecompressionStream('deflate');
+      const ab = await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer();
+      return new Uint8Array(ab);
+    }
+    async content(page){                           // /Contents: ссылка либо массив ссылок
+      const c = this.get(page.dict.Contents);
+      const list = Array.isArray(c) ? c.map(r => this.get(r)) : [c];
+      let s = '';
+      for (const o of list){
+        if (!o || !o.dict) continue;
+        s += toStr(await this.stream(o)) + '\n';
+      }
+      return s;
+    }
+    pages(){
+      const root = this.get(this.trailer.Root);
+      const out = [];
+      const walk = (nodeRef, inherited) => {
+        const n = this.get(nodeRef);
+        if (!n) return;
+        const inh = {
+          Resources: n.Resources !== undefined ? n.Resources : inherited.Resources,
+          MediaBox:  n.MediaBox  !== undefined ? n.MediaBox  : inherited.MediaBox
+        };
+        if (n.Type && n.Type.name === 'Page'){
+          out.push({ ref: nodeRef.ref, dict: n,
+                     Resources: this.get(inh.Resources), MediaBox: this.get(inh.MediaBox) });
+          return;
+        }
+        const kids = this.get(n.Kids) || [];
+        for (const k of kids) walk(k, inh);
+      };
+      walk(root.Pages, {});
+      return out;
+    }
+  }
+
+  /* ---------- извлечение текста ---------- */
+  function textItems(content){
+    const lx = new Lexer(content, 0);
+    const st = [];
+    let size = 0, Tc = 0, Tz = 100, TL = 0;
+    let Tm = [1,0,0,1,0,0], Tlm = [1,0,0,1,0,0];
+    const out = [];
+    const mul = (a, b) => [
+      a[0]*b[0] + a[1]*b[2],       a[0]*b[1] + a[1]*b[3],
+      a[2]*b[0] + a[3]*b[2],       a[2]*b[1] + a[3]*b[3],
+      a[4]*b[0] + a[5]*b[2] + b[4], a[4]*b[1] + a[5]*b[3] + b[5]
+    ];
+    const nextLine = () => { Tlm = mul([1,0,0,1,0,-TL], Tlm); Tm = Tlm.slice(); };
+    const show = t => {
+      if (!t) return;
+      const sc = Math.hypot(Tm[0], Tm[1]) || 1;
+      const cw = size * 0.6 * (Tz / 100) + Tc;     // Courier: 600/1000 em
+      out.push({ str: t, x: Tm[4], y: Tm[5], size: size * sc, cw });
+      Tm = mul([1,0,0,1, t.length * cw, 0], Tm);
+    };
+    for (;;){
+      const o = lx.obj();
+      if (o === null) break;
+      if (o === undefined) continue;
+      if (typeof o === 'object' && 'op' in o){
+        const op = o.op;
+        if (op === 'BT'){ Tm = [1,0,0,1,0,0]; Tlm = Tm.slice(); st.length = 0; }
+        else if (op === 'Tf'){ size = st[st.length - 1] || 0; }
+        else if (op === 'TL'){ TL = st[st.length - 1] || 0; }
+        else if (op === 'Tc'){ Tc = st[st.length - 1] || 0; }
+        else if (op === 'Tz'){ Tz = st[st.length - 1] || 100; }
+        else if (op === 'Td' || op === 'TD'){
+          const y = st.pop() || 0, x = st.pop() || 0;
+          if (op === 'TD') TL = -y;
+          Tlm = mul([1,0,0,1,x,y], Tlm); Tm = Tlm.slice();
+        }
+        else if (op === 'Tm'){
+          const v = st.slice(-6);
+          if (v.length === 6){ Tlm = v.slice(); Tm = v.slice(); }
+        }
+        else if (op === 'T*') nextLine();
+        else if (op === 'Tj') show((st[st.length - 1] || {}).text);
+        else if (op === "'"){ nextLine(); show((st[st.length - 1] || {}).text); }
+        else if (op === '"'){ nextLine(); show((st[st.length - 1] || {}).text); }
+        else if (op === 'TJ'){
+          const a = st[st.length - 1];
+          if (Array.isArray(a)) for (const el of a){
+            if (el && el.text !== undefined) show(el.text);
+            else if (typeof el === 'number') Tm = mul([1,0,0,1, -el / 1000 * size * (Tz/100), 0], Tm);
+          }
+        }
+        st.length = 0;
+      } else st.push(o);
+    }
+    return out;
+  }
+
+  /* ---------- инкрементальная запись ---------- */
+  const esc = t => String(t).replace(/([\\()])/g, '\\$1');
+
+  function append(doc, perPage){
+    // perPage: Map(pageIndex -> строка операторов контента)
+    const pages = doc.pages();
+    let size = doc.get(doc.trailer.Size);
+    if (typeof size !== 'number') size = Math.max(...doc.xref.keys()) + 1;
+    let next = size;
+    const parts = [];
+    const newXref = new Map();
+    let base = doc.s.length;
+    if (!/[\r\n]$/.test(doc.s)) { parts.push('\n'); base++; }
+
+    let cursor = base;
+    const emit = s => { parts.push(s); cursor += s.length; };
+
+    for (const [pi, ops] of perPage){
+      const pg = pages[pi];
+      if (!pg || !ops) continue;
+
+      const cnum = next++;
+      newXref.set(cnum, cursor);
+      emit(`${cnum} 0 obj\n<</Length ${ops.length}>>\nstream\n${ops}\nendstream\nendobj\n`);
+
+      // страница: /Contents X 0 R  ->  /Contents[X 0 R cnum 0 R]
+      const off = doc.xref.get(pg.ref);
+      const lx = new Lexer(doc.s, off);
+      lx.obj(); lx.obj(); lx.skip();
+      if (doc.s.substr(lx.i, 3) === 'obj') lx.i += 3;
+      const dstart = lx.i;
+      lx.obj();
+      let raw = doc.s.slice(dstart, lx.i);
+      const cur = pg.dict.Contents;
+      let patched;
+      if (Array.isArray(cur))
+        patched = raw.replace(/\/Contents\s*\[([\s\S]*?)\]/, (m, inner) => `/Contents[${inner} ${cnum} 0 R]`);
+      else
+        patched = raw.replace(/\/Contents\s+(\d+)\s+(\d+)\s+R/, (m, n, g) => `/Contents[${n} ${g} R ${cnum} 0 R]`);
+      if (patched === raw) throw new Error('не удалось обновить /Contents страницы ' + (pi + 1));
+
+      newXref.set(pg.ref, cursor);
+      emit(`${pg.ref} 0 obj\n${patched}\nendobj\n`);
+    }
+
+    // таблица xref
+    const nums = [...newXref.keys()].sort((a, b) => a - b);
+    const runs = [];
+    for (const n of nums){
+      const last = runs[runs.length - 1];
+      if (last && n === last.start + last.list.length) last.list.push(n);
+      else runs.push({ start: n, list: [n] });
+    }
+    const xrefPos = cursor;
+    let x = 'xref\n';
+    for (const r of runs){
+      x += `${r.start} ${r.list.length}\n`;
+      for (const n of r.list) x += String(newXref.get(n)).padStart(10, '0') + ' 00000 n \n';
+    }
+    const tr = doc.trailer;
+    const idStr = Array.isArray(tr.ID)
+      ? '/ID[' + tr.ID.map(v => '<' + [...v.text].map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').toUpperCase() + '>').join('') + ']'
+      : '';
+    const prev = /startxref\s+(\d+)\s*%%EOF\s*$/.exec(doc.s.slice(-2048));
+    x += 'trailer\n<</Size ' + next
+       + '/Root ' + tr.Root.ref + ' 0 R'
+       + (tr.Info && tr.Info.ref ? '/Info ' + tr.Info.ref + ' 0 R' : '')
+       + idStr
+       + (prev ? '/Prev ' + prev[1] : '')
+       + '>>\nstartxref\n' + xrefPos + '\n%%EOF\n';
+    emit(x);
+
+    const tail = toBytes(parts.join(''));
+    const out = new Uint8Array(doc.bytes.length + tail.length);
+    out.set(doc.bytes, 0);
+    out.set(tail, doc.bytes.length);
+    return out;
+  }
+
+  /* ---------- построение операторов рисования ---------- */
+  class Ops {
+    constructor(){ this.b = ['q\n']; }
+    rect(x, y, w, h, c){
+      this.b.push(`${c[0]} ${c[1]} ${c[2]} rg\n${f(x)} ${f(y)} ${f(w)} ${f(h)} re f\n`);
+      return this;
+    }
+    text(font, size, x, y, str, c){
+      this.b.push(`${c[0]} ${c[1]} ${c[2]} rg\nBT /${font} ${f(size)} Tf ${f(x)} ${f(y)} Td (${esc(str)}) Tj ET\n`);
+      return this;
+    }
+    done(){ return this.b.join('') + 'Q\n'; }
+  }
+  const f = n => (Math.round(n * 1000) / 1000).toString();
+
+  return { Doc, textItems, append, Ops, toStr, toBytes };
+})();
+
+if (false && typeof module !== 'undefined') module.exports = PDFMini;
+</script>
+<script>
+const $ = s => document.querySelector(s);
+let RAW = null, DOC = null, NAME = '', KEY = '';
+let PLAN = null, HDRS = [], ANCHOR = 0, RESULT = [];
+const ACT = {};
+const COL = { eto:'#000000', ato:'#0033cc', fuel:'#0033cc', pos:'#00762e', neg:'#cc0000', bySign:true };
+const CKEY = 'etofill:colors';
+
+const msg = (el, t, k) => { const e = $(el); e.className = 'msg show ' + (k || 'ok'); e.textContent = t; };
+const hide = el => { $(el).className = 'msg'; };
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+
+/* ================= цвета ================= */
+const hex2rgb = h => { const n = parseInt(h.slice(1), 16);
+  return { r:(n >> 16 & 255)/255, g:(n >> 8 & 255)/255, b:(n & 255)/255 }; };
+const rgbArr = h => { const c = hex2rgb(h); return [+c.r.toFixed(4), +c.g.toFixed(4), +c.b.toFixed(4)]; };
+
+function onScreen(h){
+  const c = hex2rgb(h), lum = .2126*c.r + .7152*c.g + .0722*c.b;
+  if (lum >= .38) return h;
+  const k = (.38 - lum) * 1.25, mix = v => Math.round(255 * (v + (1 - v) * k));
+  return `rgb(${mix(c.r)},${mix(c.g)},${mix(c.b)})`;
+}
+const diffColor = d => !COL.bySign || d === 0 ? COL.fuel : (d > 0 ? COL.pos : COL.neg);
+
+function applyColors(){
+  document.querySelectorAll('input[type=color],input.hex').forEach(i => i.value = COL[i.dataset.t]);
+  $('#bySign').checked = COL.bySign;
+  document.querySelectorAll('.sw').forEach(s =>
+    s.classList.toggle('on', s.dataset.c.toLowerCase() === COL[s.dataset.t].toLowerCase()));
+  document.querySelectorAll('#tbl td.eto').forEach(td => td.style.color = onScreen(COL.eto));
+  document.querySelectorAll('#tbl input.ato').forEach(el => el.style.color = onScreen(COL.ato));
+  document.querySelectorAll('#tbl input.fuel').forEach(el => el.style.color = onScreen(COL.fuel));
+  RESULT.forEach(p => paint(p.i));
+}
+document.querySelectorAll('.sw').forEach(s => s.onclick = () => {
+  COL[s.dataset.t] = s.dataset.c; applyColors(); saveColors(); });
+$('#bySign').onchange = e => { COL.bySign = e.target.checked; applyColors(); saveColors(); };
+
+// Safari без <input type=color> подменяем текстовым полем для HEX
+(() => {
+  const probe = document.createElement('input'); probe.type = 'color';
+  if (probe.type === 'color') return;
+  document.querySelectorAll('input[type=color]').forEach(i => {
+    const t = document.createElement('input');
+    t.className = 'hex'; t.dataset.t = i.dataset.t; t.value = COL[i.dataset.t];
+    t.maxLength = 7; t.spellcheck = false; t.autocapitalize = 'off';
+    i.replaceWith(t);
+  });
+})();
+document.addEventListener('input', e => {
+  const i = e.target;
+  if (i.matches('input[type=color],input.hex') && /^#[0-9a-fA-F]{6}$/.test(i.value)){
+    COL[i.dataset.t] = i.value.toLowerCase(); applyColors(); saveColors();
+  }
+});
+
+function saveColors(){ try { localStorage.setItem(CKEY, JSON.stringify(COL)); } catch(e){} save(); }
+try {
+  const st = JSON.parse(localStorage.getItem(CKEY) || '{}');
+  if (st.act && !st.ato){ st.ato = st.act; st.fuel = st.act; }
+  for (const k in COL) if (st[k] !== undefined) COL[k] = st[k];
+} catch(e){}
+applyColors();
+
+/* ================= загрузка файла ================= */
+const drop = $('#drop');
+drop.onclick = () => $('#file').click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over');
+  if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); };
+$('#file').onchange = e => { if (e.target.files[0]) load(e.target.files[0]); };
+
+async function load(f){
+  if (typeof DecompressionStream === 'undefined'){
+    msg('#m1', 'Браузер слишком старый: нет DecompressionStream. Нужен Safari 16.4+ / iPadOS 16.4+.', 'err');
+    return;
+  }
+  NAME = f.name; KEY = 'etofill:' + f.name + ':' + f.size;
+  RAW = await f.arrayBuffer();
+  $('#fname').textContent = f.name + '  ·  ' + (f.size / 1048576).toFixed(1) + ' MB';
+  hide('#m1'); hide('#m3'); $('#c2').classList.remove('hide'); $('#c3').classList.add('hide');
+  for (const k in ACT) delete ACT[k];
+  try {
+    const r = await parse(RAW);
+    PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor;
+    const s1 = PLAN.filter(p => p.sec === 1).length;
+    msg('#m1', `Найдено точек: основной маршрут ${s1}` + (PLAN.length - s1 ? `, запасной ${PLAN.length - s1}` : ''), 'ok');
+    const st = restore();
+    if (st){
+      $('#etd').value = st.etd || ''; $('#alt').checked = !!st.alt;
+      Object.assign(ACT, st.act || {});
+      if (st.etd){ $('#calc').click(); msg('#m1', 'Восстановлены ранее введённые данные для этого файла.', 'ok'); }
+    }
+    $('#etd').focus();
+  } catch (err){ msg('#m1', 'Не удалось разобрать документ: ' + err.message, 'err'); }
+}
+
+/* ================= разбор PDF ================= */
+function courierName(doc, page){
+  const fonts = doc.get(page.Resources && page.Resources.Font);
+  if (!fonts) return null;
+  for (const k in fonts){
+    const fd = doc.get(fonts[k]);
+    if (fd && fd.BaseFont && /Courier/i.test(fd.BaseFont.name)) return k;
+  }
+  return null;
+}
+function tokenize(chars, cw){
+  const t = []; let cur = '', prev = null;
+  for (const c of chars){
+    if (prev !== null && c.x - prev > cw * 1.5){ if (cur) t.push(cur); cur = ''; }
+    cur += c.ch; prev = c.x;
+  }
+  if (cur) t.push(cur);
+  return t;
+}
+
+async function parse(buf){
+  const doc = new PDFMini.Doc(new Uint8Array(buf));
+  DOC = doc;
+  const pages = doc.pages();
+  const dotRows = [], headers = [];
+  let anchor = 0;
+
+  for (let p = 0; p < pages.length; p++){
+    const items = PDFMini.textItems(await doc.content(pages[p]));
+    const font = courierName(doc, pages[p]);
+    const byLine = new Map();
+    for (const it of items){
+      if (it.size < 9 || it.size > 13) continue;
+      const key = Math.round(it.y * 2) / 2;
+      if (!byLine.has(key)) byLine.set(key, []);
+      const arr = byLine.get(key);
+      for (let i = 0; i < it.str.length; i++){
+        const ch = it.str[i];
+        if (ch === ' ') continue;
+        arr.push({ ch, x: it.x + i * it.cw, base: it.y, size: it.size, cw: it.cw });
+      }
+    }
+    for (const [, chars] of byLine){
+      chars.sort((a, b) => a.x - b.x);
+      const last = chars[chars.length - 1];
+      if (!last) continue;
+      const tk = tokenize(chars, last.cw);
+      if (tk[tk.length - 1] === 'ATO' && last.x > 460 && last.x < 540){
+        headers.push({ page: p, base: last.base, size: last.size, cw: last.cw, font });
+        continue;
+      }
+      const dots = chars.filter(c => c.ch === '.' && c.x > 440 && c.x < 540);
+      if (dots.length !== 4) continue;
+      const cw = dots[0].cw;
+      let ok = true;
+      for (let i = 1; i < 4; i++) if (Math.abs(dots[i].x - dots[0].x - cw * i) > 0.8) ok = false;
+      if (!ok) continue;
+      anchor = Math.max(anchor, dots[0].x + 4 * cw);
+      dotRows.push({ page: p, base: dots[0].base, size: dots[0].size, cw, x: dots[0].x, font,
+                     tok: tokenize(chars.filter(c => c.x < dots[0].x - 3), cw) });
+    }
+  }
+
+  dotRows.sort((a, b) => a.page - b.page || b.base - a.base);
+  const pairs = [];
+  const reTT = /^\d+\.\d\d$/, reET = /^\d+$/;
+  let cum = 0, prev = -1, sec = 1;
+
+  for (let i = 0; i < dotRows.length; i++){
+    const a = dotRows[i], b = dotRows[i + 1];
+    if (!b || b.page !== a.page || Math.abs(a.base - b.base - 12) > 2) continue;
+    if (a.tok.length < 3 || b.tok.length < 3) continue;
+    const et = a.tok[a.tok.length - 2], tt = b.tok[b.tok.length - 2], rem = b.tok[b.tok.length - 1];
+    if (!reET.test(et) || !reTT.test(tt)) continue;
+    const ttm = +tt.split('.')[0] * 60 + +tt.split('.')[1];
+    if (ttm < prev){ sec++; cum = 0; }
+    prev = ttm; cum += +et;
+    pairs.push({ i: pairs.length, wp: a.tok[0], et: +et, cum, sec, page: a.page,
+                 ex: a.x, ey: a.base, ax: b.x, ay: b.base, size: a.size, cw: a.cw, font: a.font,
+                 rem: /^\d+$/.test(rem) ? +rem : null, drift: cum !== ttm });
+    i++;
+  }
+  if (!pairs.length) throw new Error('колонка ETO не найдена — это другой формат плана');
+  if (pairs.some(p => !p.font)) throw new Error('на странице нет шрифта Courier');
+  return { pairs, headers, anchor };
+}
+
+/* ================= расчёт ================= */
+function parseTime(v){
+  const d = (v || '').replace(/\D/g, '');
+  if (d.length !== 4) return null;
+  const h = +d.slice(0, 2), m = +d.slice(2);
+  return (h > 23 || m > 59) ? null : h * 60 + m;
+}
+const norm = m => ((m % 1440) + 1440) % 1440;
+const fmt = m => String(Math.floor(norm(m) / 60)).padStart(2, '0') + String(norm(m) % 60).padStart(2, '0');
+const hhmm = m => Math.floor(m / 60) + '.' + String(m % 60).padStart(2, '0');
+
+$('#etd').oninput = e => { e.target.value = e.target.value.replace(/[^\d:]/g, ''); };
+$('#etd').onkeydown = e => { if (e.key === 'Enter'){ e.target.blur(); $('#calc').click(); } };
+$('#alt').onchange = () => { if (RESULT.length) $('#calc').click(); };
+
+$('#calc').onclick = () => {
+  const t0 = parseTime($('#etd').value);
+  if (t0 === null){ msg('#m2', 'Введите время в формате HHMM, например 0210', 'err'); return; }
+  if (!PLAN){ msg('#m2', 'Сначала загрузите PDF', 'err'); return; }
+  const main = PLAN.filter(p => p.sec === 1);
+  const arr = main.length ? t0 + main[main.length - 1].cum : t0;
+  RESULT = PLAN.filter(p => p.sec === 1 || ($('#alt').checked && p.sec === 2))
+               .map(p => ({ ...p, t: (p.sec === 1 ? t0 : arr) + p.cum }));
+  const drift = RESULT.filter(p => p.drift).length;
+  drift ? msg('#m2', `Внимание: в ${drift} точках сумма ET не совпала с T/T.`, 'warn') : hide('#m2');
+  render(t0, arr);
+  $('#c3').classList.remove('hide');
+  save();
+};
+
+function render(t0, arr){
+  const last = RESULT.filter(p => p.sec === 1).slice(-1)[0];
+  $('#stats').innerHTML = `
+    <div class="stat"><b>${fmt(t0)}</b><span>Взлёт</span></div>
+    <div class="stat"><b>${last ? fmt(arr) : '—'}</b><span>Прибытие (ETO)</span></div>
+    <div class="stat"><b>${last ? hhmm(last.cum) : '—'}</b><span>Время в пути</span></div>
+    <div class="stat"><b>${RESULT.length}</b><span>Точек</span></div>
+    <div class="stat" id="stFilled"><b>0</b><span>Факт введён</span></div>`;
+
+  const tb = $('#tbl tbody'); tb.innerHTML = '';
+  let lastSec = 0;
+  for (const p of RESULT){
+    if (p.sec !== lastSec){
+      lastSec = p.sec;
+      const h = tb.insertRow(); h.className = 'hdr';
+      h.innerHTML = `<td colspan="9">${p.sec === 1 ? 'Основной маршрут' : 'Запасной маршрут (ALTN)'}</td>`;
+    }
+    const a = ACT[p.i] || {};
+    const r = tb.insertRow(); r.dataset.i = p.i;
+    r.innerHTML =
+      `<td>${p.wp}</td><td class="num">${p.et}</td><td class="num">${hhmm(p.cum)}</td>
+       <td class="eto">${fmt(p.t)}</td>
+       <td><input class="ato" data-i="${p.i}" maxlength="4" inputmode="numeric"
+            enterkeyhint="next" placeholder="${fmt(p.t)}" value="${a.ato || ''}"></td>
+       <td class="num">${p.rem ?? '—'}</td>
+       <td><input class="fuel" data-i="${p.i}" maxlength="5" inputmode="numeric"
+            enterkeyhint="next" placeholder="${p.rem ?? ''}" value="${a.fuel || ''}"></td>
+       <td class="diff" data-d="${p.i}"></td><td class="num">${p.page + 1}</td>`;
+    paint(p.i);
+  }
+  bindInputs(); countFilled(); applyColors();
+}
+
+const rowOf = i => $(`#tbl tbody tr[data-i="${i}"]`);
+const planOf = i => RESULT.find(p => p.i === +i);
+
+function paint(i){
+  const p = planOf(i), a = ACT[i] || {}, td = $(`td.diff[data-d="${i}"]`);
+  if (!td || !p) return;
+  const f = a.fuel !== undefined && a.fuel !== '' ? +a.fuel : null;
+  if (f === null || p.rem === null){ td.textContent = '—'; td.style.color = '#4a5560'; }
+  else {
+    const d = f - p.rem;
+    td.textContent = (d > 0 ? '+' : '') + d;
+    td.style.color = onScreen(diffColor(d));
+  }
+  const tr = rowOf(i);
+  if (tr) tr.classList.toggle('filled', !!(a.ato || a.fuel));
+}
+function countFilled(){
+  const n = RESULT.filter(p => { const a = ACT[p.i]; return a && (a.ato || a.fuel); }).length;
+  const el = $('#stFilled'); if (el) el.querySelector('b').textContent = n;
+}
+function bindInputs(){
+  const inputs = [...document.querySelectorAll('#tbl input')];
+  inputs.forEach((inp, idx) => {
+    inp.oninput = () => {
+      const i = inp.dataset.i, isAto = inp.classList.contains('ato');
+      inp.value = inp.value.replace(/\D/g, '').slice(0, isAto ? 4 : 5);
+      ACT[i] = ACT[i] || {};
+      ACT[i][isAto ? 'ato' : 'fuel'] = inp.value;
+      if (!ACT[i].ato && !ACT[i].fuel) delete ACT[i];
+      inp.classList.toggle('bad', isAto && inp.value.length > 0 &&
+                                  (inp.value.length !== 4 || parseTime(inp.value) === null));
+      paint(i); countFilled(); save();
+    };
+    inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
+      const nx = inputs[idx + 1]; if (nx){ nx.focus(); nx.select(); } else inp.blur(); } };
+    inp.onfocus = () => inp.select();
+  });
+}
+
+$('#copyEto').onclick = () => {
+  for (const p of RESULT){ ACT[p.i] = ACT[p.i] || {}; ACT[p.i].ato = fmt(p.t); }
+  document.querySelectorAll('#tbl input.ato').forEach(i => i.value = ACT[i.dataset.i].ato);
+  RESULT.forEach(p => paint(p.i)); countFilled(); save();
+};
+$('#clearAct').onclick = () => {
+  if (!confirm('Очистить все введённые ATO и топливо?')) return;
+  for (const k in ACT) delete ACT[k];
+  document.querySelectorAll('#tbl input').forEach(i => { i.value = ''; i.classList.remove('bad'); });
+  RESULT.forEach(p => paint(p.i)); countFilled(); save();
+};
+
+/* ================= автосохранение ================= */
+let saveT = null;
+function save(){
+  if (!KEY) return;
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ etd: $('#etd').value, alt: $('#alt').checked, act: ACT }));
+      const d = new Date();
+      $('#saved').textContent = 'сохранено ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    } catch(e){ $('#saved').textContent = 'сохранение недоступно'; }
+  }, 250);
+}
+function restore(){
+  try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch(e){ return null; }
+}
+
+/* ================= формирование PDF ================= */
+function build(){
+  const per = new Map();
+  const ops = pi => { if (!per.has(pi)) per.set(pi, new PDFMini.Ops()); return per.get(pi); };
+  const WHITE = [1, 1, 1];
+  const C_ETO = rgbArr(COL.eto), C_ATO = rgbArr(COL.ato), C_FUEL = rgbArr(COL.fuel);
+  const right = (x, cw, w, t) => x + (w - t.length) * cw;
+
+  const fuelPages = new Set(RESULT.filter(p => ACT[p.i] && ACT[p.i].fuel).map(p => p.page));
+  for (const h of HDRS){
+    if (!fuelPages.has(h.page) || !h.font) continue;
+    const o = ops(h.page), A = ANCHOR + h.cw;
+    o.text(h.font, h.size, right(A, h.cw, 5, 'DIFF'), h.base + 12, 'DIFF', C_FUEL);
+    o.text(h.font, h.size, right(A, h.cw, 5, 'FUEL'), h.base, 'FUEL', C_FUEL);
+    o.text(h.font, h.size, A, h.base - 12, '-----', C_FUEL);
+  }
+
+  for (const p of RESULT){
+    const o = ops(p.page), cw = p.cw, a = ACT[p.i] || {};
+    o.rect(p.ex - 1, p.ey - 2.6, cw * 4 + 1.5, p.size + .5, WHITE);
+    o.text(p.font, p.size, p.ex, p.ey, fmt(p.t), C_ETO);
+
+    if (a.ato && a.ato.length === 4){
+      o.rect(p.ax - 1, p.ay - 2.6, cw * 4 + 1.5, p.size + .5, WHITE);
+      o.text(p.font, p.size, p.ax, p.ay, a.ato, C_ATO);
+    }
+    if (a.fuel){
+      const A = ANCHOR + cw;
+      o.text(p.font, p.size, right(A, cw, 5, a.fuel), p.ay, a.fuel, C_FUEL);
+      if (p.rem !== null){
+        const d = +a.fuel - p.rem, t = (d > 0 ? '+' : '') + d;
+        o.text(p.font, p.size, right(A, cw, 5, t), p.ey, t, rgbArr(diffColor(d)));
+      }
+    }
+  }
+  const map = new Map([...per].map(([k, v]) => [k, v.done()]));
+  return new Blob([PDFMini.append(DOC, map)], { type: 'application/pdf' });
+}
+const outName = () => NAME.replace(/\.pdf$/i, '') + '_ETO.pdf';
+
+$('#dl').onclick = async () => {
+  const b = $('#dl'); b.disabled = true; b.textContent = 'Формирую…';
+  try {
+    const blob = build(), name = outName();
+    const file = new File([blob], name, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })){
+      try { await navigator.share({ files: [file], title: name });
+            msg('#m3', 'Готово — выберите «Сохранить в Файлы» в панели.', 'ok'); return; }
+      catch (e){ if (e.name === 'AbortError'){ hide('#m3'); return; } }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    msg('#m3', 'Файл сохранён: ' + name, 'ok');
+  } catch (e){ msg('#m3', 'Ошибка: ' + e.message, 'err'); }
+  b.disabled = false; b.textContent = 'Сохранить PDF';
+};
+
+$('#open').onclick = () => {
+  try {
+    const url = URL.createObjectURL(build());
+    const w = window.open(url, '_blank');
+    if (!w) msg('#m3', 'Браузер заблокировал новую вкладку — используйте «Сохранить PDF».', 'warn');
+    else hide('#m3');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e){ msg('#m3', 'Ошибка: ' + e.message, 'err'); }
+};
+
+$('#reset').onclick = () => {
+  if (KEY && confirm('Сбросить и удалить сохранённые данные этого файла?')){
+    try { localStorage.removeItem(KEY); } catch(e){}
+  }
+  RAW = null; DOC = null; PLAN = null; RESULT = []; KEY = '';
+  for (const k in ACT) delete ACT[k];
+  $('#file').value = ''; $('#etd').value = ''; $('#fname').textContent = ''; $('#saved').textContent = '';
+  $('#c2').classList.add('hide'); $('#c3').classList.add('hide');
+  hide('#m1'); hide('#m2'); hide('#m3');
+};
+</script>
+</body>
+</html>
