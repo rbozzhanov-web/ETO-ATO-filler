@@ -17,13 +17,13 @@
   --bg:#0f1419; --panel:#171d24; --panel2:#1e262f; --line:#2c3742; --line2:#232c35;
   --txt:#e6edf3; --dim:#8b98a5; --acc:#4d9fff; --acc2:#1f6feb;
   --ok:#3fb950; --warn:#d29922; --err:#f85149;
-  --gold:#9b804d; --hdr:#131a21; --fld:#4a5560;
+  --gold:#9b804d; --hdr:#131a21; --fld:#4a5560; --dangerbtn:#c93a3a;
 }
 html[data-theme=light]{
   --bg:#f2f5f8; --panel:#ffffff; --panel2:#f1f4f7; --line:#d6dde4; --line2:#e6ebf0;
   --txt:#16202b; --dim:#5d6b7a; --acc:#0b62d6; --acc2:#0b62d6;
   --ok:#1a7f37; --warn:#9a6700; --err:#cf222e;
-  --gold:#8a6f3e; --hdr:#eef2f6; --fld:#9aa7b4;
+  --gold:#8a6f3e; --hdr:#eef2f6; --fld:#9aa7b4; --dangerbtn:#cf222e;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -35,9 +35,8 @@ body{margin:0;background:var(--bg);color:var(--txt);-webkit-tap-highlight-color:
 h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 .sub{color:var(--dim);font-size:13px}
 
-.hd{display:flex;align-items:center;gap:18px;flex-wrap:wrap;position:relative;
-  padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--line)}
-.hd::after{content:"";position:absolute;left:0;bottom:-1px;width:72px;height:1px;background:var(--gold)}
+.hd{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--gold)}
 .hd .grow{flex:1}
 .brand{background:#fff;border-radius:8px;padding:9px 14px;display:flex;flex:0 0 auto;
   box-shadow:0 0 0 1px rgba(0,0,0,.07)}
@@ -57,6 +56,8 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 #drop.over{border-color:var(--acc)}
 #drop b{color:var(--acc)}
 #drop .fn{margin-top:8px;font-size:13px;color:var(--dim);word-break:break-all}
+.disc{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:12.5px;color:var(--dim)}
+.disc::before{content:"";flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--gold)}
 
 .row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
 label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px}
@@ -76,7 +77,10 @@ button{background:var(--acc2);color:#fff;border:0;border-radius:8px;padding:13px
 button:active:not(:disabled){transform:scale(.98)}
 button:disabled{opacity:.4}
 button.ghost{background:transparent;border:1px solid var(--line);color:var(--dim)}
+button.danger{background:var(--dangerbtn);color:#fff}
 button.sm{padding:9px 15px;font-size:13.5px;min-height:38px}
+.row .sep{flex:1 1 0;min-width:0}
+@media(max-width:560px){.row .sep{display:none}}
 @media(hover:hover){button:hover:not(:disabled){filter:brightness(1.12)}
   button.ghost:hover:not(:disabled){background:var(--panel2);color:var(--txt)}
   #drop:hover{border-color:var(--acc)}}
@@ -158,6 +162,7 @@ td.diff{text-align:right;font-weight:700}
       <div class="fn" id="fname"></div>
     </div>
     <input type="file" id="file" accept="application/pdf,.pdf" class="hide">
+    <p class="disc">Only Air Astana computerized flight plans are supported.</p>
     <div class="msg" id="m1"></div>
   </div>
 
@@ -169,7 +174,9 @@ td.diff{text-align:right;font-weight:700}
   <div class="card hide" id="c2">
     <div class="step"><i>3</i> Takeoff time (airborne), UTC</div>
     <div class="row">
-      <div><label>HHMM</label><input type="text" id="etd" class="big" placeholder="----" maxlength="5" inputmode="numeric" enterkeyhint="go"></div>
+      <div><label>HHMM</label><input type="text" id="etd" class="big" placeholder="----" maxlength="5"
+        inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" spellcheck="false"
+        enterkeyhint="go"></div>
       <label class="chk"><input type="checkbox" id="alt"> Alternate route (ALTN)</label>
       <div style="padding-bottom:5px"><button id="calc">Calculate</button></div>
     </div>
@@ -198,7 +205,8 @@ td.diff{text-align:right;font-weight:700}
     <div class="row">
       <button id="dl">Save PDF</button>
       <button id="open" class="ghost">Preview filled PDF</button>
-      <button id="reset" class="ghost">Reset</button>
+      <span class="sep"></span>
+      <button id="reset" class="danger">Reset</button>
     </div>
     <div class="msg" id="m3"></div>
     <div class="note">
@@ -654,6 +662,9 @@ const ACT = {}, TXT = {};
 /* fixed print palette */
 const C = { eto:'#0033cc', ato:'#00762e', fuel:'#000000', pos:'#00762e', neg:'#cc0000', doc:'#0033cc' };
 const BOLD = 'FB';                                   // Courier-Bold resource name
+// digits-only fields: open the numbers/symbols keyboard layer on iPadOS
+const NUM = 'inputmode="numeric" pattern="[0-9]*" autocomplete="off" ' +
+            'autocorrect="off" spellcheck="false" enterkeyhint="next"';
 
 const msg = (el, t, k) => { const e = $(el); e.className = 'msg show ' + (k || 'ok'); e.textContent = t; };
 const hide = el => { $(el).className = 'msg'; };
@@ -987,11 +998,11 @@ function render(t0, arr){
     r.innerHTML =
       `<td>${p.wp}</td><td class="num">${p.et}</td><td class="num">${hhmm(p.cum)}</td>
        <td class="eto">${fmt(p.t)}</td>
-       <td><input class="ato" data-i="${p.i}" maxlength="4" inputmode="numeric"
-            enterkeyhint="next" placeholder="${fmt(p.t)}" value="${a.ato || ''}"></td>
+       <td><input class="ato" data-i="${p.i}" maxlength="4" ${NUM}
+            placeholder="${fmt(p.t)}" value="${a.ato || ''}"></td>
        <td class="num">${p.rem ?? '—'}</td>
-       <td><input class="fuel" data-i="${p.i}" maxlength="5" inputmode="numeric"
-            enterkeyhint="next" placeholder="${p.rem ?? ''}" value="${a.fuel || ''}"></td>
+       <td><input class="fuel" data-i="${p.i}" maxlength="5" ${NUM}
+            placeholder="${p.rem ?? ''}" value="${a.fuel || ''}"></td>
        <td class="diff" data-d="${p.i}"></td><td class="num">${p.page + 1}</td>`;
     paint(p.i);
   }
@@ -1051,6 +1062,10 @@ function renderFields(){
     inp.type = 'text'; inp.id = 'fd' + f.i; inp.maxLength = f.n; inp.value = TXT[f.i] || '';
     inp.placeholder = '.'.repeat(Math.min(f.n, 40));
     inp.autocapitalize = 'characters'; inp.spellcheck = false; inp.enterKeyHint = 'next';
+    inp.autocomplete = 'off'; inp.setAttribute('autocorrect', 'off');
+    if (/^(ALTM\d|STBY|QNH)$/i.test(f.label)){          // pressure settings are digits only
+      inp.inputMode = 'numeric'; inp.pattern = '[0-9]*';
+    }
     inp.oninput = () => {
       inp.value = inp.value.toUpperCase().slice(0, f.n);
       TXT[f.i] = inp.value;
