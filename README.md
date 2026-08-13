@@ -94,7 +94,9 @@ Two services are selectable under **API key**:
 | Google Gemini (default) | Free tier, rate limited | aistudio.google.com, no card |
 | Anthropic Claude | Paid per request | console.anthropic.com, prepaid credit |
 
-The key is entered once and stored on the device only. **On the Gemini free tier Google may use
+Only the key is needed — the app queries the service for the models that key can use and
+selects one automatically, preferring the current fast tier over preview models, and re-checks
+if the chosen model is ever withdrawn. The key is stored on the device only. **On the Gemini free tier Google may use
 what you send to improve their products** — check that sending company flight documentation is
 acceptable under your operator's policy. The summary is machine-generated, may be wrong, and
 never replaces studying the flight documentation.

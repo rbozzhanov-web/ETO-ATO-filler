@@ -335,8 +335,7 @@ td.diff{text-align:right;font-weight:700}
         </select>
         <label for="aiKey">API key</label>
         <input type="password" id="aiKey" placeholder="AIza..." autocomplete="off" spellcheck="false">
-        <label for="aiModel">Model</label>
-        <input type="text" id="aiModel" autocomplete="off" spellcheck="false">
+        <p class="note2" id="aiModelInfo">Model: chosen automatically.</p>
         <p class="note2" id="aiNote"></p>
       </div>
       <div class="row">
@@ -421,8 +420,9 @@ td.diff{text-align:right;font-weight:700}
       turbulence, NOTAMs and anything else needing attention.</p>
       <p>Two services are available under <b>API key</b>. <b>Google Gemini</b> is the default and
       has a free tier — get a key at aistudio.google.com, no card required. <b>Anthropic Claude</b>
-      is the alternative and is billed per request. Either key is entered once and kept on this
-      device only.</p>
+      is the alternative and is billed per request. Paste the key and nothing else: the app asks
+      the service which models the key can use and picks the best one itself, preferring the
+      current fast tier over previews. If that model is later withdrawn it simply looks again.</p>
       <div class="tip">On the Gemini free tier Google may use what you send to improve their
       products. Check that sending company flight documentation is acceptable under your
       operator's policy before using it.</div>
@@ -1020,10 +1020,19 @@ let TEXT_ALL = '', aiBusy = false;
 const PROVIDERS = {
   gemini: {
     label: 'Gemini', keyStore: 'etofill:gkey', modelStore: 'etofill:gmodel',
-    model: 'gemini-2.5-flash', placeholder: 'AIza...',
+    fallbacks: ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'],
+    placeholder: 'AIza...',
+    async list(key){
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',
+                            { headers: { 'x-goog-api-key': key } });
+      if (!r.ok) throw new Error('models ' + r.status);
+      return ((await r.json()).models || [])
+        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+        .map(m => String(m.name).replace(/^models\//, ''));
+    },
     note: 'Free key from <a href="https://aistudio.google.com/apikey" target="_blank" '
         + 'rel="noopener">aistudio.google.com</a>, no card needed. Other models to try: '
-        + 'gemini-2.5-pro, gemini-2.0-flash. <b>On the free tier Google may use what you send '
+        + '<b>On the free tier Google may use what you send '
         + 'to improve their products</b> — check that sending company flight documentation '
         + 'is acceptable under your operator&rsquo;s policy.',
     send(key, model, pdf, text){
@@ -1049,7 +1058,15 @@ const PROVIDERS = {
   },
   claude: {
     label: 'Claude', keyStore: 'etofill:aikey', modelStore: 'etofill:aimodel',
-    model: 'claude-sonnet-5', placeholder: 'sk-ant-...',
+    fallbacks: ['claude-sonnet-5', 'claude-haiku-4-5-20251001'],
+    placeholder: 'sk-ant-...',
+    async list(key){
+      const r = await fetch('https://api.anthropic.com/v1/models?limit=100', {
+        headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01',
+                   'anthropic-dangerous-direct-browser-access': 'true' } });
+      if (!r.ok) throw new Error('models ' + r.status);
+      return ((await r.json()).data || []).map(m => m.id);
+    },
     note: 'Key from <a href="https://console.anthropic.com" target="_blank" '
         + 'rel="noopener">console.anthropic.com</a>. API access is billed separately from a '
         + 'Claude.ai subscription and needs prepaid credit.',
@@ -1074,6 +1091,44 @@ const PROVIDERS = {
 };
 const prov = () => PROVIDERS[$('#aiProv').value] || PROVIDERS.gemini;
 
+/* Rank the models a key can actually use: newest generation first, the fast tier
+   preferred (it is the one the free quota is generous with), previews last. */
+function rankModel(id){
+  const s = id.toLowerCase();
+  if (/embedding|aqa|tts|imagen|image-gen|veo|learnlm|nano/.test(s)) return -1e9;
+  const v = parseFloat((s.match(/(?:gemini|claude)[a-z-]*?-(\d+(?:\.\d+)?)/) || [0, 0])[1]) || 0;
+  let k = v * 100;
+  if (/flash|haiku/.test(s)) k += 30;
+  if (/sonnet/.test(s)) k += 25;
+  if (/pro|opus/.test(s)) k += 10;
+  if (/lite/.test(s)) k -= 18;
+  if (/preview|exp|beta/.test(s)) k -= 60;   // preview quotas are tighter
+  if (/thinking/.test(s)) k -= 12;
+  if (/latest/.test(s)) k += 2;
+  return k;
+}
+async function pickModel(p, key, force){
+  if (!force){
+    try {
+      const c = JSON.parse(localStorage.getItem(p.modelStore) || 'null');
+      if (c && c.id && Date.now() - c.at < 7 * 24 * 3600e3) return c.id;
+    } catch(e){}
+  }
+  let id = p.fallbacks[0];
+  try {
+    const list = await p.list(key);
+    const best = list.filter(m => rankModel(m) > -1e8).sort((a, b) => rankModel(b) - rankModel(a))[0];
+    if (best) id = best;
+  } catch(e){}
+  try { localStorage.setItem(p.modelStore, JSON.stringify({ id, at: Date.now() })); } catch(e){}
+  return id;
+}
+function showModel(id){
+  $('#aiModelInfo').innerHTML = id
+    ? `Model: <b>${id}</b> — chosen automatically for your key.`
+    : 'Model: chosen automatically.';
+}
+
 const online = () => navigator.onLine !== false;
 function aiRefresh(){
   const has = !!(RAW && DOC);
@@ -1086,19 +1141,27 @@ addEventListener('offline', aiRefresh);
 
 function loadProv(){
   const p = prov();
-  let k = '', m = '';
-  try { k = localStorage.getItem(p.keyStore) || ''; m = localStorage.getItem(p.modelStore) || ''; } catch(e){}
+  let k = '', cached = null;
+  try {
+    k = localStorage.getItem(p.keyStore) || '';
+    cached = JSON.parse(localStorage.getItem(p.modelStore) || 'null');
+  } catch(e){}
   $('#aiKey').value = k; $('#aiKey').placeholder = p.placeholder;
-  $('#aiModel').value = m || p.model;
   $('#aiNote').innerHTML = p.note;
+  showModel(cached && cached.id);
   try { localStorage.setItem('etofill:aiprov', $('#aiProv').value); } catch(e){}
 }
 try { $('#aiProv').value = localStorage.getItem('etofill:aiprov') || 'gemini'; } catch(e){}
 loadProv();
 $('#aiProv').onchange = () => { loadProv(); hide('#m5'); };
 $('#aiKeyBtn').onclick = () => $('#aiKeyRow').classList.toggle('hide');
-$('#aiKey').oninput = () => { try { localStorage.setItem(prov().keyStore, $('#aiKey').value.trim()); } catch(e){} };
-$('#aiModel').oninput = () => { try { localStorage.setItem(prov().modelStore, $('#aiModel').value.trim()); } catch(e){} };
+$('#aiKey').oninput = () => {
+  try {
+    localStorage.setItem(prov().keyStore, $('#aiKey').value.trim());
+    localStorage.removeItem(prov().modelStore);      // new key -> detect again
+  } catch(e){}
+  showModel(null);
+};
 
 const PROMPT = `You are briefing the operating crew from the attached Air Astana operational flight plan.
 
@@ -1157,18 +1220,26 @@ async function runBriefing(){
   hide('#m5'); out.classList.add('hide');
 
   try {
-    const p = prov();
-    const model = $('#aiModel').value.trim() || p.model;
+    const p = prov(), key = $('#aiKey').value.trim();
     const maxInline = $('#aiProv').value === 'gemini' ? 14 : 22;      // MB before falling back to text
     const usePdf = DOC.pages().length <= 100 && RAW.byteLength < maxInline * 1024 * 1024;
-    const res = await p.send($('#aiKey').value.trim(), model, usePdf ? b64(RAW) : null, TEXT_ALL);
+    const pdf = usePdf ? b64(RAW) : null;
+
+    let model = await pickModel(p, key, false);
+    showModel(model);
+    let res = await p.send(key, model, pdf, TEXT_ALL);
+    if (res.status === 404){                       // stale choice — look the list up again
+      model = await pickModel(p, key, true);
+      showModel(model);
+      res = await p.send(key, model, pdf, TEXT_ALL);
+    }
 
     if (!res.ok){
       let detail = '';
       try { const j = await res.json(); detail = (j.error && j.error.message) || ''; } catch(e){}
       const hint = (res.status === 401 || res.status === 403) ? 'The API key was rejected.'
                  : res.status === 400 && /API_KEY|API key/i.test(detail) ? 'The API key was rejected.'
-                 : res.status === 404 ? `Model "${model}" is not available on this key.`
+                 : res.status === 404 ? 'No usable model was found for this key.'
                  : res.status === 429 ? 'Rate limit reached — wait a minute and try again.'
                  : res.status === 413 ? 'The document is too large for one request.'
                  : `Request failed (${res.status}).`;
