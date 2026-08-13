@@ -197,8 +197,9 @@ td.diff{text-align:right;font-weight:700}
 .keyrow{display:grid;grid-template-columns:150px 1fr;gap:10px 14px;align-items:center;
   background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:12px}
 .keyrow label{margin:0;text-align:right;font-size:12.5px}
-.keyrow input{background:var(--bg);border:1px solid var(--line);color:var(--txt);border-radius:6px;
-  padding:10px;font:15px/1 ui-monospace,Menlo,monospace;width:100%}
+.keyrow input,.keyrow select{background:var(--bg);border:1px solid var(--line);color:var(--txt);
+  border-radius:6px;padding:10px;font:15px/1 ui-monospace,Menlo,monospace;width:100%}
+.keyrow select{font-family:inherit;height:40px}
 .keyrow .note2{grid-column:1/-1;font-size:12px;color:var(--dim);line-height:1.6}
 .keyrow .note2 a{color:var(--acc)}
 @media(max-width:640px){.keyrow{grid-template-columns:1fr}.keyrow label{text-align:left}}
@@ -327,14 +328,16 @@ td.diff{text-align:right;font-weight:700}
     <p class="disc" id="aiOffline">AI briefing needs an internet connection. It is unavailable offline.</p>
     <div class="hide" id="aiPanel">
       <div class="keyrow hide" id="aiKeyRow">
-        <label for="aiKey">Claude API key</label>
-        <input type="password" id="aiKey" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+        <label for="aiProv">Service</label>
+        <select id="aiProv">
+          <option value="gemini">Google Gemini — free tier</option>
+          <option value="claude">Anthropic Claude — paid API</option>
+        </select>
+        <label for="aiKey">API key</label>
+        <input type="password" id="aiKey" placeholder="AIza..." autocomplete="off" spellcheck="false">
         <label for="aiModel">Model</label>
-        <input type="text" id="aiModel" value="claude-sonnet-5" autocomplete="off" spellcheck="false">
-        <p class="note2">The key stays on this device and is never sent anywhere except to
-          Anthropic. Get one at <a href="https://console.anthropic.com" target="_blank"
-          rel="noopener">console.anthropic.com</a> — note that API access is billed separately
-          from a Claude.ai subscription.</p>
+        <input type="text" id="aiModel" autocomplete="off" spellcheck="false">
+        <p class="note2" id="aiNote"></p>
       </div>
       <div class="row">
         <button id="aiRun">Generate briefing</button>
@@ -359,7 +362,7 @@ td.diff{text-align:right;font-weight:700}
       <p>The commander remains responsible for studying the flight plan, NOTAMs, weather and all
       other briefing material in full, and for verifying every figure against the source document
       before acting on it.</p>
-      <p>The flight plan is sent to Anthropic for processing when you continue.</p>
+      <p id="aiWhere"></p>
       <div class="row" style="margin-top:20px">
         <button id="aiAgree">I understand — generate</button>
         <button id="aiCancel" class="ghost">Cancel</button>
@@ -414,10 +417,15 @@ td.diff{text-align:right;font-weight:700}
 
       <h3>AI briefing (optional)</h3>
       <p>With an internet connection an extra card appears at the bottom. It sends the loaded
-      flight plan to Claude and returns a short summary of fuel, times, SIGMET and AIRMET,
+      flight plan to a model and returns a short summary of fuel, times, SIGMET and AIRMET,
       turbulence, NOTAMs and anything else needing attention.</p>
-      <p>It needs your own Claude API key from console.anthropic.com, entered once and kept on
-      this device. API access is billed separately from a Claude.ai subscription.</p>
+      <p>Two services are available under <b>API key</b>. <b>Google Gemini</b> is the default and
+      has a free tier — get a key at aistudio.google.com, no card required. <b>Anthropic Claude</b>
+      is the alternative and is billed per request. Either key is entered once and kept on this
+      device only.</p>
+      <div class="tip">On the Gemini free tier Google may use what you send to improve their
+      products. Check that sending company flight documentation is acceptable under your
+      operator's policy before using it.</div>
       <div class="tip">The summary is machine-generated and may be wrong or incomplete. It is an
       aid to orientation, never a substitute for studying the flight documentation, and every
       figure must be verified against the source before it is acted on.</div>
@@ -1007,8 +1015,64 @@ async function load(f){
 }
 
 /* ================= AI briefing ================= */
-const AKEY = 'etofill:aikey', AMODEL = 'etofill:aimodel';
 let TEXT_ALL = '', aiBusy = false;
+
+const PROVIDERS = {
+  gemini: {
+    label: 'Gemini', keyStore: 'etofill:gkey', modelStore: 'etofill:gmodel',
+    model: 'gemini-2.5-flash', placeholder: 'AIza...',
+    note: 'Free key from <a href="https://aistudio.google.com/apikey" target="_blank" '
+        + 'rel="noopener">aistudio.google.com</a>, no card needed. Other models to try: '
+        + 'gemini-2.5-pro, gemini-2.0-flash. <b>On the free tier Google may use what you send '
+        + 'to improve their products</b> — check that sending company flight documentation '
+        + 'is acceptable under your operator&rsquo;s policy.',
+    send(key, model, pdf, text){
+      return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({
+          contents: [{ parts: pdf
+            ? [{ inline_data: { mime_type: 'application/pdf', data: pdf } }, { text: PROMPT }]
+            : [{ text: PROMPT + '\n\nFLIGHT PLAN TEXT:\n' + text }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 3000 }
+        })
+      });
+    },
+    read(d){
+      const c = (d.candidates || [])[0];
+      const t = ((c && c.content && c.content.parts) || []).map(p => p.text || '').join('').trim();
+      if (!t && c && c.finishReason && c.finishReason !== 'STOP')
+        throw new Error('The model stopped early (' + c.finishReason + ').');
+      const u = d.usageMetadata || {};
+      return { text: t, in: u.promptTokenCount, out: u.candidatesTokenCount };
+    }
+  },
+  claude: {
+    label: 'Claude', keyStore: 'etofill:aikey', modelStore: 'etofill:aimodel',
+    model: 'claude-sonnet-5', placeholder: 'sk-ant-...',
+    note: 'Key from <a href="https://console.anthropic.com" target="_blank" '
+        + 'rel="noopener">console.anthropic.com</a>. API access is billed separately from a '
+        + 'Claude.ai subscription and needs prepaid credit.',
+    send(key, model, pdf, text){
+      return fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': key,
+                   'anthropic-version': '2023-06-01',
+                   'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model, max_tokens: 3000, messages: [{ role: 'user', content: pdf
+          ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdf } },
+             { type: 'text', text: PROMPT }]
+          : [{ type: 'text', text: PROMPT + '\n\nFLIGHT PLAN TEXT:\n' + text }] }] })
+      });
+    },
+    read(d){
+      const u = d.usage || {};
+      return { text: (d.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim(),
+               in: u.input_tokens, out: u.output_tokens };
+    }
+  }
+};
+const prov = () => PROVIDERS[$('#aiProv').value] || PROVIDERS.gemini;
 
 const online = () => navigator.onLine !== false;
 function aiRefresh(){
@@ -1020,13 +1084,21 @@ function aiRefresh(){
 addEventListener('online', aiRefresh);
 addEventListener('offline', aiRefresh);
 
-try {
-  $('#aiKey').value = localStorage.getItem(AKEY) || '';
-  $('#aiModel').value = localStorage.getItem(AMODEL) || 'claude-sonnet-5';
-} catch(e){}
+function loadProv(){
+  const p = prov();
+  let k = '', m = '';
+  try { k = localStorage.getItem(p.keyStore) || ''; m = localStorage.getItem(p.modelStore) || ''; } catch(e){}
+  $('#aiKey').value = k; $('#aiKey').placeholder = p.placeholder;
+  $('#aiModel').value = m || p.model;
+  $('#aiNote').innerHTML = p.note;
+  try { localStorage.setItem('etofill:aiprov', $('#aiProv').value); } catch(e){}
+}
+try { $('#aiProv').value = localStorage.getItem('etofill:aiprov') || 'gemini'; } catch(e){}
+loadProv();
+$('#aiProv').onchange = () => { loadProv(); hide('#m5'); };
 $('#aiKeyBtn').onclick = () => $('#aiKeyRow').classList.toggle('hide');
-$('#aiKey').oninput = () => { try { localStorage.setItem(AKEY, $('#aiKey').value.trim()); } catch(e){} };
-$('#aiModel').oninput = () => { try { localStorage.setItem(AMODEL, $('#aiModel').value.trim()); } catch(e){} };
+$('#aiKey').oninput = () => { try { localStorage.setItem(prov().keyStore, $('#aiKey').value.trim()); } catch(e){} };
+$('#aiModel').oninput = () => { try { localStorage.setItem(prov().modelStore, $('#aiModel').value.trim()); } catch(e){} };
 
 const PROMPT = `You are briefing the operating crew from the attached Air Astana operational flight plan.
 
@@ -1058,9 +1130,13 @@ $('#aiRun').onclick = () => {
   if (!RAW){ msg('#m5', 'Load a flight plan first.', 'err'); return; }
   if (!$('#aiKey').value.trim()){
     $('#aiKeyRow').classList.remove('hide');
-    msg('#m5', 'Enter your Claude API key to use the briefing.', 'warn');
+    msg('#m5', `Enter your ${prov().label} API key to use the briefing.`, 'warn');
     $('#aiKey').focus(); return;
   }
+  $('#aiWhere').innerHTML = $('#aiProv').value === 'gemini'
+    ? 'The flight plan is sent to <b>Google</b> when you continue. On the free tier Google may '
+    + 'use it to improve their products, so make sure that is acceptable for this document.'
+    : 'The flight plan is sent to <b>Anthropic</b> when you continue.';
   $('#aiDisc').classList.remove('hide');
   document.body.style.overflow = 'hidden';
 };
@@ -1081,51 +1157,35 @@ async function runBriefing(){
   hide('#m5'); out.classList.add('hide');
 
   try {
-    const pages = DOC.pages().length;
-    const usePdf = pages <= 100 && RAW.byteLength < 22 * 1024 * 1024;
-    const content = usePdf
-      ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64(RAW) } },
-         { type: 'text', text: PROMPT }]
-      : [{ type: 'text', text: PROMPT + '\n\nFLIGHT PLAN TEXT:\n' + TEXT_ALL }];
-
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': $('#aiKey').value.trim(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: $('#aiModel').value.trim() || 'claude-sonnet-5',
-        max_tokens: 3000,
-        messages: [{ role: 'user', content }]
-      })
-    });
+    const p = prov();
+    const model = $('#aiModel').value.trim() || p.model;
+    const maxInline = $('#aiProv').value === 'gemini' ? 14 : 22;      // MB before falling back to text
+    const usePdf = DOC.pages().length <= 100 && RAW.byteLength < maxInline * 1024 * 1024;
+    const res = await p.send($('#aiKey').value.trim(), model, usePdf ? b64(RAW) : null, TEXT_ALL);
 
     if (!res.ok){
       let detail = '';
-      try { detail = (await res.json()).error?.message || ''; } catch(e){}
-      const hint = res.status === 401 ? 'The API key was rejected.'
-                 : res.status === 429 ? 'Rate limit or credit limit reached.'
+      try { const j = await res.json(); detail = (j.error && j.error.message) || ''; } catch(e){}
+      const hint = (res.status === 401 || res.status === 403) ? 'The API key was rejected.'
+                 : res.status === 400 && /API_KEY|API key/i.test(detail) ? 'The API key was rejected.'
+                 : res.status === 404 ? `Model "${model}" is not available on this key.`
+                 : res.status === 429 ? 'Rate limit reached — wait a minute and try again.'
                  : res.status === 413 ? 'The document is too large for one request.'
                  : `Request failed (${res.status}).`;
       throw new Error(hint + (detail ? ' ' + detail : ''));
     }
-    const data = await res.json();
-    const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
-    if (!text) throw new Error('The model returned nothing.');
+    const r = p.read(await res.json());
+    if (!r.text) throw new Error('The model returned nothing.');
 
-    out.innerHTML = renderBrief(text);
+    out.innerHTML = renderBrief(r.text);
     out.classList.remove('hide');
-    const u = data.usage || {};
-    $('#aiMeta').textContent = `${$('#aiModel').value.trim()} · ${Math.round((Date.now()-t0)/1000)}s`
-      + (u.input_tokens ? ` · ${u.input_tokens} in / ${u.output_tokens} out` : '')
+    $('#aiMeta').textContent = `${p.label} · ${model} · ${Math.round((Date.now()-t0)/1000)}s`
+      + (r.in ? ` · ${r.in} in / ${r.out} out` : '')
       + (usePdf ? '' : ' · sent as text');
     msg('#m5', 'Generated by a language model. Verify every figure against the document.', 'warn');
   } catch (e){
     const off = /Failed to fetch|NetworkError|Load failed/i.test(e.message);
-    msg('#m5', off ? 'Could not reach Anthropic — check the connection.' : e.message, 'err');
+    msg('#m5', off ? `Could not reach ${prov().label} — check the connection.` : e.message, 'err');
   }
   clearInterval(tick);
   aiBusy = false; btn.disabled = false; btn.textContent = 'Generate briefing';

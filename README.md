@@ -84,11 +84,20 @@ The button in the header switches between light and dark themes; the choice is r
 
 ## AI briefing (optional)
 
-When the device is online an extra card appears at the bottom. It sends the loaded plan to
-Claude and returns a short summary — fuel, times, SIGMET and AIRMET, turbulence, NOTAMs,
-specials. It needs your own Claude API key from console.anthropic.com, entered once and stored
-on the device only; API access is billed separately from a Claude.ai subscription. The summary
-is machine-generated, may be wrong, and never replaces studying the flight documentation.
+When the device is online an extra card appears at the bottom. It sends the loaded plan to a
+model and returns a short summary — fuel, times, SIGMET and AIRMET, turbulence, NOTAMs, specials.
+
+Two services are selectable under **API key**:
+
+| Service | Cost | Key from |
+|---|---|---|
+| Google Gemini (default) | Free tier, rate limited | aistudio.google.com, no card |
+| Anthropic Claude | Paid per request | console.anthropic.com, prepaid credit |
+
+The key is entered once and stored on the device only. **On the Gemini free tier Google may use
+what you send to improve their products** — check that sending company flight documentation is
+acceptable under your operator's policy. The summary is machine-generated, may be wrong, and
+never replaces studying the flight documentation.
 
 ## Print colours
 
