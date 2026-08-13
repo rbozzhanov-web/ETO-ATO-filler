@@ -1063,7 +1063,7 @@ function renderFields(){
     inp.placeholder = '.'.repeat(Math.min(f.n, 40));
     inp.autocapitalize = 'characters'; inp.spellcheck = false; inp.enterKeyHint = 'next';
     inp.autocomplete = 'off'; inp.setAttribute('autocorrect', 'off');
-    if (/^(ALTM\d|STBY|QNH)$/i.test(f.label)){          // pressure settings are digits only
+    if (/^(ALTM\d|STBY|QNH|PIC BLOCK)$/i.test(f.label)){   // digits-only fields
       inp.inputMode = 'numeric'; inp.pattern = '[0-9]*';
     }
     inp.oninput = () => {
