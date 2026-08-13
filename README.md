@@ -85,16 +85,24 @@ The button in the header switches between light and dark themes; the choice is r
 ## AI briefing (optional)
 
 When the device is online an extra card appears at the bottom. It sends the loaded plan to a
-model and returns a short summary — fuel, times, SIGMET and AIRMET, turbulence, NOTAMs, specials.
+model and returns a cockpit-length summary: seven headings — fuel, time, route, weather,
+turbulence, NOTAMs, specials — at most five short lines each. Only what changes a decision,
+with anything limiting marked ATTENTION.
 
 It runs on the Anthropic API and needs your own key. The card has a **How to get a key** button
 with the steps: an account on console.anthropic.com (separate from claude.ai — a subscription
 there does not include API access), a card added under Settings → Billing with a minimum 5 USD
 prepaid top-up, then API Keys → Create Key. The key is shown once, so copy it immediately.
 
-Paste the key and nothing else. The app asks which models the key can use and selects one
-automatically, preferring the current fast tier over preview models, and re-checks if the chosen
-model is ever withdrawn. The key is stored on this device only, never written into the app file,
+Paste the key and nothing else. The app asks which models the key can use and picks the
+cheapest suitable one, and re-checks if that model is ever withdrawn.
+
+Cost is kept down by default: the plan is sent as text, not as rasterised pages, which for a
+typical 81-page plan is about 29k input tokens instead of 146k; the cheapest suitable model is
+chosen; and the answer is capped at 1.8k tokens. Two tick boxes
+change it — **strongest model** for a sharper read at several times the price, and **whole PDF**
+to include the chart and scan pages that carry no text, which multiplies the input roughly
+fivefold. The key is stored on this device only, never written into the app file,
 and is sent nowhere except api.anthropic.com. API requests are not used to train models.
 
 The summary is machine-generated, may be wrong, and

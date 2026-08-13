@@ -166,7 +166,6 @@ td.diff{text-align:right;font-weight:700}
 .clock{margin-left:auto;font:12px/1 ui-monospace,Menlo,monospace;color:var(--dim);align-self:center}
 @media(max-width:640px){.fld{grid-template-columns:1fr;gap:2px}.fld label{text-align:left;margin-top:8px}}
 
-.hide{display:none}
 .note{font-size:12.5px;color:var(--dim);margin-top:12px;line-height:1.8}
 .note code{background:var(--panel2);padding:1px 5px;border-radius:3px}
 .sw{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:1px;
@@ -201,6 +200,9 @@ td.diff{text-align:right;font-weight:700}
   border-radius:6px;padding:10px;font:15px/1 ui-monospace,Menlo,monospace;width:100%}
 .keyrow select{font-family:inherit;height:40px}
 .keyrow .note2{grid-column:1/-1;font-size:12px;color:var(--dim);line-height:1.6}
+.keyline{display:flex;gap:10px;align-items:center}
+.keyline input{flex:1;min-width:0}
+.keyline input:read-only{color:var(--dim);background:var(--panel2);letter-spacing:1px}
 .setup{grid-column:1/-1}
 .setup h5{margin:0 0 8px;font-size:12px;letter-spacing:.7px;text-transform:uppercase;color:var(--acc)}
 .setup ol{margin:0;padding-left:20px;font-size:13px;line-height:1.7;color:var(--dim)}
@@ -231,6 +233,9 @@ td.diff{text-align:right;font-weight:700}
 .paper b+b{margin-left:10px}
 .guide .tip{border-left:3px solid var(--gold);border-radius:0;padding:2px 0 2px 14px;
   margin:0 0 12px;color:var(--dim);font-size:13.5px;line-height:1.65}
+
+/* keep last: a later rule setting display would defeat it */
+.hide{display:none}
 </style>
 </head>
 <body>
@@ -351,9 +356,17 @@ td.diff{text-align:right;font-weight:700}
           </ol>
         </div>
         <label for="aiKey">API key</label>
-        <input type="password" id="aiKey" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+        <div class="keyline">
+          <input type="password" id="aiKey" placeholder="sk-ant-..." autocomplete="off"
+                 spellcheck="false" enterkeyhint="done">
+          <button type="button" class="ghost sm hide" id="aiKeyClear">Remove</button>
+        </div>
         <p class="note2" id="aiModelInfo">Model: chosen automatically.</p>
       </div>
+      <label class="chk" style="padding:0 0 6px"><input type="checkbox" id="aiBest">
+        Use the strongest model — sharper, several times the cost</label>
+      <label class="chk" style="padding:0 0 12px"><input type="checkbox" id="aiFull">
+        Send the whole PDF including charts and scans — slower and dearer</label>
       <div class="row">
         <button id="aiRun">Generate briefing</button>
         <button id="aiKeyBtn" class="ghost">How to get a key</button>
@@ -433,15 +446,26 @@ td.diff{text-align:right;font-weight:700}
 
       <h3>AI briefing (optional)</h3>
       <p>With an internet connection an extra card appears at the bottom. It sends the loaded
-      flight plan to a model and returns a short summary of fuel, times, SIGMET and AIRMET,
-      turbulence, NOTAMs and anything else needing attention.</p>
+      flight plan to a model and returns a cockpit-length summary — seven headings, at most five
+      short lines each, covering fuel, times, route, weather, turbulence, NOTAMs and specials.
+      It is deliberately terse: only what changes a decision, with anything limiting marked
+      ATTENTION.</p>
       <p>It runs on the Anthropic API and needs your own key. Press <b>How to get a key</b> in
       that card for the steps — an account on console.anthropic.com, a small prepaid balance,
       then a key you paste once. It is kept on this iPad, never written into the app file, and
       goes nowhere but api.anthropic.com. API requests are not used to train models.</p>
       <p>Paste the key and nothing else: the app asks which models that key can use and picks the
       best one itself, preferring the current fast tier over previews, and looks again if the
-      model is ever withdrawn.</p>
+      model is ever withdrawn. Once entered the key is locked and shown only as
+      <code>sk-ant-a…6789</code>; <b>Remove</b> deletes it and lets you enter another.</p>
+      <p>The briefing is written out as it arrives rather than appearing all at once. If nothing
+      comes back for a minute the request is dropped so you can try again, and tapping the button
+      while it runs cancels it.</p>
+      <p>By default the plan goes as text and the cheapest suitable model is used, which keeps a
+      briefing to a fraction of a cent and a few seconds. Two tick boxes change that:
+      <b>strongest model</b> for a sharper read at several times the cost, and <b>whole PDF</b>
+      to include the chart and scan pages that carry no text — that one multiplies the input
+      roughly fivefold, so leave it off unless you need the charts.</p>
       <div class="tip">The summary is machine-generated and may be wrong or incomplete. It is an
       aid to orientation, never a substitute for studying the flight documentation, and every
       figure must be verified against the source before it is acted on.</div>
@@ -1031,55 +1055,92 @@ async function load(f){
 }
 
 /* ================= AI briefing ================= */
-let TEXT_ALL = '', aiBusy = false;
+let TEXT_ALL = '', aiBusy = false, aiAbort = null, aiTimedOut = false;
+const AI_TIMEOUT = 60;                                   // seconds before the request is dropped
 
 const CLAUDE = {
   label: 'Claude', keyStore: 'etofill:aikey', modelStore: 'etofill:aimodel',
-  fallbacks: ['claude-sonnet-5', 'claude-haiku-4-5-20251001'],
-  async list(key){
+  fallbacks: ['claude-haiku-4-5-20251001', 'claude-sonnet-5'],
+  async list(key, signal){
     const r = await fetch('https://api.anthropic.com/v1/models?limit=100', {
+      signal,
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01',
                  'anthropic-dangerous-direct-browser-access': 'true' } });
     if (!r.ok) throw new Error('models ' + r.status);
     return ((await r.json()).data || []).map(m => m.id);
   },
-  send(key, model, pdf, text){
+  send(key, model, pdf, text, signal, noThink){
     return fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
+      method: 'POST', signal,
       headers: { 'content-type': 'application/json', 'x-api-key': key,
                  'anthropic-version': '2023-06-01',
                  'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model, max_tokens: 6000, messages: [{ role: 'user', content: pdf
+      body: JSON.stringify({ model, max_tokens: 1800, stream: true,
+        ...(noThink ? { thinking: { type: 'disabled' } } : {}),
+        messages: [{ role: 'user', content: pdf
         ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdf } },
            { type: 'text', text: PROMPT }]
         : [{ type: 'text', text: PROMPT + '\n\nFLIGHT PLAN TEXT:\n' + text }] }] })
     });
   },
-  read(d){
-    const u = d.usage || {};
-    return { text: (d.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim(),
-             in: u.input_tokens, out: u.output_tokens };
-  }
 };
+
+/* Server-sent events: show the briefing as it is written instead of waiting for the whole
+   answer, and treat silence — not total duration — as the thing worth timing out. */
+async function readStream(res, onText, onIdle){
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = '', text = '', stop = '', usage = {}, thinking = false;
+  for (;;){
+    const { value, done } = await reader.read();
+    if (done) break;
+    onIdle();
+    buf += dec.decode(value, { stream: true });
+    const chunks = buf.split('\n\n');
+    buf = chunks.pop();
+    for (const c of chunks){
+      const line = c.split('\n').find(l => l.startsWith('data:'));
+      if (!line) continue;
+      let ev; try { ev = JSON.parse(line.slice(5).trim()); } catch(e){ continue; }
+      if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta'){
+        text += ev.delta.text; onText(text);
+      } else if (ev.type === 'content_block_delta' && ev.delta
+                 && /thinking/.test(ev.delta.type || '')){
+        thinking = true;
+      } else if (ev.type === 'message_start' && ev.message){
+        usage.in = (ev.message.usage || {}).input_tokens;
+      } else if (ev.type === 'message_delta'){
+        if (ev.delta && ev.delta.stop_reason) stop = ev.delta.stop_reason;
+        if (ev.usage) usage.out = ev.usage.output_tokens;
+      } else if (ev.type === 'error'){
+        throw new Error((ev.error && ev.error.message) || 'stream error');
+      }
+    }
+  }
+  return { text: text.trim(), stop, thinking, in: usage.in, out: usage.out };
+}
 const prov = () => CLAUDE;
 
-/* Rank the models a key can actually use: newest generation first, the fast tier
-   preferred (it is the one the free quota is generous with), previews last. */
-function rankModel(id){
+/* Rank the models a key can use. Cost comes first: Haiku is an order of magnitude cheaper
+   than Sonnet and reads a flight plan perfectly well. Tick "strongest model" to invert it. */
+function rankModel(id, best){
   const s = id.toLowerCase();
   if (!/^claude/.test(s)) return -1e9;
   const v = parseFloat((s.match(/claude[a-z-]*?-(\d+(?:\.\d+)?)/) || [0, 0])[1]) || 0;
-  let k = v * 100;
-  if (/flash|haiku/.test(s)) k += 30;
-  if (/sonnet/.test(s)) k += 25;
-  if (/pro|opus/.test(s)) k += 10;
-  if (/lite/.test(s)) k -= 18;
-  if (/preview|exp|beta/.test(s)) k -= 60;   // preview quotas are tighter
-  if (/thinking/.test(s)) k -= 12;
+  let k = v * 10;                              // generation matters, but less than tier
+  if (best){
+    if (/opus/.test(s)) k += 400;
+    else if (/sonnet/.test(s)) k += 300;
+    else if (/haiku/.test(s)) k += 100;
+  } else {
+    if (/haiku/.test(s)) k += 400;             // cheapest tier
+    else if (/sonnet/.test(s)) k += 150;
+    else if (/opus/.test(s)) k += 0;
+  }
+  if (/preview|exp|beta/.test(s)) k -= 60;     // preview quotas are tighter
   if (/latest/.test(s)) k += 2;
   return k;
 }
-async function pickModel(p, key, force){
+async function pickModel(p, key, force, signal){
   if (!force){
     try {
       const c = JSON.parse(localStorage.getItem(p.modelStore) || 'null');
@@ -1088,10 +1149,12 @@ async function pickModel(p, key, force){
   }
   let id = p.fallbacks[0];
   try {
-    const list = await p.list(key);
-    const best = list.filter(m => rankModel(m) > -1e8).sort((a, b) => rankModel(b) - rankModel(a))[0];
-    if (best) id = best;
-  } catch(e){}
+    const strongest = $('#aiBest').checked;
+    const list = await p.list(key, signal);
+    const top = list.filter(m => rankModel(m, strongest) > -1e8)
+                    .sort((a, b) => rankModel(b, strongest) - rankModel(a, strongest))[0];
+    if (top) id = top;
+  } catch(e){ if (e.name === 'AbortError') throw e; }
   try { localStorage.setItem(p.modelStore, JSON.stringify({ id, at: Date.now() })); } catch(e){}
   return id;
 }
@@ -1111,79 +1174,88 @@ function aiRefresh(){
 addEventListener('online', aiRefresh);
 addEventListener('offline', aiRefresh);
 
+let AIKEY = '';
+const maskKey = k => k.length > 14 ? k.slice(0, 8) + '\u2026' + k.slice(-4) : '\u2026'.repeat(6);
+
+function lockKey(on){
+  const i = $('#aiKey');
+  i.readOnly = on;
+  i.type = on ? 'text' : 'password';
+  i.value = on ? maskKey(AIKEY) : '';
+  $('#aiKeyClear').classList.toggle('hide', !on);
+  if (!on) i.focus();
+}
 function loadProv(){
   const p = prov();
   let cached = null;
   try {
-    $('#aiKey').value = localStorage.getItem(p.keyStore) || '';
+    AIKEY = localStorage.getItem(p.keyStore) || '';
     cached = JSON.parse(localStorage.getItem(p.modelStore) || 'null');
   } catch(e){}
+  lockKey(!!AIKEY);
   showModel(cached && cached.id);
 }
 loadProv();
 $('#aiKeyBtn').onclick = () => $('#aiKeyRow').classList.toggle('hide');
-$('#aiKey').oninput = () => {
-  try {
-    localStorage.setItem(prov().keyStore, $('#aiKey').value.trim());
-    localStorage.removeItem(prov().modelStore);      // new key -> detect again
-  } catch(e){}
+$('#aiBest').onchange = () => {                 // different tier -> choose again
+  try { localStorage.removeItem(prov().modelStore); } catch(e){}
   showModel(null);
 };
+function commitKey(){
+  const i = $('#aiKey');
+  if (i.readOnly) return;
+  const v = i.value.trim();
+  if (!v) return;
+  AIKEY = v;
+  try {
+    localStorage.setItem(prov().keyStore, AIKEY);
+    localStorage.removeItem(prov().modelStore);      // new key -> detect the model again
+  } catch(e){}
+  showModel(null);
+  lockKey(true);                                     // one entry, then read-only
+  hide('#m5');
+}
+$('#aiKey').onblur = commitKey;
+$('#aiKey').onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); commitKey(); } };
+$('#aiKeyClear').onclick = () => {
+  if (!confirm('Remove the stored API key from this device?')) return;
+  AIKEY = '';
+  try { localStorage.removeItem(prov().keyStore); localStorage.removeItem(prov().modelStore); } catch(e){}
+  showModel(null);
+  lockKey(false);
+};
 
-const PROMPT = `You are preparing a pre-flight briefing for the operating crew from the attached
-Air Astana operational flight plan. The crew will read this before departure, alongside the
-document itself. Be thorough and specific: this is a working briefing, not a teaser.
+const PROMPT = `Brief the operating crew from the attached Air Astana operational flight plan.
 
-Produce every one of these sections, in this order, with the exact heading given. Never omit a
-section and never merge two sections together.
+This is a cockpit briefing, not a report. Hard limits, and they are limits, not targets:
+at most five lines per section, at most eighteen words per line. Leave out anything that does not
+change what the crew does, but do carry the figures they will be asked for.
+
+Write these seven sections in this order, each heading alone on its line, nothing before or after:
 
 FUEL
-Block, trip, taxi, alternate, final reserve, contingency, extra with the stated reason, minimum
-block, and the tankering figure. Give the burn per extra tonne if printed. State the fuel
-remaining planned at destination and at the alternate. Call out anything tight: a small margin
-over minimum block, extra fuel carried, an alternate that is far away.
-
 TIME
-Off-block and airborne times, trip time, time to the alternate, endurance, and the arrival
-estimate. Note the difference between STD/ETD and STA/ETA if the document shows one.
-
-ROUTE AND LEVELS
-Departure and arrival airports and runways if given, the SID and STAR, planned cruise levels and
-where they change, step climbs, top of climb and top of descent, great circle versus ground
-distance, and the alternate routing.
-
+ROUTE
 WEATHER
-SIGMET and AIRMET affecting this route, with the phenomenon, area, levels and validity. Then the
-significant en-route weather from the wind and temperature summary: worst winds, lowest
-temperatures, ISA deviation, tropopause and freezing level. Then departure, destination and
-alternate weather if the document carries TAF or METAR.
-
 TURBULENCE
-Where turbulence is forecast along this route, naming the waypoints or FIRs, with flight levels
-and severity. Include jet stream cores and wind shear if shown. If the document gives a
-turbulence chart or index, say what it indicates. If nothing is forecast, say so explicitly.
-
 NOTAMS
-Only those that bear on this flight, grouped by departure, destination, alternates and en-route.
-For each, give what is affected and the validity period. Lead with runway, taxiway, navaid and
-airspace closures, then approach or lighting unserviceability, then the rest. If a NOTAM changes
-what the crew can plan for, say so in plain words.
-
 SPECIALS
-Overflight permits and their numbers, ETOPS or ERA arrangements, RVSM, RNP and PBN requirements,
-CPDLC and datalink, minimum equipment items, curfews, slot times, security or overflight
-restrictions, and anything else the crew must know that does not fit above.
 
-Rules, and they matter:
-- Use only what the attached document contains. Quote every figure exactly as printed, with its
-  units. Never calculate, estimate, round or infer a number that is not written there.
-- If the document does not cover a section, write "Not contained in this flight plan" under that
-  heading and move on. Never fill a gap from general knowledge.
-- Begin any line that is limiting, unusual or needs a decision with ATTENTION:
-- Put the most operationally significant item first within each section.
-- Write in short factual lines. No preamble, no summary at the end, no advice on how to fly.
-- All times UTC. Use the document's own naming for waypoints, airports and airways.
-- Plain text. Each heading on its own line, exactly as written above.`;
+What belongs under each:
+FUEL - block, trip, alternate and final reserve. Extra with its reason. The tightest margin there is.
+TIME - trip time, time to alternate, endurance, arrival estimate.
+ROUTE - departure and destination, cruise levels and where they change, top of descent, alternate routing.
+WEATHER - SIGMET and AIRMET with area, levels and validity. Worst wind and lowest temperature. Tropopause.
+TURBULENCE - where along this route, at what levels, how severe. Jet stream if it matters.
+NOTAMS - only those that change what the crew can do. Aerodrome, what is affected, validity.
+SPECIALS - permits with numbers, ETOPS or ERA, RVSM, PBN, MEL, slots, restrictions. Only if limiting.
+
+Rules:
+- Quote figures exactly as printed, with units. Never calculate, estimate or round anything.
+- Nothing significant in a section: write None and nothing else.
+- Section not covered by the document: write Not in document and nothing else.
+- Begin a line with ATTENTION: only when it is limiting or out of the ordinary. Sparingly.
+- No introduction, no closing summary, no advice on how to fly. Plain text. Times in UTC.`;
 
 function b64(buf){
   const u8 = new Uint8Array(buf); let s = '', C = 0x8000;
@@ -1192,12 +1264,12 @@ function b64(buf){
 }
 
 $('#aiRun').onclick = () => {
-  if (aiBusy) return;
+  if (aiBusy){ if (aiAbort) aiAbort.abort(); return; }    // second press cancels
   if (!RAW){ msg('#m5', 'Load a flight plan first.', 'err'); return; }
-  if (!$('#aiKey').value.trim()){
-    $('#aiKeyRow').classList.remove('hide');
-    msg('#m5', 'Enter your Claude API key to use the briefing. Press “How to get a key”.', 'warn');
-    $('#aiKey').focus(); return;
+  commitKey();
+  if (!AIKEY){
+    msg('#m5', 'No API key set. Press “How to get a key” to set one up.', 'err');
+    return;
   }
   $('#aiDisc').classList.remove('hide');
   document.body.style.overflow = 'hidden';
@@ -1209,28 +1281,42 @@ $('#aiAgree').onclick = () => { closeDisc(); runBriefing(); };
 
 async function runBriefing(){
   const btn = $('#aiRun'), out = $('#aiOut');
-  aiBusy = true; btn.disabled = true;
+  aiBusy = true; aiTimedOut = false;
+  aiAbort = new AbortController();
+  const signal = aiAbort.signal;
   const t0 = Date.now();
-  const tick = setInterval(() => {
-    btn.innerHTML = '<span class="spin"></span>Reading the plan… ' +
-      Math.round((Date.now() - t0) / 1000) + 's';
-  }, 500);
-  btn.innerHTML = '<span class="spin"></span>Reading the plan…';
+  let kill = setTimeout(() => { aiTimedOut = true; aiAbort.abort(); }, AI_TIMEOUT * 1000);
+  let streaming = false;
+  const idle = () => {                                   // a chunk arrived: restart the clock
+    clearTimeout(kill);
+    kill = setTimeout(() => { aiTimedOut = true; aiAbort.abort(); }, AI_TIMEOUT * 1000);
+  };
+  const label = () => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    btn.innerHTML = `<span class="spin"></span>${streaming ? 'Writing the briefing' : 'Reading the plan'}`
+                  + `… ${s}s · tap to cancel`;
+  };
+  const tick = setInterval(label, 500);
+  label();
   hide('#m5'); out.classList.add('hide');
 
   try {
-    const p = prov(), key = $('#aiKey').value.trim();
-    const maxInline = 22;                        // MB before falling back to plain text
-    const usePdf = DOC.pages().length <= 100 && RAW.byteLength < maxInline * 1024 * 1024;
+    const p = prov(), key = AIKEY;
+    // Text is the fast path: this OFP is ~36k tokens as text against ~146k when every page is
+    // rasterised. The whole PDF is opt-in, for the chart and scan pages that carry no text.
+    const usePdf = $('#aiFull').checked
+                && DOC.pages().length <= 100 && RAW.byteLength < 22 * 1024 * 1024;
     const pdf = usePdf ? b64(RAW) : null;
+    if ($('#aiFull').checked && !usePdf)
+      msg('#m5', 'The document is too big to send whole — sending the text instead.', 'warn');
 
-    let model = await pickModel(p, key, false);
+    let model = await pickModel(p, key, false, signal);
     showModel(model);
-    let res = await p.send(key, model, pdf, TEXT_ALL);
+    let res = await p.send(key, model, pdf, TEXT_ALL, signal);
     if (res.status === 404){                       // stale choice — look the list up again
-      model = await pickModel(p, key, true);
+      model = await pickModel(p, key, true, signal);
       showModel(model);
-      res = await p.send(key, model, pdf, TEXT_ALL);
+      res = await p.send(key, model, pdf, TEXT_ALL, signal);
     }
 
     if (!res.ok){
@@ -1244,26 +1330,55 @@ async function runBriefing(){
                  : `Request failed (${res.status}).`;
       throw new Error(hint + (detail ? ' ' + detail : ''));
     }
-    const r = p.read(await res.json());
-    if (!r.text) throw new Error('The model returned nothing.');
+    let last = 0;
+    const paint = t => {
+      streaming = true;
+      if (Date.now() - last < 120) return;             // repaint a few times a second, no more
+      last = Date.now();
+      out.innerHTML = renderBrief(t);
+    };
+    out.innerHTML = ''; out.classList.remove('hide');
+    let r = await readStream(res, paint, idle);
 
+    // budget spent on internal reasoning and nothing written: ask again with it turned off
+    if (!r.text && r.stop === 'max_tokens'){
+      msg('#m5', 'First attempt produced no text — retrying.', 'warn');
+      const res2 = await p.send(key, model, pdf, TEXT_ALL, signal, true);
+      if (res2.ok) r = await readStream(res2, paint, idle);
+    }
     out.innerHTML = renderBrief(r.text);
-    out.classList.remove('hide');
+
+    if (!r.text){
+      out.classList.add('hide');
+      throw new Error(r.stop === 'max_tokens'
+        ? 'The model used its whole output budget without writing a briefing. Try again, or '
+          + 'untick the whole-PDF option to send less.'
+        : `The model returned no text${r.stop ? ' (stop reason: ' + r.stop + ')' : ''}.`);
+    }
+    if (r.stop === 'max_tokens')
+      msg('#m5', 'The briefing was cut short at the length limit — the end may be missing.', 'warn');
     $('#aiMeta').textContent = `${p.label} · ${model} · ${Math.round((Date.now()-t0)/1000)}s`
       + (r.in ? ` · ${r.in} in / ${r.out} out` : '')
-      + (usePdf ? '' : ' · sent as text');
-    msg('#m5', 'Generated by a language model. Verify every figure against the document.', 'warn');
+      + (usePdf ? ' · full PDF' : ' · text only');
+    if (r.stop !== 'max_tokens')
+      msg('#m5', 'Generated by a language model. Verify every figure against the document.', 'warn');
   } catch (e){
     const off = /Failed to fetch|NetworkError|Load failed/i.test(e.message);
-    msg('#m5', off ? `Could not reach ${prov().label} — check the connection.` : e.message, 'err');
+    msg('#m5',
+      e.name === 'AbortError'
+        ? (aiTimedOut
+            ? `Nothing received for ${AI_TIMEOUT} s — the request was dropped. Press Generate briefing to try again.`
+            : 'Cancelled. Press Generate briefing to start again.')
+        : off ? 'Could not reach Anthropic — check the connection.'
+              : e.message, aiTimedOut || e.name === 'AbortError' ? 'warn' : 'err');
   }
-  clearInterval(tick);
-  aiBusy = false; btn.disabled = false; btn.textContent = 'Generate briefing';
+  clearTimeout(kill); clearInterval(tick);
+  aiAbort = null; aiBusy = false; btn.disabled = false; btn.textContent = 'Generate briefing';
 }
 
 function renderBrief(t){
   const esc = s => s.replace(/[&<>]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[c]));
-  const heads = /^(FUEL|TIME|ROUTE AND LEVELS|WEATHER|TURBULENCE|NOTAMS?|SPECIALS?)\b[:\s]*$/i;
+  const heads = /^(FLIGHT|FUEL|TIME|ROUTE(?: AND LEVELS)?|WEATHER|TURBULENCE|NOTAMS?|SPECIALS?)\b[:\s]*$/i;
   const out = []; let inList = false;
   for (const raw of t.split(/\r?\n/)){
     const line = raw.trim();
@@ -1558,8 +1673,15 @@ async function parse(buf){
   if (!pairs.length) throw new Error('ETO column not found — unexpected plan format');
   if (pairs.some(p => !p.font)) throw new Error('no Courier font on the page');
   allLines.sort((a, b) => a.page - b.page || b.base - a.base);
+  const out = [];
+  let cur = -1;
+  for (const l of allLines){
+    if (l.page !== cur){ cur = l.page; out.push(`\n===== PAGE ${cur + 1} =====`); }
+    if (!/^AIR ASTANA BRIEF PAGE|^PAGE \d+ OF \d+$/.test(l.text)) out.push(l.text);
+  }
   return { pairs, headers, anchor, fields, fpl, icao: icaoPlan(allLines),
-           text: allLines.map(l => l.text).join('\n') };
+           text: out.join('\n').trim(),
+           imagePages: [] };
 }
 
 /* ================= calculation ================= */
