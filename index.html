@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -14,15 +14,22 @@
 <title>ETO / ATO Filler — OFP</title>
 <style>
 :root{
-  --bg:#0f1419; --panel:#171d24; --panel2:#1e262f; --line:#2c3742;
+  --bg:#0f1419; --panel:#171d24; --panel2:#1e262f; --line:#2c3742; --line2:#232c35;
   --txt:#e6edf3; --dim:#8b98a5; --acc:#4d9fff; --acc2:#1f6feb;
   --ok:#3fb950; --warn:#d29922; --err:#f85149;
-  --gold:#9b804d; --navy:#253168;
+  --gold:#9b804d; --hdr:#131a21; --fld:#4a5560;
+}
+html[data-theme=light]{
+  --bg:#f2f5f8; --panel:#ffffff; --panel2:#f1f4f7; --line:#d6dde4; --line2:#e6ebf0;
+  --txt:#16202b; --dim:#5d6b7a; --acc:#0b62d6; --acc2:#0b62d6;
+  --ok:#1a7f37; --warn:#9a6700; --err:#cf222e;
+  --gold:#8a6f3e; --hdr:#eef2f6; --fld:#9aa7b4;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--txt);-webkit-tap-highlight-color:transparent;
-  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  transition:background .15s,color .15s}
 .wrap{max-width:1120px;margin:0 auto;
   padding:max(20px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) 70px max(18px,env(safe-area-inset-left))}
 h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
@@ -31,9 +38,13 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 .hd{display:flex;align-items:center;gap:18px;flex-wrap:wrap;position:relative;
   padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--line)}
 .hd::after{content:"";position:absolute;left:0;bottom:-1px;width:72px;height:1px;background:var(--gold)}
-.brand{background:#fff;border-radius:8px;padding:9px 14px;display:flex;flex:0 0 auto}
+.hd .grow{flex:1}
+.brand{background:#fff;border-radius:8px;padding:9px 14px;display:flex;flex:0 0 auto;
+  box-shadow:0 0 0 1px rgba(0,0,0,.07)}
 .logo{height:23px;width:auto;display:block}
-@media(max-width:520px){.hd{gap:12px}.logo{height:19px}}
+#theme{background:transparent;border:1px solid var(--line);color:var(--dim);border-radius:8px;
+  padding:9px 14px;font-size:13px;font-weight:600;min-height:40px;white-space:nowrap}
+@media(max-width:560px){.hd{gap:12px}.logo{height:19px}}
 
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
 .step{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.8px;
@@ -43,18 +54,22 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 
 #drop{border:2px dashed var(--line);border-radius:8px;padding:32px 20px;text-align:center;
   cursor:pointer;transition:.15s;background:var(--panel2)}
-#drop.over{border-color:var(--acc);background:#1b2530}
+#drop.over{border-color:var(--acc)}
 #drop b{color:var(--acc)}
 #drop .fn{margin-top:8px;font-size:13px;color:var(--dim);word-break:break-all}
 
 .row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
 label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px}
 input[type=text].big{background:var(--bg);border:1px solid var(--line);color:var(--txt);
-  border-radius:8px;padding:12px;font:600 24px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  border-radius:8px;padding:12px;font:700 24px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
   width:148px;letter-spacing:3px;text-align:center}
 input:focus{outline:none;border-color:var(--acc)}
 .chk{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--txt);cursor:pointer;padding-bottom:11px}
 .chk input{width:20px;height:20px;accent-color:var(--acc)}
+.hint{margin-top:14px;font-size:13px;color:var(--dim);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hint b{color:var(--txt);font-family:ui-monospace,Menlo,monospace}
+.pill{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:7px 14px;
+  font:600 13px/1 ui-monospace,Menlo,monospace;color:var(--acc);cursor:pointer;min-height:34px}
 
 button{background:var(--acc2);color:#fff;border:0;border-radius:8px;padding:13px 22px;
   font-size:15px;font-weight:600;cursor:pointer;transition:.15s;touch-action:manipulation;min-height:44px}
@@ -62,16 +77,18 @@ button:active:not(:disabled){transform:scale(.98)}
 button:disabled{opacity:.4}
 button.ghost{background:transparent;border:1px solid var(--line);color:var(--dim)}
 button.sm{padding:9px 15px;font-size:13.5px;min-height:38px}
-@media(hover:hover){button:hover:not(:disabled){background:var(--acc)}
+@media(hover:hover){button:hover:not(:disabled){filter:brightness(1.12)}
   button.ghost:hover:not(:disabled){background:var(--panel2);color:var(--txt)}
-  #drop:hover{border-color:var(--acc);background:#1b2530}
-  .sw:hover{transform:scale(1.12)}}
+  #drop:hover{border-color:var(--acc)}}
 
 .msg{margin-top:12px;font-size:13.5px;padding:11px 13px;border-radius:7px;display:none}
 .msg.show{display:block}
-.msg.ok{background:rgba(63,185,80,.12);color:var(--ok);border:1px solid rgba(63,185,80,.3)}
-.msg.err{background:rgba(248,81,73,.12);color:var(--err);border:1px solid rgba(248,81,73,.3)}
-.msg.warn{background:rgba(210,153,34,.12);color:var(--warn);border:1px solid rgba(210,153,34,.3)}
+.msg.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);
+  border:1px solid color-mix(in srgb,var(--ok) 34%,transparent)}
+.msg.err{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err);
+  border:1px solid color-mix(in srgb,var(--err) 34%,transparent)}
+.msg.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn);
+  border:1px solid color-mix(in srgb,var(--warn) 34%,transparent)}
 
 .stats{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px}
 .stat b{display:block;font:700 20px/1.3 ui-monospace,Menlo,monospace;color:var(--acc)}
@@ -81,41 +98,45 @@ button.sm{padding:9px 15px;font-size:13.5px;min-height:38px}
 .toolbar .sep{flex:1}
 .saved{font-size:12px;color:var(--dim)}
 
-.colors{display:flex;gap:14px 24px;flex-wrap:wrap;align-items:center;
-  background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px}
-.cgrp{display:flex;align-items:center;gap:9px}
-.clab{font-size:12.5px;color:var(--dim);white-space:nowrap}
-.sgn{font:700 15px/1 ui-monospace,Menlo,monospace;color:var(--dim)}
-.sw{width:26px;height:26px;border-radius:5px;cursor:pointer;border:2px solid transparent;
-  box-shadow:0 0 0 1px #3a4650 inset;transition:.12s;touch-action:manipulation}
-.sw.on{border-color:var(--acc);box-shadow:0 0 0 1px #3a4650 inset,0 0 0 1px var(--acc)}
-input[type=color]{width:34px;height:30px;padding:0;border:1px solid var(--line);
-  border-radius:5px;background:transparent;cursor:pointer}
-input.hex{width:80px;background:var(--bg);border:1px solid var(--line);color:var(--txt);
-  border-radius:5px;padding:6px;font:16px/1 ui-monospace,Menlo,monospace;text-align:center}
-
 .tblbox{max-height:min(56vh,520px);overflow:auto;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px}
 table{border-collapse:collapse;width:100%;font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
 th{position:sticky;top:0;z-index:2;background:var(--panel2);color:var(--dim);font-size:11px;
   text-transform:uppercase;letter-spacing:.6px;padding:9px 8px;text-align:left;
   border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:5px 8px;border-bottom:1px solid #232c35;white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid var(--line2);white-space:nowrap}
 tr:last-child td{border-bottom:0}
-td.eto{font-weight:700}
+td.eto{font-weight:700;color:var(--c-eto)}
 td.num{text-align:right;color:var(--dim)}
-tr.hdr td{background:#131a21;color:var(--dim);font-size:11px;letter-spacing:.8px;
+tr.hdr td{background:var(--hdr);color:var(--dim);font-size:11px;letter-spacing:.8px;
   text-transform:uppercase;font-weight:700;padding:8px}
-tr.filled{background:rgba(63,185,80,.05)}
-td input{background:transparent;border:1px solid #2c3742;color:var(--txt);border-radius:5px;
-  padding:7px 4px;font:600 16px/1 ui-monospace,Menlo,monospace;width:78px;text-align:center}
-td input::placeholder{color:#4a5560;font-weight:400;font-size:14px}
+tr.filled{background:color-mix(in srgb,var(--ok) 8%,transparent)}
+td input,.fld input{background:transparent;border:1px solid var(--line);color:var(--txt);
+  border-radius:5px;padding:7px 4px;font:700 16px/1 ui-monospace,Menlo,monospace;
+  width:78px;text-align:center}
+input::placeholder{color:var(--fld);font-weight:400;font-size:14px}
 td input.bad{border-color:var(--err)}
-td input:focus{border-color:var(--acc);background:var(--bg)}
+td input:focus,.fld input:focus{border-color:var(--acc);background:var(--bg)}
+td input.ato{color:var(--c-ato)}
+td input.fuel{color:var(--c-fuel)}
 td.diff{text-align:right;font-weight:700}
+
+.fld{display:grid;grid-template-columns:200px 1fr;gap:4px 14px;align-items:center}
+.fld label{margin:0;font-size:12.5px;text-align:right;color:var(--dim);
+  font-family:ui-monospace,Menlo,monospace;text-transform:uppercase;line-height:1.3}
+.fld input{width:100%;text-align:left;padding:10px;font-size:15px;color:var(--c-eto)}
+.fld .cnt{grid-column:2;font-size:11px;color:var(--fld);margin:-2px 0 8px}
+.fld .multi{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.fld .multi>div{display:flex;flex-direction:column;gap:5px}
+.fld .multi small{font-size:11px;color:var(--dim);font-family:ui-monospace,Menlo,monospace;letter-spacing:.5px}
+.fld .multi input{width:132px;text-align:center}
+@media(max-width:640px){.fld{grid-template-columns:1fr;gap:2px}.fld label{text-align:left;margin-top:8px}}
+
 .hide{display:none}
-.note{font-size:12.5px;color:var(--dim);margin-top:12px;line-height:1.7}
+.note{font-size:12.5px;color:var(--dim);margin-top:12px;line-height:1.8}
 .note code{background:var(--panel2);padding:1px 5px;border-radius:3px}
+.sw{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:1px;
+  margin-right:4px;box-shadow:0 0 0 1px var(--line)}
 </style>
 </head>
 <body>
@@ -124,101 +145,82 @@ td.diff{text-align:right;font-weight:700}
     <div class="brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 47.514785 12.039602" class="logo" role="img" aria-label="Air Astana"><g transform="translate(-89.011869,-149.48493)"><path style="fill:#9b804d" d="m 93.217326,155.50426 c 0.625828,-0.87947 1.352197,-0.7045 2.208389,-0.60572 -0.227189,-0.24271 -0.33902,-0.54892 -0.33902,-0.87771 0,-0.75741 0.628298,-1.3716 1.403703,-1.3716 1.61925,0 1.419225,1.83303 0.716845,1.83303 -0.157692,0 -0.284339,-0.11077 -0.318559,-0.242 -0.02822,-0.10831 -0.0011,-0.23566 -0.03845,-0.33832 -0.05256,-0.14322 -0.197908,-0.24835 -0.360538,-0.24835 -0.104775,0 -0.198967,0.0413 -0.268112,0.10795 -0.218016,0.21025 -0.08184,0.63112 0.06033,0.84631 0.197909,0.29845 0.545395,0.49107 0.944034,0.48719 l 0.06491,-0.002 c 1.110192,-0.12488 1.436864,-1.06997 1.154994,-1.92758 -0.122414,-0.37253 -0.549627,-0.92075 -1.030816,-1.1504 0.886177,-0.51294 1.158169,-1.69581 1.126772,-2.39784 l -9.529939,5.88716 9.529939,5.88786 c 0.0314,-0.70238 -0.240595,-1.88524 -1.126772,-2.39783 0.481189,-0.23001 0.908402,-0.77823 1.030816,-1.15076 0.28187,-0.8576 -0.0448,-1.8027 -1.154994,-1.92793 l -0.06491,-0.002 c -0.398639,-0.004 -0.746125,0.18874 -0.944034,0.48719 -0.142169,0.2152 -0.278341,0.63606 -0.06033,0.84631 0.06915,0.0667 0.163337,0.10795 0.268112,0.10795 0.16263,0 0.307975,-0.10477 0.360538,-0.24835 0.0374,-0.10266 0.01023,-0.22966 0.03845,-0.33831 0.03422,-0.13124 0.160867,-0.24201 0.318559,-0.24201 0.70238,0 0.902405,1.83303 -0.716845,1.83303 -0.775405,0 -1.403703,-0.61418 -1.403703,-1.3716 0,-0.32879 0.111831,-0.635 0.33902,-0.87771 -0.856192,0.0991 -1.582561,0.27411 -2.208389,-0.60607"/><path style="fill:#253168" d="m 104.89551,158.47514 v -3.00637 c 0,-0.0374 -0.001,-0.0741 -0.002,-0.11007 v -0.002 l -0.002,-0.0384 v -0.002 -0.003 l -7e-4,-0.007 v -0.003 c -0.0674,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.70485,0 -1.26577,0.22754 -1.5501,0.50588 v 0.56056 c 0.38346,-0.20672 0.93274,-0.40357 1.36278,-0.40357 0.53445,0 0.9084,0.16086 0.90946,0.75318 l 3.5e-4,0.005 v 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62019,1.49613 1.87008,1.49613 0.42862,0 1.30528,-0.0776 1.6577,-0.26635 m -0.96696,-0.44097 c -0.27588,0.11324 -0.76659,0.12418 -1.02906,0.0459 -0.15204,-0.0455 -0.27693,-0.11536 -0.36865,-0.21908 -0.12065,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67769,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 123.05002,158.64979 v -0.73484 c -0.0833,0.0247 -0.14958,0.0416 -0.2413,0.0416 -0.3496,0 -0.49107,-0.23318 -0.49107,-0.58279 v -2.82469 h 0.73237 v -0.64347 h -0.73237 v -1.13665 l -1.01564,0.6343 3.5e-4,0.50235 h -0.53834 v 0.64347 h 0.53834 v 2.97674 c 0,0.62406 0.3496,1.21567 1.23155,1.21567 0.24165,0 0.42439,-0.0501 0.51611,-0.0917"/><path style="fill:#253168" d="m 120.20001,157.31401 c 0,-0.54786 -0.21202,-1.01812 -1.13877,-1.38359 -0.41486,-0.1651 -0.70626,-0.35666 -0.70626,-0.73943 0,-0.3309 0.23848,-0.61806 0.67981,-0.61806 0.33549,0 0.7186,0.21837 0.89252,0.40287 v -0.57256 c -0.59796,-0.90346 -2.61373,-0.63394 -2.61373,0.83996 0,0.48719 0.18521,0.97438 1.08585,1.31375 0.48542,0.18274 0.76024,0.36512 0.76024,0.76517 0,0.85831 -1.37372,0.7546 -1.85067,0.39935 l 0.005,0.75 c 0.28081,0.14253 0.63571,0.26988 1.19169,0.26988 1.0414,0 1.69474,-0.66146 1.69474,-1.42734"/><path style="fill:#253168" d="m 131.8993,158.6141 -7.1e-4,-3.31329 c 0,-0.74612 -0.45402,-1.41464 -1.83444,-1.41464 -0.78034,0 -1.37195,0.12841 -1.80904,0.33444 l 3.5e-4,4.39349 h 1.04598 l -3.5e-4,-3.93947 c 0.1972,-0.0769 0.37712,-0.12841 0.72002,-0.12841 0.6604,0 0.83185,0.39441 0.83185,0.77152 l 3.5e-4,3.29636 z"/><path style="fill:#253168" d="m 110.42173,153.893 c -1.17016,-0.0402 -1.78682,0.0974 -2.2666,0.32879 v 4.39243 h 1.04493 v -3.92112 c 0.23954,-0.13723 0.81915,-0.2159 1.22132,-0.0526 z"/><path d="m 107.03383,153.9084 h -1.0163 v 4.7057 h 1.0163 z" style="fill:#253168"/><path style="fill:#253168" d="m 116.4726,158.47513 v -3.00637 c 0,-0.0374 -0.001,-0.0741 -0.002,-0.11007 v -0.002 l -0.002,-0.0384 v -0.002 -0.003 l -7e-4,-0.007 v -0.003 c -0.0674,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.70485,0 -1.26577,0.22754 -1.55046,0.50588 v 0.56056 c 0.38382,-0.20672 0.9331,-0.40357 1.36314,-0.40357 0.53445,0 0.9084,0.16086 0.90946,0.75318 v 0.005 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62019,1.49613 1.86972,1.49613 0.42898,0 1.30564,-0.0776 1.65806,-0.26635 m -0.96696,-0.44097 c -0.27623,0.11324 -0.76659,0.12418 -1.02906,0.0459 -0.15204,-0.0455 -0.27728,-0.11536 -0.36865,-0.21908 -0.121,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67733,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 127.13273,158.47513 v -3.00637 c 0,-0.0374 -7.1e-4,-0.0741 -0.002,-0.11007 l -3.5e-4,-0.002 -0.002,-0.0384 v -0.002 -0.003 l -3.5e-4,-0.007 -3.5e-4,-0.003 c -0.067,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.7045,0 -1.26541,0.22754 -1.5501,0.50588 v 0.56056 c 0.38382,-0.20672 0.93274,-0.40357 1.36313,-0.40357 0.53446,0 0.9084,0.16086 0.90946,0.75318 v 0.005 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62054,1.49613 1.87008,1.49613 0.42898,0 1.30563,-0.0776 1.6577,-0.26635 m -0.96696,-0.44097 c -0.27588,0.11324 -0.76624,0.12418 -1.02906,0.0459 -0.15169,-0.0455 -0.27693,-0.11536 -0.36865,-0.21908 -0.12065,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67769,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 136.26195,158.47513 v -3.00637 c 0,-0.0374 -0.001,-0.0741 -0.002,-0.11007 l -3.5e-4,-0.002 -0.002,-0.0384 v -0.002 -0.003 l -7e-4,-0.007 v -0.003 c -0.0674,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.70485,0 -1.26577,0.22754 -1.5501,0.50588 v 0.56056 c 0.38382,-0.20672 0.93274,-0.40357 1.36278,-0.40357 0.53445,0 0.9084,0.16086 0.90981,0.75318 v 0.005 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62019,1.49613 1.87008,1.49613 0.42862,0 1.30528,-0.0776 1.6577,-0.26635 m -0.96696,-0.44097 c -0.27588,0.11324 -0.76624,0.12418 -1.02906,0.0459 -0.15169,-0.0455 -0.27693,-0.11536 -0.36865,-0.21908 -0.12065,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67733,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 107.06729,152.77607 c 0,-0.28328 -0.23424,-0.50835 -0.54187,-0.50835 -0.2988,0 -0.54151,0.22507 -0.54151,0.50835 0,0.27481 0.24271,0.49953 0.54151,0.49953 0.30763,0 0.54187,-0.22472 0.54187,-0.49953"/></g></svg></div>
     <div>
       <h1>ETO / ATO Filler</h1>
-      <div class="sub">Заполнение ETO по времени взлёта, а также фактического времени пролёта и остатка топлива</div>
+      <div class="sub">Operational flight plan filler</div>
     </div>
+    <div class="grow"></div>
+    <button id="theme" type="button" class="ghost">Light theme</button>
   </header>
 
   <div class="card">
-    <div class="step"><i>1</i> Загрузите PDF плана полёта</div>
+    <div class="step"><i>1</i> Load the flight plan PDF</div>
     <div id="drop">
-      Нажмите, чтобы выбрать файл<br><b>или перетащите PDF сюда</b>
+      Tap to choose a file<br><b>or drop a PDF here</b>
       <div class="fn" id="fname"></div>
     </div>
     <input type="file" id="file" accept="application/pdf,.pdf" class="hide">
     <div class="msg" id="m1"></div>
   </div>
 
+  <div class="card hide" id="c4">
+    <div class="step"><i>2</i> Document fields</div>
+    <div class="fld" id="fields"></div>
+  </div>
+
   <div class="card hide" id="c2">
-    <div class="step"><i>2</i> Время взлёта (airborne), UTC</div>
+    <div class="step"><i>3</i> Takeoff time (airborne), UTC</div>
     <div class="row">
-      <div><label>HHMM</label><input type="text" id="etd" class="big" placeholder="0210" maxlength="5" inputmode="numeric" enterkeyhint="go"></div>
-      <label class="chk"><input type="checkbox" id="alt"> Запасной маршрут (ALTN)</label>
-      <div style="padding-bottom:5px"><button id="calc">Рассчитать</button></div>
+      <div><label>HHMM</label><input type="text" id="etd" class="big" placeholder="----" maxlength="5" inputmode="numeric" enterkeyhint="go"></div>
+      <label class="chk"><input type="checkbox" id="alt"> Alternate route (ALTN)</label>
+      <div style="padding-bottom:5px"><button id="calc">Calculate</button></div>
     </div>
+    <div class="hint hide" id="fpl"></div>
     <div class="msg" id="m2"></div>
   </div>
 
   <div class="card hide" id="c3">
-    <div class="step"><i>3</i> Факт по точкам и выгрузка</div>
+    <div class="step"><i>4</i> Actuals by waypoint</div>
     <div class="stats" id="stats"></div>
-
-    <div class="colors">
-      <div class="cgrp"><span class="clab">Цвет ETO</span>
-        <span class="sw" data-t="eto" data-c="#000000" style="background:#000"></span>
-        <span class="sw" data-t="eto" data-c="#0033cc" style="background:#0033cc"></span>
-        <span class="sw" data-t="eto" data-c="#cc0000" style="background:#cc0000"></span>
-        <span class="sw" data-t="eto" data-c="#00762e" style="background:#00762e"></span>
-        <input type="color" data-t="eto" value="#000000">
-      </div>
-      <div class="cgrp"><span class="clab">Цвет ATO</span>
-        <span class="sw" data-t="ato" data-c="#000000" style="background:#000"></span>
-        <span class="sw" data-t="ato" data-c="#0033cc" style="background:#0033cc"></span>
-        <span class="sw" data-t="ato" data-c="#cc0000" style="background:#cc0000"></span>
-        <span class="sw" data-t="ato" data-c="#00762e" style="background:#00762e"></span>
-        <input type="color" data-t="ato" value="#0033cc">
-      </div>
-      <div class="cgrp"><span class="clab">Цвет топлива</span>
-        <span class="sw" data-t="fuel" data-c="#000000" style="background:#000"></span>
-        <span class="sw" data-t="fuel" data-c="#0033cc" style="background:#0033cc"></span>
-        <span class="sw" data-t="fuel" data-c="#cc0000" style="background:#cc0000"></span>
-        <span class="sw" data-t="fuel" data-c="#00762e" style="background:#00762e"></span>
-        <input type="color" data-t="fuel" value="#0033cc">
-      </div>
-      <div class="cgrp">
-        <label class="chk" style="padding:0"><input type="checkbox" id="bySign" checked> DIFF по знаку</label>
-        <span class="sgn">+</span><input type="color" data-t="pos" value="#00762e">
-        <span class="sgn">−</span><input type="color" data-t="neg" value="#cc0000">
-      </div>
-    </div>
-
     <div class="toolbar">
-      <button class="ghost sm" id="copyEto">ATO = ETO во всех точках</button>
-      <button class="ghost sm" id="clearAct">Очистить факт</button>
+      <button class="ghost sm" id="copyEto">Set ATO = ETO everywhere</button>
+      <button class="ghost sm" id="clearAct">Clear actuals</button>
       <span class="sep"></span>
       <span class="saved" id="saved"></span>
     </div>
-
     <div class="tblbox"><table id="tbl"><thead><tr>
-      <th>Точка</th><th style="text-align:right">ET</th><th style="text-align:right">Накопл.</th>
-      <th>ETO</th><th>ATO факт</th><th style="text-align:right">REM план</th>
-      <th>Топливо факт</th><th style="text-align:right">Δ</th><th style="text-align:right">Стр.</th>
+      <th>Waypoint</th><th style="text-align:right">ET</th><th style="text-align:right">Cumul.</th>
+      <th>ETO</th><th>ATO actual</th><th style="text-align:right">REM plan</th>
+      <th>Fuel actual</th><th style="text-align:right">Δ</th><th style="text-align:right">Page</th>
     </tr></thead><tbody></tbody></table></div>
+  </div>
 
-    <div class="row" style="margin-top:16px">
-      <button id="dl">Сохранить PDF</button>
-      <button id="open" class="ghost">Открыть в новой вкладке</button>
-      <button id="reset" class="ghost">Сбросить</button>
+  <div class="card hide" id="c5">
+    <div class="step"><i>5</i> Export</div>
+    <div class="row">
+      <button id="dl">Save PDF</button>
+      <button id="open" class="ghost">Preview filled PDF</button>
+      <button id="reset" class="ghost">Reset</button>
     </div>
     <div class="msg" id="m3"></div>
     <div class="note">
-      <code>ETO</code> = время взлёта + нарастающая сумма ET (сверено с колонкой T/T).<br>
-      <code>ATO</code> печатается поверх точек второй строки; пустые поля остаются точками.<br>
-      Фактическое топливо и отклонение от планового REM идут в новые колонки
-      <code>FUEL</code> / <code>DIFF</code> справа — оригинальные данные не затираются.
-      <code>DIFF</code> зелёный при остатке выше плана, красный — ниже.<br>
-      Работает полностью офлайн: разбор и запись PDF выполняются на устройстве, ничего не отправляется в сеть.
+      Everything you enter is printed in bold Courier-Bold over the original document:
+      <span class="sw" style="background:#0033cc"></span><code>ETO</code> blue,
+      <span class="sw" style="background:#00762e"></span><code>ATO</code> green,
+      <span class="sw" style="background:#000"></span>fuel black,
+      <span class="sw" style="background:#0033cc"></span>document fields blue.
+      <code>DIFF</code> stays green when fuel is above plan and red when below.<br>
+      Fully offline: the PDF is parsed and written on this device.
     </div>
   </div>
 </div>
 
-<script>/* pdfmini — минимальный PDF-движок: чтение текста с координатами и
-   дописывание слоя поверх страниц инкрементальным обновлением.
-   Без внешних зависимостей. Рассчитан на PDF без шифрования,
-   с классической таблицей xref и несжатыми объектами (OFP Air Astana). */
+<script>/* pdfmini — a minimal PDF engine: reads text with coordinates and appends
+   an overlay onto pages via an incremental update. No dependencies.
+   Targets unencrypted PDFs with a classic xref table and uncompressed
+   objects (Air Astana OFP). */
 
 const PDFMini = (() => {
 
-  /* ---------- байты <-> latin1-строка (1:1, индекс == смещение) ---------- */
+  /* ---------- bytes <-> latin1 string (1:1, index == byte offset) ---------- */
   function toStr(u8){
     let s = '', C = 0x8000;
     for (let i = 0; i < u8.length; i += C)
@@ -231,7 +233,7 @@ const PDFMini = (() => {
     return u;
   }
 
-  /* ---------- разбор объектов ---------- */
+  /* ---------- object parsing ---------- */
   const WS = ' \t\r\n\f\0', DELIM = '()<>[]{}/%';
   const isWS = c => WS.indexOf(c) >= 0;
   const isDelim = c => DELIM.indexOf(c) >= 0;
@@ -246,7 +248,7 @@ const PDFMini = (() => {
         else return;
       }
     }
-    // читает один объект; ссылки "N G R" сворачиваются в {ref:N}
+    // reads one object; "N G R" references collapse into {ref:N}
     obj(){
       this.skip();
       const s = this.s, c = s[this.i];
@@ -306,7 +308,7 @@ const PDFMini = (() => {
             for (let k = 0; k < 2 && s[this.i] >= '0' && s[this.i] <= '7'; k++) o += s[this.i++];
             r += String.fromCharCode(parseInt(o, 8));
           }
-          else if (n === '\n') { /* перенос строки — пропуск */ }
+          else if (n === '\n') { /* line continuation */ }
           else if (n === '\r'){ if (s[this.i] === '\n') this.i++; }
           else r += n;
         }
@@ -331,7 +333,7 @@ const PDFMini = (() => {
       while (this.i < s.length && !isWS(s[this.i]) && !isDelim(s[this.i])) t += s[this.i++];
       if (/^[-+.\d]/.test(t)){
         const save = this.i, m = /^\d+$/.test(t);
-        if (m){                                   // возможна ссылка "N G R"
+        if (m){                                   // may be an "N G R" reference
           this.skip();
           const j = this.i; let g = '';
           while (this.i < s.length && /\d/.test(s[this.i])) g += s[this.i++];
@@ -352,7 +354,7 @@ const PDFMini = (() => {
     }
   }
 
-  /* ---------- документ ---------- */
+  /* ---------- document ---------- */
   class Doc {
     constructor(u8){
       this.bytes = u8;
@@ -364,7 +366,7 @@ const PDFMini = (() => {
     readXref(){
       const m = /startxref\s+(\d+)\s*%%EOF\s*$/.exec(this.s.slice(-2048))
              || /startxref\s+(\d+)/g.exec(this.s.slice(this.s.lastIndexOf('startxref')));
-      if (!m) throw new Error('не найден startxref');
+      if (!m) throw new Error('startxref not found');
       let off = parseInt(m[1], 10);
       const seen = new Set();
       while (off !== undefined && !seen.has(off)){
@@ -372,7 +374,7 @@ const PDFMini = (() => {
         const lx = new Lexer(this.s, off);
         lx.skip();
         if (this.s.substr(lx.i, 4) !== 'xref')
-          throw new Error('поддерживается только классическая таблица xref');
+          throw new Error('only a classic xref table is supported');
         lx.i += 4;
         for (;;){
           lx.skip();
@@ -395,7 +397,7 @@ const PDFMini = (() => {
         off = typeof tr.Prev === 'number' ? tr.Prev : undefined;
       }
     }
-    get(o){                                        // разыменование
+    get(o){                                        // dereference
       if (o && typeof o === 'object' && 'ref' in o){
         const off = this.xref.get(o.ref);
         if (off === undefined) return null;
@@ -416,18 +418,18 @@ const PDFMini = (() => {
       }
       return o;
     }
-    async stream(obj){                             // распакованные данные потока
+    async stream(obj){                             // decoded stream data
       const raw = this.bytes.subarray(obj.start, obj.start + obj.length);
       const f = this.get(obj.dict.Filter);
       const names = (Array.isArray(f) ? f : f ? [f] : []).map(x => x && x.name);
       if (!names.length) return raw;
       if (names.length > 1 || (names[0] !== 'FlateDecode' && names[0] !== 'Fl'))
-        throw new Error('фильтр потока не поддерживается: ' + names.join(','));
+        throw new Error('unsupported stream filter: ' + names.join(','));
       const ds = new DecompressionStream('deflate');
       const ab = await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer();
       return new Uint8Array(ab);
     }
-    async content(page){                           // /Contents: ссылка либо массив ссылок
+    async content(page){                           // /Contents: a ref or an array of refs
       const c = this.get(page.dict.Contents);
       const list = Array.isArray(c) ? c.map(r => this.get(r)) : [c];
       let s = '';
@@ -460,7 +462,7 @@ const PDFMini = (() => {
     }
   }
 
-  /* ---------- извлечение текста ---------- */
+  /* ---------- text extraction ---------- */
   function textItems(content){
     const lx = new Lexer(content, 0);
     const st = [];
@@ -517,11 +519,29 @@ const PDFMini = (() => {
     return out;
   }
 
-  /* ---------- инкрементальная запись ---------- */
+  /* ---------- incremental write ---------- */
   const esc = t => String(t).replace(/([\\()])/g, '\\$1');
 
-  function append(doc, perPage){
-    // perPage: Map(pageIndex -> строка операторов контента)
+  // insert "/Name N 0 R" into the page /Font dictionary
+  function addFont(raw, name, num){
+    const k = raw.indexOf('/Font');
+    if (k < 0) throw new Error('page /Resources has no /Font');
+    let p = k + 5;
+    while (p < raw.length && WS.indexOf(raw[p]) >= 0) p++;
+    if (raw[p] !== '<' || raw[p + 1] !== '<')
+      throw new Error('/Font given as a reference is not supported');
+    let depth = 0, q = p;
+    for (; q < raw.length; q++){
+      if (raw[q] === '<' && raw[q + 1] === '<'){ depth++; q++; }
+      else if (raw[q] === '>' && raw[q + 1] === '>'){ if (--depth === 0) break; q++; }
+    }
+    if (depth !== 0) throw new Error('could not parse /Font');
+    return raw.slice(0, q) + `/${name} ${num} 0 R` + raw.slice(q);
+  }
+
+  function append(doc, perPage, opts){
+    // perPage: Map(pageIndex -> content operator string)
+    // opts.fonts: [{name, dict}] — added to /Resources of modified pages
     const pages = doc.pages();
     let size = doc.get(doc.trailer.Size);
     if (typeof size !== 'number') size = Math.max(...doc.xref.keys()) + 1;
@@ -534,6 +554,13 @@ const PDFMini = (() => {
     let cursor = base;
     const emit = s => { parts.push(s); cursor += s.length; };
 
+    const fonts = (opts && opts.fonts) || [];
+    for (const f of fonts){
+      f.num = next++;
+      newXref.set(f.num, cursor);
+      emit(`${f.num} 0 obj\n${f.dict}\nendobj\n`);
+    }
+
     for (const [pi, ops] of perPage){
       const pg = pages[pi];
       if (!pg || !ops) continue;
@@ -542,7 +569,7 @@ const PDFMini = (() => {
       newXref.set(cnum, cursor);
       emit(`${cnum} 0 obj\n<</Length ${ops.length}>>\nstream\n${ops}\nendstream\nendobj\n`);
 
-      // страница: /Contents X 0 R  ->  /Contents[X 0 R cnum 0 R]
+      // page: /Contents X 0 R  ->  /Contents[X 0 R cnum 0 R]
       const off = doc.xref.get(pg.ref);
       const lx = new Lexer(doc.s, off);
       lx.obj(); lx.obj(); lx.skip();
@@ -556,13 +583,15 @@ const PDFMini = (() => {
         patched = raw.replace(/\/Contents\s*\[([\s\S]*?)\]/, (m, inner) => `/Contents[${inner} ${cnum} 0 R]`);
       else
         patched = raw.replace(/\/Contents\s+(\d+)\s+(\d+)\s+R/, (m, n, g) => `/Contents[${n} ${g} R ${cnum} 0 R]`);
-      if (patched === raw) throw new Error('не удалось обновить /Contents страницы ' + (pi + 1));
+      if (patched === raw) throw new Error('could not update /Contents of page ' + (pi + 1));
+      for (const f of fonts)
+        if (!new RegExp('/' + f.name + '[\\s/]').test(patched)) patched = addFont(patched, f.name, f.num);
 
       newXref.set(pg.ref, cursor);
       emit(`${pg.ref} 0 obj\n${patched}\nendobj\n`);
     }
 
-    // таблица xref
+    // xref table
     const nums = [...newXref.keys()].sort((a, b) => a - b);
     const runs = [];
     for (const n of nums){
@@ -596,7 +625,7 @@ const PDFMini = (() => {
     return out;
   }
 
-  /* ---------- построение операторов рисования ---------- */
+  /* ---------- drawing operator builder ---------- */
   class Ops {
     constructor(){ this.b = ['q\n']; }
     rect(x, y, w, h, c){
@@ -619,10 +648,12 @@ if (false && typeof module !== 'undefined') module.exports = PDFMini;
 <script>
 const $ = s => document.querySelector(s);
 let RAW = null, DOC = null, NAME = '', KEY = '';
-let PLAN = null, HDRS = [], ANCHOR = 0, RESULT = [];
-const ACT = {};
-const COL = { eto:'#000000', ato:'#0033cc', fuel:'#0033cc', pos:'#00762e', neg:'#cc0000', bySign:true };
-const CKEY = 'etofill:colors';
+let PLAN = null, HDRS = [], ANCHOR = 0, RESULT = [], FIELDS = [], FPL = null;
+const ACT = {}, TXT = {};
+
+/* fixed print palette */
+const C = { eto:'#0033cc', ato:'#00762e', fuel:'#000000', pos:'#00762e', neg:'#cc0000', doc:'#0033cc' };
+const BOLD = 'FB';                                   // Courier-Bold resource name
 
 const msg = (el, t, k) => { const e = $(el); e.className = 'msg show ' + (k || 'ok'); e.textContent = t; };
 const hide = el => { $(el).className = 'msg'; };
@@ -630,60 +661,41 @@ const hide = el => { $(el).className = 'msg'; };
 if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
   navigator.serviceWorker.register('sw.js').catch(() => {});
 
-/* ================= цвета ================= */
+/* ================= theme ================= */
 const hex2rgb = h => { const n = parseInt(h.slice(1), 16);
   return { r:(n >> 16 & 255)/255, g:(n >> 8 & 255)/255, b:(n & 255)/255 }; };
 const rgbArr = h => { const c = hex2rgb(h); return [+c.r.toFixed(4), +c.g.toFixed(4), +c.b.toFixed(4)]; };
 
+// dark print colours are unreadable on a dark background — lighten for screen only
 function onScreen(h){
+  if (document.documentElement.dataset.theme === 'light') return h;
   const c = hex2rgb(h), lum = .2126*c.r + .7152*c.g + .0722*c.b;
-  if (lum >= .38) return h;
-  const k = (.38 - lum) * 1.25, mix = v => Math.round(255 * (v + (1 - v) * k));
+  if (lum >= .42) return h;
+  const k = (.42 - lum) * 1.3, mix = v => Math.round(255 * (v + (1 - v) * k));
   return `rgb(${mix(c.r)},${mix(c.g)},${mix(c.b)})`;
 }
-const diffColor = d => !COL.bySign || d === 0 ? COL.fuel : (d > 0 ? COL.pos : COL.neg);
-
-function applyColors(){
-  document.querySelectorAll('input[type=color],input.hex').forEach(i => i.value = COL[i.dataset.t]);
-  $('#bySign').checked = COL.bySign;
-  document.querySelectorAll('.sw').forEach(s =>
-    s.classList.toggle('on', s.dataset.c.toLowerCase() === COL[s.dataset.t].toLowerCase()));
-  document.querySelectorAll('#tbl td.eto').forEach(td => td.style.color = onScreen(COL.eto));
-  document.querySelectorAll('#tbl input.ato').forEach(el => el.style.color = onScreen(COL.ato));
-  document.querySelectorAll('#tbl input.fuel').forEach(el => el.style.color = onScreen(COL.fuel));
+function applyTheme(t){
+  document.documentElement.dataset.theme = t;
+  $('#theme').textContent = t === 'dark' ? 'Light theme' : 'Dark theme';
+  const m = document.querySelector('meta[name=theme-color]');
+  if (m) m.content = t === 'dark' ? '#0f1419' : '#f2f5f8';
+  const s = document.documentElement.style;
+  s.setProperty('--c-eto', onScreen(C.eto));
+  s.setProperty('--c-ato', onScreen(C.ato));
+  s.setProperty('--c-fuel', onScreen(C.fuel));
   RESULT.forEach(p => paint(p.i));
+  try { localStorage.setItem('etofill:theme', t); } catch(e){}
 }
-document.querySelectorAll('.sw').forEach(s => s.onclick = () => {
-  COL[s.dataset.t] = s.dataset.c; applyColors(); saveColors(); });
-$('#bySign').onchange = e => { COL.bySign = e.target.checked; applyColors(); saveColors(); };
-
-// Safari без <input type=color> подменяем текстовым полем для HEX
+$('#theme').onclick = () =>
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
 (() => {
-  const probe = document.createElement('input'); probe.type = 'color';
-  if (probe.type === 'color') return;
-  document.querySelectorAll('input[type=color]').forEach(i => {
-    const t = document.createElement('input');
-    t.className = 'hex'; t.dataset.t = i.dataset.t; t.value = COL[i.dataset.t];
-    t.maxLength = 7; t.spellcheck = false; t.autocapitalize = 'off';
-    i.replaceWith(t);
-  });
+  let t = null;
+  try { t = localStorage.getItem('etofill:theme'); } catch(e){}
+  if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  applyTheme(t);
 })();
-document.addEventListener('input', e => {
-  const i = e.target;
-  if (i.matches('input[type=color],input.hex') && /^#[0-9a-fA-F]{6}$/.test(i.value)){
-    COL[i.dataset.t] = i.value.toLowerCase(); applyColors(); saveColors();
-  }
-});
 
-function saveColors(){ try { localStorage.setItem(CKEY, JSON.stringify(COL)); } catch(e){} save(); }
-try {
-  const st = JSON.parse(localStorage.getItem(CKEY) || '{}');
-  if (st.act && !st.ato){ st.ato = st.act; st.fuel = st.act; }
-  for (const k in COL) if (st[k] !== undefined) COL[k] = st[k];
-} catch(e){}
-applyColors();
-
-/* ================= загрузка файла ================= */
+/* ================= file loading ================= */
 const drop = $('#drop');
 drop.onclick = () => $('#file').click();
 drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
@@ -694,36 +706,45 @@ $('#file').onchange = e => { if (e.target.files[0]) load(e.target.files[0]); };
 
 async function load(f){
   if (typeof DecompressionStream === 'undefined'){
-    msg('#m1', 'Браузер слишком старый: нет DecompressionStream. Нужен Safari 16.4+ / iPadOS 16.4+.', 'err');
+    msg('#m1', 'Browser too old: no DecompressionStream. Safari 16.4+ / iPadOS 16.4+ required.', 'err');
     return;
   }
   NAME = f.name; KEY = 'etofill:' + f.name + ':' + f.size;
   RAW = await f.arrayBuffer();
   $('#fname').textContent = f.name + '  ·  ' + (f.size / 1048576).toFixed(1) + ' MB';
-  hide('#m1'); hide('#m3'); $('#c2').classList.remove('hide'); $('#c3').classList.add('hide');
+  hide('#m1'); hide('#m3');
+  $('#c2').classList.remove('hide');
+  for (const c of ['#c3','#c4','#c5']) $(c).classList.add('hide');
   for (const k in ACT) delete ACT[k];
+  for (const k in TXT) delete TXT[k];
   try {
     const r = await parse(RAW);
-    PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor;
+    PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor; FIELDS = r.fields; FPL = r.fpl;
     const s1 = PLAN.filter(p => p.sec === 1).length;
-    msg('#m1', `Найдено точек: основной маршрут ${s1}` + (PLAN.length - s1 ? `, запасной ${PLAN.length - s1}` : ''), 'ok');
+    msg('#m1', `Found: ${s1} main route waypoints`
+             + (PLAN.length - s1 ? `, ${PLAN.length - s1} alternate` : '')
+             + (FIELDS.length ? `, ${FIELDS.length} document fields` : ''), 'ok');
+    showFpl();
     const st = restore();
     if (st){
       $('#etd').value = st.etd || ''; $('#alt').checked = !!st.alt;
-      Object.assign(ACT, st.act || {});
-      if (st.etd){ $('#calc').click(); msg('#m1', 'Восстановлены ранее введённые данные для этого файла.', 'ok'); }
+      Object.assign(ACT, st.act || {}); Object.assign(TXT, st.txt || {});
     }
+    renderFields();
+    if (FIELDS.length) $('#c4').classList.remove('hide');
+    $('#c5').classList.remove('hide');
+    if (st && st.etd){ $('#calc').click(); msg('#m1', 'Restored previously entered data for this file.', 'ok'); }
     $('#etd').focus();
-  } catch (err){ msg('#m1', 'Не удалось разобрать документ: ' + err.message, 'err'); }
+  } catch (err){ msg('#m1', 'Could not parse the document: ' + err.message, 'err'); }
 }
 
-/* ================= разбор PDF ================= */
+/* ================= PDF parsing ================= */
 function courierName(doc, page){
   const fonts = doc.get(page.Resources && page.Resources.Font);
   if (!fonts) return null;
   for (const k in fonts){
     const fd = doc.get(fonts[k]);
-    if (fd && fd.BaseFont && /Courier/i.test(fd.BaseFont.name)) return k;
+    if (fd && fd.BaseFont && /^Courier$/i.test(fd.BaseFont.name)) return k;
   }
   return null;
 }
@@ -736,13 +757,69 @@ function tokenize(chars, cw){
   if (cur) t.push(cur);
   return t;
 }
+function tokensX(chars, cw){
+  const t = []; let cur = '', x0 = 0, prev = null;
+  for (const c of chars){
+    if (prev !== null && c.x - prev > cw * 1.5){ if (cur) t.push({ t: cur, x: x0, x1: prev + cw }); cur = ''; }
+    if (!cur) x0 = c.x;
+    cur += c.ch; prev = c.x;
+  }
+  if (cur) t.push({ t: cur, x: x0, x1: prev + cw });
+  return t;
+}
+// field label: words before the dots, numbers dropped, after the last colon
+function labelOf(tokens){
+  const out = [];
+  for (let i = tokens.length - 1; i >= 0 && out.length < 4; i--){
+    if (/^[\d.,%/+-]+$/.test(tokens[i])) break;
+    out.unshift(tokens[i]);
+  }
+  let ci = -1;
+  out.forEach((s, k) => { if (/:$/.test(s)) ci = k; });
+  const tail = (ci >= 0 && ci < out.length - 1) ? out.slice(ci + 1) : out;
+  return tail.join(' ').replace(/[:\-]+$/, '').trim();
+}
+// blank document fields: runs of 5+ consecutive dots
+function dotFields(chars, cw){
+  const out = []; let i = 0, lastEnd = 0;
+  while (i < chars.length){
+    if (chars[i].ch !== '.'){ i++; continue; }
+    let j = i;
+    while (j + 1 < chars.length && chars[j + 1].ch === '.' &&
+           Math.abs(chars[j + 1].x - chars[j].x - cw) < 0.6) j++;
+    const n = j - i + 1;
+    if (n >= 5){
+      const tk = tokenize(chars.slice(lastEnd, i), cw);
+      out.push({ x: chars[i].x, n, label: labelOf(tk), pre: tk });
+      lastEnd = j + 1;
+    }
+    i = j + 1;
+  }
+  if (out.length > 1 && out[0].pre.length > 1) out.rowLabel = labelOf(out[0].pre.slice(0, -1));
+  return out;
+}
+
+// spread a value across the segments of one field, breaking on spaces
+function layout(value, segs){
+  const out = []; let rest = value;
+  segs.forEach((s, k) => {
+    if (!rest){ out.push(''); return; }
+    if (rest.length <= s.n || k === segs.length - 1){ out.push(rest.slice(0, s.n)); rest = rest.slice(s.n); return; }
+    let cut = s.n;
+    const sp = rest.lastIndexOf(' ', s.n);
+    if (sp > s.n * 0.4) cut = sp;
+    out.push(rest.slice(0, cut).replace(/\s+$/, ''));
+    rest = rest.slice(cut).replace(/^\s+/, '');
+  });
+  return out;
+}
 
 async function parse(buf){
   const doc = new PDFMini.Doc(new Uint8Array(buf));
   DOC = doc;
   const pages = doc.pages();
-  const dotRows = [], headers = [];
-  let anchor = 0;
+  const dotRows = [], headers = [], rawFields = [], page0 = [];
+  let anchor = 0, fpl = null;
 
   for (let p = 0; p < pages.length; p++){
     const items = PDFMini.textItems(await doc.content(pages[p]));
@@ -763,20 +840,57 @@ async function parse(buf){
       chars.sort((a, b) => a.x - b.x);
       const last = chars[chars.length - 1];
       if (!last) continue;
-      const tk = tokenize(chars, last.cw);
+      const cw = last.cw;
+
+      if (p === 0){
+        page0.push({ base: last.base, chars, cw });
+        const runs = dotFields(chars, cw);
+        runs.forEach((f, k) => rawFields.push({ page: p, base: last.base, size: last.size, cw, font,
+          x: f.x, n: f.n, label: f.label, rowLabel: k === 0 ? (runs.rowLabel || '') : '' }));
+      }
+      const tk = tokenize(chars, cw);
       if (tk[tk.length - 1] === 'ATO' && last.x > 460 && last.x < 540){
-        headers.push({ page: p, base: last.base, size: last.size, cw: last.cw, font });
+        headers.push({ page: p, base: last.base, size: last.size, cw, font });
         continue;
       }
       const dots = chars.filter(c => c.ch === '.' && c.x > 440 && c.x < 540);
       if (dots.length !== 4) continue;
-      const cw = dots[0].cw;
       let ok = true;
       for (let i = 1; i < 4; i++) if (Math.abs(dots[i].x - dots[0].x - cw * i) > 0.8) ok = false;
       if (!ok) continue;
       anchor = Math.max(anchor, dots[0].x + 4 * cw);
       dotRows.push({ page: p, base: dots[0].base, size: dots[0].size, cw, x: dots[0].x, font,
                      tok: tokenize(chars.filter(c => c.x < dots[0].x - 3), cw) });
+    }
+  }
+
+  // a run without its own label continues the previous field
+  rawFields.sort((a, b) => b.base - a.base || a.x - b.x);
+  const fields = [];
+  for (const r of rawFields){
+    const prev = fields[fields.length - 1];
+    if (!r.label && prev){ prev.segs.push(r); prev.n += r.n; continue; }
+    fields.push({ i: fields.length, label: r.label, rowLabel: r.rowLabel, n: r.n, segs: [r] });
+  }
+
+  // flight header: STD ETD STA ETA and the row of values
+  page0.sort((a, b) => b.base - a.base);
+  for (let i = 0; i < page0.length && !fpl; i++){
+    const head = tokensX(page0[i].chars, page0[i].cw), cols = {};
+    for (const t of head) if (['STD','ETD','STA','ETA'].includes(t.t)) cols[t.t] = (t.x + t.x1) / 2;
+    if (Object.keys(cols).length < 4) continue;
+    for (let j = i + 1; j < Math.min(i + 4, page0.length); j++){
+      const row = tokensX(page0[j].chars, page0[j].cw);
+      const pick = cx => {
+        let best = null, bd = 1e9;
+        for (const t of row){
+          const d = Math.abs((t.x + t.x1) / 2 - cx);
+          if (/^\d{4}$/.test(t.t) && d < bd){ bd = d; best = t.t; }
+        }
+        return bd < 24 ? best : null;
+      };
+      const v = { STD: pick(cols.STD), ETD: pick(cols.ETD), STA: pick(cols.STA), ETA: pick(cols.ETA) };
+      if (v.ETD){ fpl = v; break; }
     }
   }
 
@@ -799,12 +913,12 @@ async function parse(buf){
                  rem: /^\d+$/.test(rem) ? +rem : null, drift: cum !== ttm });
     i++;
   }
-  if (!pairs.length) throw new Error('колонка ETO не найдена — это другой формат плана');
-  if (pairs.some(p => !p.font)) throw new Error('на странице нет шрифта Courier');
-  return { pairs, headers, anchor };
+  if (!pairs.length) throw new Error('ETO column not found — unexpected plan format');
+  if (pairs.some(p => !p.font)) throw new Error('no Courier font on the page');
+  return { pairs, headers, anchor, fields, fpl };
 }
 
-/* ================= расчёт ================= */
+/* ================= calculation ================= */
 function parseTime(v){
   const d = (v || '').replace(/\D/g, '');
   if (d.length !== 4) return null;
@@ -815,20 +929,37 @@ const norm = m => ((m % 1440) + 1440) % 1440;
 const fmt = m => String(Math.floor(norm(m) / 60)).padStart(2, '0') + String(norm(m) % 60).padStart(2, '0');
 const hhmm = m => Math.floor(m / 60) + '.' + String(m % 60).padStart(2, '0');
 
+function showFpl(){
+  const el = $('#fpl');
+  if (!FPL){ el.className = 'hint hide'; return; }
+  el.className = 'hint';
+  el.innerHTML = `From document: STD <b>${FPL.STD || '—'}</b> · ETD <b>${FPL.ETD}</b> ·
+                  STA <b>${FPL.STA || '—'}</b> · ETA <b>${FPL.ETA || '—'}</b>`;
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'pill'; b.textContent = 'Use ' + FPL.ETD;
+  b.onclick = () => { $('#etd').value = FPL.ETD; $('#calc').click(); };
+  el.appendChild(b);
+  const n = document.createElement('span');
+  n.style.fontSize = '12px';
+  n.textContent = 'ETD is off-block time — takeoff is normally later';
+  el.appendChild(n);
+  $('#etd').placeholder = FPL.ETD;
+}
+
 $('#etd').oninput = e => { e.target.value = e.target.value.replace(/[^\d:]/g, ''); };
 $('#etd').onkeydown = e => { if (e.key === 'Enter'){ e.target.blur(); $('#calc').click(); } };
 $('#alt').onchange = () => { if (RESULT.length) $('#calc').click(); };
 
 $('#calc').onclick = () => {
   const t0 = parseTime($('#etd').value);
-  if (t0 === null){ msg('#m2', 'Введите время в формате HHMM, например 0210', 'err'); return; }
-  if (!PLAN){ msg('#m2', 'Сначала загрузите PDF', 'err'); return; }
+  if (t0 === null){ msg('#m2', 'Enter the time as HHMM, for example 0210', 'err'); return; }
+  if (!PLAN){ msg('#m2', 'Load a PDF first', 'err'); return; }
   const main = PLAN.filter(p => p.sec === 1);
   const arr = main.length ? t0 + main[main.length - 1].cum : t0;
   RESULT = PLAN.filter(p => p.sec === 1 || ($('#alt').checked && p.sec === 2))
                .map(p => ({ ...p, t: (p.sec === 1 ? t0 : arr) + p.cum }));
   const drift = RESULT.filter(p => p.drift).length;
-  drift ? msg('#m2', `Внимание: в ${drift} точках сумма ET не совпала с T/T.`, 'warn') : hide('#m2');
+  drift ? msg('#m2', `Warning: at ${drift} waypoints the ET sum did not match T/T.`, 'warn') : hide('#m2');
   render(t0, arr);
   $('#c3').classList.remove('hide');
   save();
@@ -837,11 +968,11 @@ $('#calc').onclick = () => {
 function render(t0, arr){
   const last = RESULT.filter(p => p.sec === 1).slice(-1)[0];
   $('#stats').innerHTML = `
-    <div class="stat"><b>${fmt(t0)}</b><span>Взлёт</span></div>
-    <div class="stat"><b>${last ? fmt(arr) : '—'}</b><span>Прибытие (ETO)</span></div>
-    <div class="stat"><b>${last ? hhmm(last.cum) : '—'}</b><span>Время в пути</span></div>
-    <div class="stat"><b>${RESULT.length}</b><span>Точек</span></div>
-    <div class="stat" id="stFilled"><b>0</b><span>Факт введён</span></div>`;
+    <div class="stat"><b>${fmt(t0)}</b><span>Takeoff</span></div>
+    <div class="stat"><b>${last ? fmt(arr) : '—'}</b><span>Arrival (ETO)</span></div>
+    <div class="stat"><b>${last ? hhmm(last.cum) : '—'}</b><span>Time en route</span></div>
+    <div class="stat"><b>${RESULT.length}</b><span>Waypoints</span></div>
+    <div class="stat" id="stFilled"><b>0</b><span>Actuals entered</span></div>`;
 
   const tb = $('#tbl tbody'); tb.innerHTML = '';
   let lastSec = 0;
@@ -849,7 +980,7 @@ function render(t0, arr){
     if (p.sec !== lastSec){
       lastSec = p.sec;
       const h = tb.insertRow(); h.className = 'hdr';
-      h.innerHTML = `<td colspan="9">${p.sec === 1 ? 'Основной маршрут' : 'Запасной маршрут (ALTN)'}</td>`;
+      h.innerHTML = `<td colspan="9">${p.sec === 1 ? 'Main route' : 'Alternate route (ALTN)'}</td>`;
     }
     const a = ACT[p.i] || {};
     const r = tb.insertRow(); r.dataset.i = p.i;
@@ -864,7 +995,7 @@ function render(t0, arr){
        <td class="diff" data-d="${p.i}"></td><td class="num">${p.page + 1}</td>`;
     paint(p.i);
   }
-  bindInputs(); countFilled(); applyColors();
+  bindInputs(); countFilled();
 }
 
 const rowOf = i => $(`#tbl tbody tr[data-i="${i}"]`);
@@ -874,11 +1005,11 @@ function paint(i){
   const p = planOf(i), a = ACT[i] || {}, td = $(`td.diff[data-d="${i}"]`);
   if (!td || !p) return;
   const f = a.fuel !== undefined && a.fuel !== '' ? +a.fuel : null;
-  if (f === null || p.rem === null){ td.textContent = '—'; td.style.color = '#4a5560'; }
+  if (f === null || p.rem === null){ td.textContent = '—'; td.style.color = 'var(--fld)'; }
   else {
     const d = f - p.rem;
     td.textContent = (d > 0 ? '+' : '') + d;
-    td.style.color = onScreen(diffColor(d));
+    td.style.color = onScreen(d === 0 ? C.fuel : d > 0 ? C.pos : C.neg);
   }
   const tr = rowOf(i);
   if (tr) tr.classList.toggle('filled', !!(a.ato || a.fuel));
@@ -906,112 +1037,185 @@ function bindInputs(){
   });
 }
 
+/* ================= document fields ================= */
+function renderFields(){
+  const box = $('#fields'); box.innerHTML = '';
+  const groups = [];
+  for (const f of FIELDS){
+    const s = f.segs[0], key = s.page + ':' + s.base, g = groups[groups.length - 1];
+    if (g && g.key === key) g.items.push(f); else groups.push({ key, items: [f] });
+  }
+
+  const mkInput = f => {
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.id = 'fd' + f.i; inp.maxLength = f.n; inp.value = TXT[f.i] || '';
+    inp.placeholder = '.'.repeat(Math.min(f.n, 40));
+    inp.autocapitalize = 'characters'; inp.spellcheck = false; inp.enterKeyHint = 'next';
+    inp.oninput = () => {
+      inp.value = inp.value.toUpperCase().slice(0, f.n);
+      TXT[f.i] = inp.value;
+      if (!inp.value) delete TXT[f.i];
+      const c = document.getElementById('cnt' + f.i);
+      if (c) c.textContent = inp.value.length + ' / ' + f.n;
+      save();
+    };
+    inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
+      const nx = document.getElementById('fd' + (f.i + 1)); if (nx) nx.focus(); else inp.blur(); } };
+    return inp;
+  };
+
+  for (const g of groups){
+    if (g.items.length === 1){
+      const f = g.items[0];
+      const lab = document.createElement('label');
+      lab.htmlFor = 'fd' + f.i; lab.textContent = f.label || 'field ' + (f.i + 1);
+      const inp = mkInput(f);
+      const cnt = document.createElement('div');
+      cnt.className = 'cnt'; cnt.id = 'cnt' + f.i;
+      cnt.textContent = inp.value.length + ' / ' + f.n;
+      box.append(lab, inp, cnt);
+    } else {
+      const lab = document.createElement('label');
+      lab.textContent = g.items[0].rowLabel || g.items.map(f => f.label).join(' / ');
+      const wrap = document.createElement('div');
+      wrap.className = 'multi';
+      for (const f of g.items){
+        const cell = document.createElement('div');
+        const cap = document.createElement('small');
+        cap.textContent = f.label || 'field ' + (f.i + 1);
+        cell.append(cap, mkInput(f));
+        wrap.appendChild(cell);
+      }
+      box.append(lab, wrap);
+    }
+  }
+}
+
 $('#copyEto').onclick = () => {
   for (const p of RESULT){ ACT[p.i] = ACT[p.i] || {}; ACT[p.i].ato = fmt(p.t); }
   document.querySelectorAll('#tbl input.ato').forEach(i => i.value = ACT[i.dataset.i].ato);
   RESULT.forEach(p => paint(p.i)); countFilled(); save();
 };
 $('#clearAct').onclick = () => {
-  if (!confirm('Очистить все введённые ATO и топливо?')) return;
+  if (!confirm('Clear all entered ATO and fuel values?')) return;
   for (const k in ACT) delete ACT[k];
   document.querySelectorAll('#tbl input').forEach(i => { i.value = ''; i.classList.remove('bad'); });
   RESULT.forEach(p => paint(p.i)); countFilled(); save();
 };
 
-/* ================= автосохранение ================= */
+/* ================= autosave ================= */
 let saveT = null;
 function save(){
   if (!KEY) return;
   clearTimeout(saveT);
   saveT = setTimeout(() => {
     try {
-      localStorage.setItem(KEY, JSON.stringify({ etd: $('#etd').value, alt: $('#alt').checked, act: ACT }));
+      localStorage.setItem(KEY, JSON.stringify({
+        etd: $('#etd').value, alt: $('#alt').checked, act: ACT, txt: TXT }));
       const d = new Date();
-      $('#saved').textContent = 'сохранено ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
-    } catch(e){ $('#saved').textContent = 'сохранение недоступно'; }
+      $('#saved').textContent = 'saved ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    } catch(e){ $('#saved').textContent = 'storage unavailable'; }
   }, 250);
 }
 function restore(){
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch(e){ return null; }
 }
 
-/* ================= формирование PDF ================= */
+/* ================= PDF generation ================= */
 function build(){
   const per = new Map();
   const ops = pi => { if (!per.has(pi)) per.set(pi, new PDFMini.Ops()); return per.get(pi); };
   const WHITE = [1, 1, 1];
-  const C_ETO = rgbArr(COL.eto), C_ATO = rgbArr(COL.ato), C_FUEL = rgbArr(COL.fuel);
+  const C_ETO = rgbArr(C.eto), C_ATO = rgbArr(C.ato), C_FUEL = rgbArr(C.fuel), C_DOC = rgbArr(C.doc);
   const right = (x, cw, w, t) => x + (w - t.length) * cw;
 
   const fuelPages = new Set(RESULT.filter(p => ACT[p.i] && ACT[p.i].fuel).map(p => p.page));
   for (const h of HDRS){
-    if (!fuelPages.has(h.page) || !h.font) continue;
+    if (!fuelPages.has(h.page)) continue;
     const o = ops(h.page), A = ANCHOR + h.cw;
-    o.text(h.font, h.size, right(A, h.cw, 5, 'DIFF'), h.base + 12, 'DIFF', C_FUEL);
-    o.text(h.font, h.size, right(A, h.cw, 5, 'FUEL'), h.base, 'FUEL', C_FUEL);
-    o.text(h.font, h.size, A, h.base - 12, '-----', C_FUEL);
+    o.text(BOLD, h.size, right(A, h.cw, 5, 'DIFF'), h.base + 12, 'DIFF', C_FUEL);
+    o.text(BOLD, h.size, right(A, h.cw, 5, 'FUEL'), h.base, 'FUEL', C_FUEL);
+    o.text(BOLD, h.size, A, h.base - 12, '-----', C_FUEL);
   }
 
   for (const p of RESULT){
     const o = ops(p.page), cw = p.cw, a = ACT[p.i] || {};
     o.rect(p.ex - 1, p.ey - 2.6, cw * 4 + 1.5, p.size + .5, WHITE);
-    o.text(p.font, p.size, p.ex, p.ey, fmt(p.t), C_ETO);
+    o.text(BOLD, p.size, p.ex, p.ey, fmt(p.t), C_ETO);
 
     if (a.ato && a.ato.length === 4){
       o.rect(p.ax - 1, p.ay - 2.6, cw * 4 + 1.5, p.size + .5, WHITE);
-      o.text(p.font, p.size, p.ax, p.ay, a.ato, C_ATO);
+      o.text(BOLD, p.size, p.ax, p.ay, a.ato, C_ATO);
     }
     if (a.fuel){
       const A = ANCHOR + cw;
-      o.text(p.font, p.size, right(A, cw, 5, a.fuel), p.ay, a.fuel, C_FUEL);
+      o.text(BOLD, p.size, right(A, cw, 5, a.fuel), p.ay, a.fuel, C_FUEL);
       if (p.rem !== null){
         const d = +a.fuel - p.rem, t = (d > 0 ? '+' : '') + d;
-        o.text(p.font, p.size, right(A, cw, 5, t), p.ey, t, rgbArr(diffColor(d)));
+        o.text(BOLD, p.size, right(A, cw, 5, t), p.ey, t,
+               rgbArr(d === 0 ? C.fuel : d > 0 ? C.pos : C.neg));
       }
     }
   }
+
+  for (const f of FIELDS){
+    const v = TXT[f.i] || '';
+    if (!v) continue;
+    layout(v, f.segs).forEach((part, k) => {
+      if (!part) return;
+      const s = f.segs[k], o = ops(s.page);
+      o.rect(s.x - 1, s.base - 2.6, s.cw * s.n + 1.5, s.size + .5, WHITE);
+      o.text(BOLD, s.size, s.x, s.base, part, C_DOC);
+    });
+  }
+
   const map = new Map([...per].map(([k, v]) => [k, v.done()]));
-  return new Blob([PDFMini.append(DOC, map)], { type: 'application/pdf' });
+  const fonts = [{ name: BOLD,
+    dict: '<</Type/Font/BaseFont/Courier-Bold/Encoding/StandardEncoding/Subtype/Type1>>' }];
+  return new Blob([PDFMini.append(DOC, map, { fonts })], { type: 'application/pdf' });
 }
 const outName = () => NAME.replace(/\.pdf$/i, '') + '_ETO.pdf';
 
 $('#dl').onclick = async () => {
-  const b = $('#dl'); b.disabled = true; b.textContent = 'Формирую…';
+  const b = $('#dl'); b.disabled = true; b.textContent = 'Building…';
   try {
     const blob = build(), name = outName();
     const file = new File([blob], name, { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [file] })){
       try { await navigator.share({ files: [file], title: name });
-            msg('#m3', 'Готово — выберите «Сохранить в Файлы» в панели.', 'ok'); return; }
+            msg('#m3', 'Ready — choose “Save to Files” in the share sheet.', 'ok'); return; }
       catch (e){ if (e.name === 'AbortError'){ hide('#m3'); return; } }
     }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
-    msg('#m3', 'Файл сохранён: ' + name, 'ok');
-  } catch (e){ msg('#m3', 'Ошибка: ' + e.message, 'err'); }
-  b.disabled = false; b.textContent = 'Сохранить PDF';
+    msg('#m3', 'Saved: ' + name, 'ok');
+  } catch (e){ msg('#m3', 'Error: ' + e.message, 'err'); }
+  b.disabled = false; b.textContent = 'Save PDF';
 };
 
 $('#open').onclick = () => {
   try {
     const url = URL.createObjectURL(build());
     const w = window.open(url, '_blank');
-    if (!w) msg('#m3', 'Браузер заблокировал новую вкладку — используйте «Сохранить PDF».', 'warn');
+    if (!w) msg('#m3', 'The browser blocked the preview tab — use “Save PDF” instead.', 'warn');
     else hide('#m3');
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-  } catch (e){ msg('#m3', 'Ошибка: ' + e.message, 'err'); }
+  } catch (e){ msg('#m3', 'Error: ' + e.message, 'err'); }
 };
 
 $('#reset').onclick = () => {
-  if (KEY && confirm('Сбросить и удалить сохранённые данные этого файла?')){
+  if (KEY && confirm('Reset and delete saved data for this file?')){
     try { localStorage.removeItem(KEY); } catch(e){}
   }
-  RAW = null; DOC = null; PLAN = null; RESULT = []; KEY = '';
+  RAW = null; DOC = null; PLAN = null; RESULT = []; FIELDS = []; FPL = null; KEY = '';
   for (const k in ACT) delete ACT[k];
-  $('#file').value = ''; $('#etd').value = ''; $('#fname').textContent = ''; $('#saved').textContent = '';
-  $('#c2').classList.add('hide'); $('#c3').classList.add('hide');
+  for (const k in TXT) delete TXT[k];
+  $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
+  $('#fname').textContent = ''; $('#saved').textContent = '';
+  for (const c of ['#c2','#c3','#c4','#c5']) $(c).classList.add('hide');
+  $('#fpl').className = 'hint hide';
   hide('#m1'); hide('#m2'); hide('#m3');
 };
 </script>

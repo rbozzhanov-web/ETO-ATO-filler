@@ -1,4 +1,4 @@
-/* ETO Filler — офлайн-кэш. Всё приложение в одном index.html. */
+/* ETO Filler — offline cache. The whole app lives in index.html. */
 const V = 'eto-filler-v1';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
