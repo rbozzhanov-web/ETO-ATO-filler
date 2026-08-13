@@ -82,6 +82,14 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 
 The button in the header switches between light and dark themes; the choice is remembered.
 
+## AI briefing (optional)
+
+When the device is online an extra card appears at the bottom. It sends the loaded plan to
+Claude and returns a short summary — fuel, times, SIGMET and AIRMET, turbulence, NOTAMs,
+specials. It needs your own Claude API key from console.anthropic.com, entered once and stored
+on the device only; API access is billed separately from a Claude.ai subscription. The summary
+is machine-generated, may be wrong, and never replaces studying the flight documentation.
+
 ## Print colours
 
 Fixed and not configurable, so every document comes out the same:
