@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/31012749/README.md)
 # ETO / ATO Filler — installing on iPad
 
 The app is fully self-contained: the PDF is parsed and written on the device.
