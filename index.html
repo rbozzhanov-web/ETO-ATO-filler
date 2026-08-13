@@ -156,6 +156,7 @@ td.diff{text-align:right;font-weight:700}
 .sw{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:1px;
   margin-right:4px;box-shadow:0 0 0 1px var(--line)}
 
+.ovl.hide{display:none}
 .ovl{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);overflow-y:auto;
   -webkit-overflow-scrolling:touch;display:flex;justify-content:center;
   padding:max(16px,env(safe-area-inset-top)) 16px 40px}
@@ -169,7 +170,8 @@ td.diff{text-align:right;font-weight:700}
   margin:24px 0 9px;font-weight:700}
 .guide h3:first-child{margin-top:14px}
 .guide p{margin:0 0 11px;font-size:14px;line-height:1.7;color:var(--txt)}
-.guide ul{margin:0 0 11px;padding-left:20px;font-size:14px;line-height:1.7}
+.guide ul,.guide ol{margin:0 0 11px;padding-left:22px;font-size:14px;line-height:1.7}
+.guide ol li{margin-bottom:8px}
 .guide li{margin-bottom:6px}
 .guide code{background:var(--panel2);padding:1px 5px;border-radius:3px;
   font:13px/1 ui-monospace,Menlo,monospace}
@@ -276,110 +278,58 @@ td.diff{text-align:right;font-weight:700}
     </div>
     <div class="guide">
 
-      <h3>What this does</h3>
-      <p>It fills an Air Astana computerized flight plan: the estimated time over every waypoint,
-      the actual time and fuel you record in flight, the hourly altimeter cross-checks, and the
-      blank fields on the front page. The result is written back into the same PDF, keeping the
-      original document untouched underneath.</p>
-      <p>Everything runs on this device. Nothing is uploaded, and no internet connection is needed
-      once the app is installed.</p>
-      <div class="tip">Only Air Astana computerized flight plans are supported. Another layout will
-      be rejected on load rather than filled in incorrectly.</div>
+      <h3>Quick start</h3>
+      <ol>
+        <li><b>Load</b> the flight plan PDF.</li>
+        <li><b>Document fields</b> — ATIS, ATC CLRNC, altimeter settings, PIC BLOCK.
+            Each box is capped at the width of the blank in the form.</li>
+        <li><b>Takeoff time</b> in UTC, four digits. Every calculation follows from it.</li>
+        <li><b>Actuals</b> — ATO and remaining fuel per waypoint. The grey hint in each box is
+            the calculated value, so you only type where reality differed. Enter moves on.</li>
+        <li><b>Altimeter cross-checks</b> — one row per hour of flight.</li>
+        <li><b>Save PDF</b> — the share sheet offers Save to Files, AirDrop, Print, ForeFlight.</li>
+      </ol>
+      <div class="tip">The ETD button under the time box inserts the off-block time from the plan.
+      Takeoff is normally later, so treat it as a starting point.</div>
 
-      <h3>1 &nbsp;Load the flight plan</h3>
-      <p>Tap the box and pick the PDF, or drag one onto it. The app reads the route, finds the ETO
-      column, and reports how many waypoints and blank fields it recognised. It also picks up
-      STD, ETD, STA and ETA from the flight header and shows them under the takeoff time box.</p>
+      <h3>Put it on the iPad home screen</h3>
+      <p>Worth doing once: it then runs offline, looks like a normal app, and saving works properly.</p>
+      <ol>
+        <li>Open this page in <b>Safari</b>. Chrome cannot add to the home screen.</li>
+        <li>Tap the <b>Share</b> button in the toolbar.</li>
+        <li>Scroll down and choose <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+        <li>Launch it from the new icon. Try it once in airplane mode to confirm it works offline.</li>
+      </ol>
+      <div class="tip">Opening the file directly from the Files app puts iPadOS into a preview mode
+      where saving and the share sheet may not work. The home screen icon avoids that.</div>
 
-      <h3>2 &nbsp;Document fields</h3>
-      <p>These are the dotted blanks on the first page: REASON FOR EXTRA FUEL, PIC BLOCK, ATIS,
-      GRND ALTM CHK and ATC CLRNC. Text is capped at the width of the blank in the form, and the
-      counter under each box shows how many characters are left.</p>
-      <ul>
-        <li>ATIS is printed on two lines in the form but entered as a single box. The text is split
-        between the lines on a space, never mid-word.</li>
-        <li>ALTM1, STBY and ALTM2 sit on one row and open the numeric keyboard layer, as do
-        PIC BLOCK and the other digits-only fields.</li>
-        <li>Entries are converted to upper case to match the form.</li>
-      </ul>
-
-      <h3>3 &nbsp;Takeoff time</h3>
-      <p>Enter the airborne time in UTC as four digits, for example <code>0210</code>. Everything
-      downstream is derived from it.</p>
-      <div class="tip">The button beside the box inserts the ETD printed in the plan. That is the
-      off-block time, and takeoff is normally later — treat it as a starting point, not an answer.</div>
-
-      <h3>4 &nbsp;Actuals by waypoint</h3>
-      <p>ETO is calculated as takeoff time plus the running sum of the ET column, and cross-checked
-      against the T/T column in the plan. If the two ever disagree the app says so instead of
-      printing a figure it cannot back up.</p>
-      <ul>
-        <li><b>ATO actual</b> — the time you actually passed the point. The grey hint in the box is
-        the calculated ETO, so you only type where reality differed.</li>
-        <li><b>Fuel actual</b> — remaining fuel at the point. The difference against the planned
-        REM is worked out for you and printed in a new DIFF column.</li>
-        <li>Enter moves to the next box, so a whole leg can be typed without touching the screen
-        again. Blank boxes stay as dots in the PDF.</li>
-        <li><b>Set ATO = ETO everywhere</b> fills every row with the calculated time when the
-        flight is running to plan, leaving you to correct only the exceptions.</li>
-        <li>Tick <b>Alternate route (ALTN)</b> to fill the diversion route as well. Its times run
-        from the arrival at destination.</li>
-      </ul>
-
-      <h3>5 &nbsp;Altimeter cross-checks</h3>
-      <p>Company rules require an altimeter comparison every hour, recorded in the flight plan. The
-      app works out which waypoint falls on each full hour after takeoff and gives you one row per
-      hour. The reading is printed on the blank line directly under that waypoint, so the time is
-      read from the ETO and ATO immediately above it.</p>
-      <p>Each row watches its own due time against this device's UTC clock:</p>
-      <table>
-        <tr><th>Status</th><th>Meaning</th></tr>
-        <tr><td>due at 0450</td><td>Still ahead.</td></tr>
-        <tr><td>due at 0450, in 7 min</td><td>Amber. The check is coming up.</td></tr>
-        <tr><td>overdue by 20 min</td><td>Red, and the row is highlighted. A banner appears at the
-        top of the section and a short tone sounds the first time a check falls due.</td></tr>
-        <tr><td>incomplete</td><td>Some of the three instruments are still blank.</td></tr>
-        <tr><td>recorded</td><td>All three entered.</td></tr>
-      </table>
-      <p>Turn the tone off with the checkbox beside the current UTC readout. Saving the PDF while
-      checks are still missing asks for confirmation before it writes the file.</p>
-
-      <h3>6 &nbsp;Export</h3>
-      <ul>
-        <li><b>Save PDF</b> — on iPad this opens the share sheet, where "Save to Files", AirDrop,
-        Print and ForeFlight are all available. On a computer it downloads the file.</li>
-        <li><b>Preview filled PDF</b> — opens the result in a new tab to check it before saving.</li>
-        <li><b>Reset</b> — clears the loaded plan and everything entered, after a confirmation.</li>
-      </ul>
-      <p>The saved file keeps the original name with <code>_ETO</code> added.</p>
+      <h3>Altimeter cross-checks</h3>
+      <p>Company rules require an hourly comparison recorded in the plan. The app finds the waypoint
+      on each full hour after takeoff and prints your reading on the blank line under it, so the time
+      is read from the ETO and ATO just above.</p>
+      <p>Rows watch the clock in UTC: amber when a check is close, red once it is overdue, with a
+      short tone the first time. Saving with checks still missing asks for confirmation.</p>
 
       <h3>Print colours</h3>
-      <p>Fixed, so every document comes out the same. Everything written is bold Courier-Bold, which
-      distinguishes it from the form's own type at a glance.</p>
       <table>
         <tr><th>Item</th><th>Colour</th></tr>
         <tr><td>ETO</td><td>Blue</td></tr>
         <tr><td>ATO</td><td>Green</td></tr>
         <tr><td>Fuel and the FUEL column</td><td>Black</td></tr>
-        <tr><td>Document fields and ALTM CHK lines</td><td>Blue</td></tr>
+        <tr><td>Document fields, ALTM CHK</td><td>Blue</td></tr>
         <tr><td>DIFF</td><td>Green above plan, red below</td></tr>
       </table>
+      <p>All of it in bold, to stand apart from the form's own type.</p>
 
-      <h3>Saving your work</h3>
-      <p>Everything you type is stored on the device as you go and tied to that particular file. Close
-      the app, reopen it, load the same plan again and your entries come back. Reset deletes them.</p>
-      <div class="tip">Opening the app straight from the Files app puts iPadOS into a preview mode
-      where saving and this memory may be unavailable. Installing it to the home screen avoids that.</div>
-
-      <h3>If something goes wrong</h3>
+      <h3>Good to know</h3>
       <ul>
-        <li><b>"ETO column not found"</b> — the PDF is not an Air Astana computerized flight plan,
-        or it is a scan rather than a text document.</li>
-        <li><b>"Browser too old"</b> — iPadOS 16.4 or newer is required.</li>
-        <li><b>The share sheet does nothing</b> — you are in the Files preview. Install to the home
-        screen, or use Preview filled PDF and save from the viewer.</li>
-        <li><b>A warning about ET and T/T</b> — the plan's own columns disagree. Check those
-        waypoints by hand before trusting the times.</li>
+        <li>Only Air Astana computerized flight plans are supported.</li>
+        <li>Entries are saved on the device as you type and come back when you reload the same plan.
+            Reset clears them.</li>
+        <li>Nothing leaves the iPad and no connection is needed.</li>
+        <li><b>Set ATO = ETO everywhere</b> fills every row at once when the flight is on plan.</li>
+        <li>A warning about ET and T/T means the plan's own columns disagree — check those
+            waypoints by hand.</li>
       </ul>
 
     </div>
