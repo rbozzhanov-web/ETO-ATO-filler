@@ -41,8 +41,14 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 .brand{background:#fff;border-radius:8px;padding:9px 14px;display:flex;flex:0 0 auto;
   box-shadow:0 0 0 1px rgba(0,0,0,.07)}
 .logo{height:23px;width:auto;display:block}
-#theme{background:transparent;border:1px solid var(--line);color:var(--dim);border-radius:8px;
-  padding:9px 14px;font-size:13px;font-weight:600;min-height:40px;white-space:nowrap}
+.themesw{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px}
+.themesw button{background:transparent;border:0;border-radius:6px;padding:7px 11px;min-height:34px;
+  color:var(--dim);display:grid;place-items:center;cursor:pointer}
+.themesw button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.themesw button[aria-pressed=true]{background:var(--panel2);color:var(--acc)}
+@media(hover:hover){.themesw button:hover{color:var(--txt)}
+  .themesw button[aria-pressed=true]:hover{color:var(--acc)}}
 @media(max-width:560px){.hd{gap:12px}.logo{height:19px}}
 
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
@@ -178,6 +184,9 @@ td.diff{text-align:right;font-weight:700}
 .guide table{width:100%;border-collapse:collapse;font-size:13.5px;margin:0 0 12px}
 .guide th,.guide td{text-align:left;padding:8px;border-bottom:1px solid var(--line2);vertical-align:top}
 .guide th{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
+.paper{display:inline-block;background:#fff;border:1px solid #c8ced6;border-radius:4px;
+  padding:4px 9px;font:700 13px/1.3 ui-monospace,Menlo,monospace;letter-spacing:.5px}
+.paper b+b{margin-left:10px}
 .guide .tip{border-left:3px solid var(--gold);border-radius:0;padding:2px 0 2px 14px;
   margin:0 0 12px;color:var(--dim);font-size:13.5px;line-height:1.65}
 </style>
@@ -192,7 +201,10 @@ td.diff{text-align:right;font-weight:700}
     </div>
     <div class="grow"></div>
     <button id="guideBtn" type="button" class="ghost">User guide</button>
-    <button id="theme" type="button" class="ghost">Light theme</button>
+    <div class="themesw" role="group" aria-label="Colour theme">
+      <button type="button" data-theme-set="light" aria-label="Light theme" title="Light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 1.8v2.6M12 19.6v2.6M4.2 4.2l1.9 1.9M17.9 17.9l1.9 1.9M1.8 12h2.6M19.6 12h2.6M4.2 19.8l1.9-1.9M17.9 6.1l1.9-1.9"/></svg></button>
+      <button type="button" data-theme-set="dark" aria-label="Dark theme" title="Dark theme"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    </div>
   </header>
 
   <div class="card">
@@ -311,15 +323,21 @@ td.diff{text-align:right;font-weight:700}
       short tone the first time. Saving with checks still missing asks for confirmation.</p>
 
       <h3>Print colours</h3>
+      <p>Fixed, so every document comes out the same. Samples below are shown on white,
+      exactly as they print:</p>
       <table>
-        <tr><th>Item</th><th>Colour</th></tr>
-        <tr><td>ETO</td><td>Blue</td></tr>
-        <tr><td>ATO</td><td>Green</td></tr>
-        <tr><td>Fuel and the FUEL column</td><td>Black</td></tr>
-        <tr><td>Document fields, ALTM CHK</td><td>Blue</td></tr>
-        <tr><td>DIFF</td><td>Green above plan, red below</td></tr>
+        <tr><th>Item</th><th>On paper</th></tr>
+        <tr><td>ETO</td><td><span class="paper"><b style="color:#0033cc">0210</b></span></td></tr>
+        <tr><td>ATO</td><td><span class="paper"><b style="color:#00762e">0213</b></span></td></tr>
+        <tr><td>Fuel, and the FUEL column</td>
+            <td><span class="paper"><b style="color:#000">22741</b></span></td></tr>
+        <tr><td>Document fields and ALTM CHK</td>
+            <td><span class="paper"><b style="color:#0033cc">ALTM1 1013</b></span></td></tr>
+        <tr><td>DIFF, against planned fuel</td>
+            <td><span class="paper"><b style="color:#00762e">+180</b>
+                <b style="color:#cc0000">-220</b></span></td></tr>
       </table>
-      <p>All of it in bold, to stand apart from the form's own type.</p>
+      <p>All of it in bold Courier, to stand apart from the form's own type.</p>
 
       <h3>Good to know</h3>
       <ul>
@@ -327,6 +345,8 @@ td.diff{text-align:right;font-weight:700}
         <li>Entries are saved on the device as you type and come back when you reload the same plan.
             Reset clears them.</li>
         <li>Nothing leaves the iPad and no connection is needed.</li>
+        <li>The sun and moon buttons in the header switch the screen theme; the choice is
+            remembered. Print colours never change.</li>
         <li><b>Set ATO = ETO everywhere</b> fills every row at once when the flight is on plan.</li>
         <li>A warning about ET and T/T means the plan's own columns disagree — check those
             waypoints by hand.</li>
@@ -802,7 +822,8 @@ function onScreen(h){
 }
 function applyTheme(t){
   document.documentElement.dataset.theme = t;
-  $('#theme').textContent = t === 'dark' ? 'Light theme' : 'Dark theme';
+  document.querySelectorAll('[data-theme-set]').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.themeSet === t)));
   const m = document.querySelector('meta[name=theme-color]');
   if (m) m.content = t === 'dark' ? '#0f1419' : '#f2f5f8';
   const s = document.documentElement.style;
@@ -822,8 +843,8 @@ $('#guideClose').onclick = () => showGuide(false);
 guide.onclick = e => { if (e.target === guide) showGuide(false); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') showGuide(false); });
 
-$('#theme').onclick = () =>
-  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+document.querySelectorAll('[data-theme-set]').forEach(b =>
+  b.onclick = () => applyTheme(b.dataset.themeSet));
 (() => {
   let t = null;
   try { t = localStorage.getItem('etofill:theme'); } catch(e){}
