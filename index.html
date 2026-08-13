@@ -201,6 +201,13 @@ td.diff{text-align:right;font-weight:700}
   border-radius:6px;padding:10px;font:15px/1 ui-monospace,Menlo,monospace;width:100%}
 .keyrow select{font-family:inherit;height:40px}
 .keyrow .note2{grid-column:1/-1;font-size:12px;color:var(--dim);line-height:1.6}
+.setup{grid-column:1/-1}
+.setup h5{margin:0 0 8px;font-size:12px;letter-spacing:.7px;text-transform:uppercase;color:var(--acc)}
+.setup ol{margin:0;padding-left:20px;font-size:13px;line-height:1.7;color:var(--dim)}
+.setup li{margin-bottom:6px}
+.setup b{color:var(--txt);font-weight:600}
+.setup a{color:var(--acc)}
+.setup code{background:var(--bg);padding:1px 5px;border-radius:3px;font:12px/1 ui-monospace,Menlo,monospace}
 .keyrow .note2 a{color:var(--acc)}
 @media(max-width:640px){.keyrow{grid-template-columns:1fr}.keyrow label{text-align:left}}
 .brief{border:1px solid var(--line);border-radius:8px;background:var(--panel2);padding:16px 18px;margin-top:12px}
@@ -328,19 +335,28 @@ td.diff{text-align:right;font-weight:700}
     <p class="disc" id="aiOffline">AI briefing needs an internet connection. It is unavailable offline.</p>
     <div class="hide" id="aiPanel">
       <div class="keyrow hide" id="aiKeyRow">
-        <label for="aiProv">Service</label>
-        <select id="aiProv">
-          <option value="gemini">Google Gemini — free tier</option>
-          <option value="claude">Anthropic Claude — paid API</option>
-        </select>
+        <div class="setup">
+          <h5>Getting a Claude API key</h5>
+          <ol>
+            <li>Open <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>
+                and sign up. This is a developer account, separate from claude.ai — a Claude.ai
+                subscription does not include API access.</li>
+            <li>Go to <b>Settings → Billing</b> and add a card. The API runs on prepaid credit;
+                the smallest top-up is 5 USD and covers a great many briefings.</li>
+            <li>Open <b>API Keys</b> in the sidebar and press <b>Create Key</b>. Name it something
+                like <code>eto-filler-ipad</code>.</li>
+            <li>Copy the key straight away — it is shown once and cannot be retrieved later.</li>
+            <li>Paste it below. It is stored on this iPad only, never in the app file, and goes
+                nowhere except api.anthropic.com.</li>
+          </ol>
+        </div>
         <label for="aiKey">API key</label>
-        <input type="password" id="aiKey" placeholder="AIza..." autocomplete="off" spellcheck="false">
+        <input type="password" id="aiKey" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
         <p class="note2" id="aiModelInfo">Model: chosen automatically.</p>
-        <p class="note2" id="aiNote"></p>
       </div>
       <div class="row">
         <button id="aiRun">Generate briefing</button>
-        <button id="aiKeyBtn" class="ghost">API key</button>
+        <button id="aiKeyBtn" class="ghost">How to get a key</button>
         <span class="saved" id="aiMeta"></span>
       </div>
       <div class="msg" id="m5"></div>
@@ -361,7 +377,8 @@ td.diff{text-align:right;font-weight:700}
       <p>The commander remains responsible for studying the flight plan, NOTAMs, weather and all
       other briefing material in full, and for verifying every figure against the source document
       before acting on it.</p>
-      <p id="aiWhere"></p>
+      <p>The flight plan is sent to Anthropic for processing when you continue. API requests
+      are not used to train models.</p>
       <div class="row" style="margin-top:20px">
         <button id="aiAgree">I understand — generate</button>
         <button id="aiCancel" class="ghost">Cancel</button>
@@ -418,14 +435,13 @@ td.diff{text-align:right;font-weight:700}
       <p>With an internet connection an extra card appears at the bottom. It sends the loaded
       flight plan to a model and returns a short summary of fuel, times, SIGMET and AIRMET,
       turbulence, NOTAMs and anything else needing attention.</p>
-      <p>Two services are available under <b>API key</b>. <b>Google Gemini</b> is the default and
-      has a free tier — get a key at aistudio.google.com, no card required. <b>Anthropic Claude</b>
-      is the alternative and is billed per request. Paste the key and nothing else: the app asks
-      the service which models the key can use and picks the best one itself, preferring the
-      current fast tier over previews. If that model is later withdrawn it simply looks again.</p>
-      <div class="tip">On the Gemini free tier Google may use what you send to improve their
-      products. Check that sending company flight documentation is acceptable under your
-      operator's policy before using it.</div>
+      <p>It runs on the Anthropic API and needs your own key. Press <b>How to get a key</b> in
+      that card for the steps — an account on console.anthropic.com, a small prepaid balance,
+      then a key you paste once. It is kept on this iPad, never written into the app file, and
+      goes nowhere but api.anthropic.com. API requests are not used to train models.</p>
+      <p>Paste the key and nothing else: the app asks which models that key can use and picks the
+      best one itself, preferring the current fast tier over previews, and looks again if the
+      model is ever withdrawn.</p>
       <div class="tip">The summary is machine-generated and may be wrong or incomplete. It is an
       aid to orientation, never a substitute for studying the flight documentation, and every
       figure must be verified against the source before it is acted on.</div>
@@ -1017,86 +1033,42 @@ async function load(f){
 /* ================= AI briefing ================= */
 let TEXT_ALL = '', aiBusy = false;
 
-const PROVIDERS = {
-  gemini: {
-    label: 'Gemini', keyStore: 'etofill:gkey', modelStore: 'etofill:gmodel',
-    fallbacks: ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'],
-    placeholder: 'AIza...',
-    async list(key){
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',
-                            { headers: { 'x-goog-api-key': key } });
-      if (!r.ok) throw new Error('models ' + r.status);
-      return ((await r.json()).models || [])
-        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
-        .map(m => String(m.name).replace(/^models\//, ''));
-    },
-    note: 'Free key from <a href="https://aistudio.google.com/apikey" target="_blank" '
-        + 'rel="noopener">aistudio.google.com</a>, no card needed. Other models to try: '
-        + '<b>On the free tier Google may use what you send '
-        + 'to improve their products</b> — check that sending company flight documentation '
-        + 'is acceptable under your operator&rsquo;s policy.',
-    send(key, model, pdf, text){
-      return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({
-          contents: [{ parts: pdf
-            ? [{ inline_data: { mime_type: 'application/pdf', data: pdf } }, { text: PROMPT }]
-            : [{ text: PROMPT + '\n\nFLIGHT PLAN TEXT:\n' + text }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 3000 }
-        })
-      });
-    },
-    read(d){
-      const c = (d.candidates || [])[0];
-      const t = ((c && c.content && c.content.parts) || []).map(p => p.text || '').join('').trim();
-      if (!t && c && c.finishReason && c.finishReason !== 'STOP')
-        throw new Error('The model stopped early (' + c.finishReason + ').');
-      const u = d.usageMetadata || {};
-      return { text: t, in: u.promptTokenCount, out: u.candidatesTokenCount };
-    }
+const CLAUDE = {
+  label: 'Claude', keyStore: 'etofill:aikey', modelStore: 'etofill:aimodel',
+  fallbacks: ['claude-sonnet-5', 'claude-haiku-4-5-20251001'],
+  async list(key){
+    const r = await fetch('https://api.anthropic.com/v1/models?limit=100', {
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01',
+                 'anthropic-dangerous-direct-browser-access': 'true' } });
+    if (!r.ok) throw new Error('models ' + r.status);
+    return ((await r.json()).data || []).map(m => m.id);
   },
-  claude: {
-    label: 'Claude', keyStore: 'etofill:aikey', modelStore: 'etofill:aimodel',
-    fallbacks: ['claude-sonnet-5', 'claude-haiku-4-5-20251001'],
-    placeholder: 'sk-ant-...',
-    async list(key){
-      const r = await fetch('https://api.anthropic.com/v1/models?limit=100', {
-        headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01',
-                   'anthropic-dangerous-direct-browser-access': 'true' } });
-      if (!r.ok) throw new Error('models ' + r.status);
-      return ((await r.json()).data || []).map(m => m.id);
-    },
-    note: 'Key from <a href="https://console.anthropic.com" target="_blank" '
-        + 'rel="noopener">console.anthropic.com</a>. API access is billed separately from a '
-        + 'Claude.ai subscription and needs prepaid credit.',
-    send(key, model, pdf, text){
-      return fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': key,
-                   'anthropic-version': '2023-06-01',
-                   'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model, max_tokens: 3000, messages: [{ role: 'user', content: pdf
-          ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdf } },
-             { type: 'text', text: PROMPT }]
-          : [{ type: 'text', text: PROMPT + '\n\nFLIGHT PLAN TEXT:\n' + text }] }] })
-      });
-    },
-    read(d){
-      const u = d.usage || {};
-      return { text: (d.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim(),
-               in: u.input_tokens, out: u.output_tokens };
-    }
+  send(key, model, pdf, text){
+    return fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': key,
+                 'anthropic-version': '2023-06-01',
+                 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model, max_tokens: 6000, messages: [{ role: 'user', content: pdf
+        ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdf } },
+           { type: 'text', text: PROMPT }]
+        : [{ type: 'text', text: PROMPT + '\n\nFLIGHT PLAN TEXT:\n' + text }] }] })
+    });
+  },
+  read(d){
+    const u = d.usage || {};
+    return { text: (d.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim(),
+             in: u.input_tokens, out: u.output_tokens };
   }
 };
-const prov = () => PROVIDERS[$('#aiProv').value] || PROVIDERS.gemini;
+const prov = () => CLAUDE;
 
 /* Rank the models a key can actually use: newest generation first, the fast tier
    preferred (it is the one the free quota is generous with), previews last. */
 function rankModel(id){
   const s = id.toLowerCase();
-  if (/embedding|aqa|tts|imagen|image-gen|veo|learnlm|nano/.test(s)) return -1e9;
-  const v = parseFloat((s.match(/(?:gemini|claude)[a-z-]*?-(\d+(?:\.\d+)?)/) || [0, 0])[1]) || 0;
+  if (!/^claude/.test(s)) return -1e9;
+  const v = parseFloat((s.match(/claude[a-z-]*?-(\d+(?:\.\d+)?)/) || [0, 0])[1]) || 0;
   let k = v * 100;
   if (/flash|haiku/.test(s)) k += 30;
   if (/sonnet/.test(s)) k += 25;
@@ -1141,19 +1113,14 @@ addEventListener('offline', aiRefresh);
 
 function loadProv(){
   const p = prov();
-  let k = '', cached = null;
+  let cached = null;
   try {
-    k = localStorage.getItem(p.keyStore) || '';
+    $('#aiKey').value = localStorage.getItem(p.keyStore) || '';
     cached = JSON.parse(localStorage.getItem(p.modelStore) || 'null');
   } catch(e){}
-  $('#aiKey').value = k; $('#aiKey').placeholder = p.placeholder;
-  $('#aiNote').innerHTML = p.note;
   showModel(cached && cached.id);
-  try { localStorage.setItem('etofill:aiprov', $('#aiProv').value); } catch(e){}
 }
-try { $('#aiProv').value = localStorage.getItem('etofill:aiprov') || 'gemini'; } catch(e){}
 loadProv();
-$('#aiProv').onchange = () => { loadProv(); hide('#m5'); };
 $('#aiKeyBtn').onclick = () => $('#aiKeyRow').classList.toggle('hide');
 $('#aiKey').oninput = () => {
   try {
@@ -1163,24 +1130,60 @@ $('#aiKey').oninput = () => {
   showModel(null);
 };
 
-const PROMPT = `You are briefing the operating crew from the attached Air Astana operational flight plan.
+const PROMPT = `You are preparing a pre-flight briefing for the operating crew from the attached
+Air Astana operational flight plan. The crew will read this before departure, alongside the
+document itself. Be thorough and specific: this is a working briefing, not a teaser.
 
-Produce a short pre-flight briefing with these sections, in this order:
-FLIGHT - callsign, registration, route, off-block and arrival times, flight level.
-FUEL - block, trip, alternate, final reserve, contingency, extra and the stated reason, minimum block.
-TIME - trip time, time to alternate, endurance.
-WEATHER - SIGMET and AIRMET affecting this route, significant en-route weather, tropopause, freezing level.
-TURBULENCE - where it is forecast along the route, with flight levels and severity.
-NOTAMS - only those affecting this flight: departure, destination, alternates, en-route closures, navaid or runway unserviceability.
-SPECIALS - overflight permits, ETOPS or ERA, RVSM, minimum equipment, unusual restrictions, anything else needing crew attention.
+Produce every one of these sections, in this order, with the exact heading given. Never omit a
+section and never merge two sections together.
 
-Rules:
-- Use only what the document contains. Quote figures exactly as printed; never calculate, estimate or infer a number.
-- If a section is not covered by the document, write "not in this document" and move on.
-- Put the single most limiting item first in each section.
-- Be terse: short lines, no filler. All times UTC.
-- Begin a line with ATTENTION: for anything limiting or out of the ordinary.
-- Plain text only. Start each section with its name on its own line.`;
+FUEL
+Block, trip, taxi, alternate, final reserve, contingency, extra with the stated reason, minimum
+block, and the tankering figure. Give the burn per extra tonne if printed. State the fuel
+remaining planned at destination and at the alternate. Call out anything tight: a small margin
+over minimum block, extra fuel carried, an alternate that is far away.
+
+TIME
+Off-block and airborne times, trip time, time to the alternate, endurance, and the arrival
+estimate. Note the difference between STD/ETD and STA/ETA if the document shows one.
+
+ROUTE AND LEVELS
+Departure and arrival airports and runways if given, the SID and STAR, planned cruise levels and
+where they change, step climbs, top of climb and top of descent, great circle versus ground
+distance, and the alternate routing.
+
+WEATHER
+SIGMET and AIRMET affecting this route, with the phenomenon, area, levels and validity. Then the
+significant en-route weather from the wind and temperature summary: worst winds, lowest
+temperatures, ISA deviation, tropopause and freezing level. Then departure, destination and
+alternate weather if the document carries TAF or METAR.
+
+TURBULENCE
+Where turbulence is forecast along this route, naming the waypoints or FIRs, with flight levels
+and severity. Include jet stream cores and wind shear if shown. If the document gives a
+turbulence chart or index, say what it indicates. If nothing is forecast, say so explicitly.
+
+NOTAMS
+Only those that bear on this flight, grouped by departure, destination, alternates and en-route.
+For each, give what is affected and the validity period. Lead with runway, taxiway, navaid and
+airspace closures, then approach or lighting unserviceability, then the rest. If a NOTAM changes
+what the crew can plan for, say so in plain words.
+
+SPECIALS
+Overflight permits and their numbers, ETOPS or ERA arrangements, RVSM, RNP and PBN requirements,
+CPDLC and datalink, minimum equipment items, curfews, slot times, security or overflight
+restrictions, and anything else the crew must know that does not fit above.
+
+Rules, and they matter:
+- Use only what the attached document contains. Quote every figure exactly as printed, with its
+  units. Never calculate, estimate, round or infer a number that is not written there.
+- If the document does not cover a section, write "Not contained in this flight plan" under that
+  heading and move on. Never fill a gap from general knowledge.
+- Begin any line that is limiting, unusual or needs a decision with ATTENTION:
+- Put the most operationally significant item first within each section.
+- Write in short factual lines. No preamble, no summary at the end, no advice on how to fly.
+- All times UTC. Use the document's own naming for waypoints, airports and airways.
+- Plain text. Each heading on its own line, exactly as written above.`;
 
 function b64(buf){
   const u8 = new Uint8Array(buf); let s = '', C = 0x8000;
@@ -1193,13 +1196,9 @@ $('#aiRun').onclick = () => {
   if (!RAW){ msg('#m5', 'Load a flight plan first.', 'err'); return; }
   if (!$('#aiKey').value.trim()){
     $('#aiKeyRow').classList.remove('hide');
-    msg('#m5', `Enter your ${prov().label} API key to use the briefing.`, 'warn');
+    msg('#m5', 'Enter your Claude API key to use the briefing. Press “How to get a key”.', 'warn');
     $('#aiKey').focus(); return;
   }
-  $('#aiWhere').innerHTML = $('#aiProv').value === 'gemini'
-    ? 'The flight plan is sent to <b>Google</b> when you continue. On the free tier Google may '
-    + 'use it to improve their products, so make sure that is acceptable for this document.'
-    : 'The flight plan is sent to <b>Anthropic</b> when you continue.';
   $('#aiDisc').classList.remove('hide');
   document.body.style.overflow = 'hidden';
 };
@@ -1221,7 +1220,7 @@ async function runBriefing(){
 
   try {
     const p = prov(), key = $('#aiKey').value.trim();
-    const maxInline = $('#aiProv').value === 'gemini' ? 14 : 22;      // MB before falling back to text
+    const maxInline = 22;                        // MB before falling back to plain text
     const usePdf = DOC.pages().length <= 100 && RAW.byteLength < maxInline * 1024 * 1024;
     const pdf = usePdf ? b64(RAW) : null;
 
@@ -1264,7 +1263,7 @@ async function runBriefing(){
 
 function renderBrief(t){
   const esc = s => s.replace(/[&<>]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[c]));
-  const heads = /^(FLIGHT|FUEL|TIME|WEATHER|TURBULENCE|NOTAMS?|SPECIALS?)\b[:\s]*$/i;
+  const heads = /^(FUEL|TIME|ROUTE AND LEVELS|WEATHER|TURBULENCE|NOTAMS?|SPECIALS?)\b[:\s]*$/i;
   const out = []; let inList = false;
   for (const raw of t.split(/\r?\n/)){
     const line = raw.trim();
