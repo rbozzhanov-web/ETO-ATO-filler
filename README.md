@@ -64,7 +64,15 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    time and takeoff is normally later, so check it.
 4. Enter actual ATO and remaining fuel per waypoint. Enter jumps to the next
    field. Everything is saved automatically.
-5. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
+5. Record the hourly altimeter cross-checks. The app works out which waypoint
+   falls on each full hour after takeoff and lists one row per hour; enter
+   ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly
+   under that waypoint, so the time is read off the ETO/ATO right above it.
+   Each row tracks its own due time against the device clock in UTC and turns
+   red once the check is overdue, with a short tone when it first falls due
+   (switch it off with the checkbox). Saving the PDF with checks still missing
+   asks for confirmation first.
+6. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
    or send it to ForeFlight.
 
 The button in the header switches between light and dark themes; the choice is remembered.
@@ -79,6 +87,7 @@ Fixed and not configurable, so every document comes out the same:
 | ATO | green |
 | Fuel and the FUEL column | black |
 | Document fields (ATIS, ATC CLRNC and the rest) | blue |
+| Hourly ALTM CHK lines | blue |
 | DIFF | green above plan, red below |
 
 Everything written is printed in bold Courier-Bold so it stands out from the form's own type.

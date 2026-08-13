@@ -113,12 +113,12 @@ td.num{text-align:right;color:var(--dim)}
 tr.hdr td{background:var(--hdr);color:var(--dim);font-size:11px;letter-spacing:.8px;
   text-transform:uppercase;font-weight:700;padding:8px}
 tr.filled{background:color-mix(in srgb,var(--ok) 8%,transparent)}
-td input,.fld input{background:transparent;border:1px solid var(--line);color:var(--txt);
+td input,.fld input,.altrow input{background:transparent;border:1px solid var(--line);color:var(--txt);
   border-radius:5px;padding:7px 4px;font:700 16px/1 ui-monospace,Menlo,monospace;
   width:78px;text-align:center}
 input::placeholder{color:var(--fld);font-weight:400;font-size:14px}
 td input.bad{border-color:var(--err)}
-td input:focus,.fld input:focus{border-color:var(--acc);background:var(--bg)}
+td input:focus,.fld input:focus,.altrow input:focus{border-color:var(--acc);background:var(--bg)}
 td input.ato{color:var(--c-ato)}
 td input.fuel{color:var(--c-fuel)}
 td.diff{text-align:right;font-weight:700}
@@ -132,6 +132,22 @@ td.diff{text-align:right;font-weight:700}
 .fld .multi>div{display:flex;flex-direction:column;gap:5px}
 .fld .multi small{font-size:11px;color:var(--dim);font-family:ui-monospace,Menlo,monospace;letter-spacing:.5px}
 .fld .multi input{width:132px;text-align:center}
+.alt{display:flex;flex-direction:column;gap:12px}
+.altrow{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;
+  padding-bottom:12px;border-bottom:1px solid var(--line2)}
+.altrow:last-child{border-bottom:0;padding-bottom:0}
+.altrow .tag{min-width:210px;font:13px/1.4 ui-monospace,Menlo,monospace;color:var(--dim)}
+.altrow .tag b{color:var(--txt);font-weight:700}
+.altrow .cell{display:flex;flex-direction:column;gap:5px}
+.altrow small{font-size:11px;color:var(--dim);font-family:ui-monospace,Menlo,monospace;letter-spacing:.5px}
+.altrow input{width:118px;text-align:center;color:var(--c-eto)}
+.altrow.late{background:color-mix(in srgb,var(--err) 9%,transparent);
+  border-radius:8px;padding:10px;margin:-10px -10px 0}
+.st{display:inline-block;margin-top:4px;font:600 11px/1.4 -apple-system,sans-serif;
+  letter-spacing:.4px;text-transform:uppercase}
+.st.wait{color:var(--dim)} .st.soon{color:var(--warn)}
+.st.late{color:var(--err)} .st.done{color:var(--ok)} .st.part{color:var(--warn)}
+.clock{margin-left:auto;font:12px/1 ui-monospace,Menlo,monospace;color:var(--dim);align-self:center}
 @media(max-width:640px){.fld{grid-template-columns:1fr;gap:2px}.fld label{text-align:left;margin-top:8px}}
 
 .hide{display:none}
@@ -139,6 +155,29 @@ td.diff{text-align:right;font-weight:700}
 .note code{background:var(--panel2);padding:1px 5px;border-radius:3px}
 .sw{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:1px;
   margin-right:4px;box-shadow:0 0 0 1px var(--line)}
+
+.ovl{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);overflow-y:auto;
+  -webkit-overflow-scrolling:touch;display:flex;justify-content:center;
+  padding:max(16px,env(safe-area-inset-top)) 16px 40px}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  max-width:780px;width:100%;margin:auto;overflow:hidden}
+.sheet .top{display:flex;align-items:center;gap:14px;padding:16px 22px;position:sticky;top:0;
+  background:var(--panel);border-bottom:1px solid var(--gold);z-index:1}
+.sheet .top h2{margin:0;font-size:17px;font-weight:600;flex:1}
+.guide{padding:6px 22px 26px}
+.guide h3{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--acc);
+  margin:24px 0 9px;font-weight:700}
+.guide h3:first-child{margin-top:14px}
+.guide p{margin:0 0 11px;font-size:14px;line-height:1.7;color:var(--txt)}
+.guide ul{margin:0 0 11px;padding-left:20px;font-size:14px;line-height:1.7}
+.guide li{margin-bottom:6px}
+.guide code{background:var(--panel2);padding:1px 5px;border-radius:3px;
+  font:13px/1 ui-monospace,Menlo,monospace}
+.guide table{width:100%;border-collapse:collapse;font-size:13.5px;margin:0 0 12px}
+.guide th,.guide td{text-align:left;padding:8px;border-bottom:1px solid var(--line2);vertical-align:top}
+.guide th{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
+.guide .tip{border-left:3px solid var(--gold);border-radius:0;padding:2px 0 2px 14px;
+  margin:0 0 12px;color:var(--dim);font-size:13.5px;line-height:1.65}
 </style>
 </head>
 <body>
@@ -150,6 +189,7 @@ td.diff{text-align:right;font-weight:700}
       <div class="sub">Operational flight plan filler</div>
     </div>
     <div class="grow"></div>
+    <button id="guideBtn" type="button" class="ghost">User guide</button>
     <button id="theme" type="button" class="ghost">Light theme</button>
   </header>
 
@@ -198,8 +238,18 @@ td.diff{text-align:right;font-weight:700}
     </tr></thead><tbody></tbody></table></div>
   </div>
 
+  <div class="card hide" id="c6">
+    <div class="step"><i>5</i> Altimeter cross-checks</div>
+    <p class="disc">Hourly comparison of ALTM1 / STBY / ALTM2, printed next to the waypoint
+      reached at each full hour after takeoff.</p>
+    <label class="chk" style="padding:0 0 12px"><input type="checkbox" id="altAlert" checked>
+      Alert me when a check falls due <span class="clock" id="utc"></span></label>
+    <div class="msg" id="m4"></div>
+    <div class="alt" id="altrows"></div>
+  </div>
+
   <div class="card hide" id="c5">
-    <div class="step"><i>5</i> Export</div>
+    <div class="step"><i>6</i> Export</div>
     <div class="row">
       <button id="dl">Save PDF</button>
       <button id="open" class="ghost">Preview filled PDF</button>
@@ -214,6 +264,124 @@ td.diff{text-align:right;font-weight:700}
       <span class="sw" style="background:#0033cc"></span>document fields blue.
       <code>DIFF</code> stays green when fuel is above plan and red when below.<br>
       Fully offline: the PDF is parsed and written on this device.
+    </div>
+  </div>
+</div>
+
+<div class="ovl hide" id="guide">
+  <div class="sheet">
+    <div class="top">
+      <h2>User guide</h2>
+      <button id="guideClose" type="button" class="ghost sm">Close</button>
+    </div>
+    <div class="guide">
+
+      <h3>What this does</h3>
+      <p>It fills an Air Astana computerized flight plan: the estimated time over every waypoint,
+      the actual time and fuel you record in flight, the hourly altimeter cross-checks, and the
+      blank fields on the front page. The result is written back into the same PDF, keeping the
+      original document untouched underneath.</p>
+      <p>Everything runs on this device. Nothing is uploaded, and no internet connection is needed
+      once the app is installed.</p>
+      <div class="tip">Only Air Astana computerized flight plans are supported. Another layout will
+      be rejected on load rather than filled in incorrectly.</div>
+
+      <h3>1 &nbsp;Load the flight plan</h3>
+      <p>Tap the box and pick the PDF, or drag one onto it. The app reads the route, finds the ETO
+      column, and reports how many waypoints and blank fields it recognised. It also picks up
+      STD, ETD, STA and ETA from the flight header and shows them under the takeoff time box.</p>
+
+      <h3>2 &nbsp;Document fields</h3>
+      <p>These are the dotted blanks on the first page: REASON FOR EXTRA FUEL, PIC BLOCK, ATIS,
+      GRND ALTM CHK and ATC CLRNC. Text is capped at the width of the blank in the form, and the
+      counter under each box shows how many characters are left.</p>
+      <ul>
+        <li>ATIS is printed on two lines in the form but entered as a single box. The text is split
+        between the lines on a space, never mid-word.</li>
+        <li>ALTM1, STBY and ALTM2 sit on one row and open the numeric keyboard layer, as do
+        PIC BLOCK and the other digits-only fields.</li>
+        <li>Entries are converted to upper case to match the form.</li>
+      </ul>
+
+      <h3>3 &nbsp;Takeoff time</h3>
+      <p>Enter the airborne time in UTC as four digits, for example <code>0210</code>. Everything
+      downstream is derived from it.</p>
+      <div class="tip">The button beside the box inserts the ETD printed in the plan. That is the
+      off-block time, and takeoff is normally later — treat it as a starting point, not an answer.</div>
+
+      <h3>4 &nbsp;Actuals by waypoint</h3>
+      <p>ETO is calculated as takeoff time plus the running sum of the ET column, and cross-checked
+      against the T/T column in the plan. If the two ever disagree the app says so instead of
+      printing a figure it cannot back up.</p>
+      <ul>
+        <li><b>ATO actual</b> — the time you actually passed the point. The grey hint in the box is
+        the calculated ETO, so you only type where reality differed.</li>
+        <li><b>Fuel actual</b> — remaining fuel at the point. The difference against the planned
+        REM is worked out for you and printed in a new DIFF column.</li>
+        <li>Enter moves to the next box, so a whole leg can be typed without touching the screen
+        again. Blank boxes stay as dots in the PDF.</li>
+        <li><b>Set ATO = ETO everywhere</b> fills every row with the calculated time when the
+        flight is running to plan, leaving you to correct only the exceptions.</li>
+        <li>Tick <b>Alternate route (ALTN)</b> to fill the diversion route as well. Its times run
+        from the arrival at destination.</li>
+      </ul>
+
+      <h3>5 &nbsp;Altimeter cross-checks</h3>
+      <p>Company rules require an altimeter comparison every hour, recorded in the flight plan. The
+      app works out which waypoint falls on each full hour after takeoff and gives you one row per
+      hour. The reading is printed on the blank line directly under that waypoint, so the time is
+      read from the ETO and ATO immediately above it.</p>
+      <p>Each row watches its own due time against this device's UTC clock:</p>
+      <table>
+        <tr><th>Status</th><th>Meaning</th></tr>
+        <tr><td>due at 0450</td><td>Still ahead.</td></tr>
+        <tr><td>due at 0450, in 7 min</td><td>Amber. The check is coming up.</td></tr>
+        <tr><td>overdue by 20 min</td><td>Red, and the row is highlighted. A banner appears at the
+        top of the section and a short tone sounds the first time a check falls due.</td></tr>
+        <tr><td>incomplete</td><td>Some of the three instruments are still blank.</td></tr>
+        <tr><td>recorded</td><td>All three entered.</td></tr>
+      </table>
+      <p>Turn the tone off with the checkbox beside the current UTC readout. Saving the PDF while
+      checks are still missing asks for confirmation before it writes the file.</p>
+
+      <h3>6 &nbsp;Export</h3>
+      <ul>
+        <li><b>Save PDF</b> — on iPad this opens the share sheet, where "Save to Files", AirDrop,
+        Print and ForeFlight are all available. On a computer it downloads the file.</li>
+        <li><b>Preview filled PDF</b> — opens the result in a new tab to check it before saving.</li>
+        <li><b>Reset</b> — clears the loaded plan and everything entered, after a confirmation.</li>
+      </ul>
+      <p>The saved file keeps the original name with <code>_ETO</code> added.</p>
+
+      <h3>Print colours</h3>
+      <p>Fixed, so every document comes out the same. Everything written is bold Courier-Bold, which
+      distinguishes it from the form's own type at a glance.</p>
+      <table>
+        <tr><th>Item</th><th>Colour</th></tr>
+        <tr><td>ETO</td><td>Blue</td></tr>
+        <tr><td>ATO</td><td>Green</td></tr>
+        <tr><td>Fuel and the FUEL column</td><td>Black</td></tr>
+        <tr><td>Document fields and ALTM CHK lines</td><td>Blue</td></tr>
+        <tr><td>DIFF</td><td>Green above plan, red below</td></tr>
+      </table>
+
+      <h3>Saving your work</h3>
+      <p>Everything you type is stored on the device as you go and tied to that particular file. Close
+      the app, reopen it, load the same plan again and your entries come back. Reset deletes them.</p>
+      <div class="tip">Opening the app straight from the Files app puts iPadOS into a preview mode
+      where saving and this memory may be unavailable. Installing it to the home screen avoids that.</div>
+
+      <h3>If something goes wrong</h3>
+      <ul>
+        <li><b>"ETO column not found"</b> — the PDF is not an Air Astana computerized flight plan,
+        or it is a scan rather than a text document.</li>
+        <li><b>"Browser too old"</b> — iPadOS 16.4 or newer is required.</li>
+        <li><b>The share sheet does nothing</b> — you are in the Files preview. Install to the home
+        screen, or use Preview filled PDF and save from the viewer.</li>
+        <li><b>A warning about ET and T/T</b> — the plan's own columns disagree. Check those
+        waypoints by hand before trusting the times.</li>
+      </ul>
+
     </div>
   </div>
 </div>
@@ -653,8 +821,8 @@ if (false && typeof module !== 'undefined') module.exports = PDFMini;
 <script>
 const $ = s => document.querySelector(s);
 let RAW = null, DOC = null, NAME = '', KEY = '';
-let PLAN = null, HDRS = [], ANCHOR = 0, RESULT = [], FIELDS = [], FPL = null;
-const ACT = {}, TXT = {};
+let PLAN = null, HDRS = [], ANCHOR = 0, RESULT = [], FIELDS = [], FPL = null, CHECKS = [], T0 = null;
+const ACT = {}, TXT = {}, ALT = {};
 
 /* fixed print palette */
 const C = { eto:'#0033cc', ato:'#00762e', fuel:'#000000', pos:'#00762e', neg:'#cc0000', doc:'#0033cc' };
@@ -694,6 +862,16 @@ function applyTheme(t){
   RESULT.forEach(p => paint(p.i));
   try { localStorage.setItem('etofill:theme', t); } catch(e){}
 }
+const guide = $('#guide');
+const showGuide = on => {
+  guide.classList.toggle('hide', !on);
+  document.body.style.overflow = on ? 'hidden' : '';
+};
+$('#guideBtn').onclick = () => showGuide(true);
+$('#guideClose').onclick = () => showGuide(false);
+guide.onclick = e => { if (e.target === guide) showGuide(false); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') showGuide(false); });
+
 $('#theme').onclick = () =>
   applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
 (() => {
@@ -722,9 +900,10 @@ async function load(f){
   $('#fname').textContent = f.name + '  ·  ' + (f.size / 1048576).toFixed(1) + ' MB';
   hide('#m1'); hide('#m3');
   $('#c2').classList.remove('hide');
-  for (const c of ['#c3','#c4','#c5']) $(c).classList.add('hide');
+  for (const c of ['#c3','#c4','#c5','#c6']) $(c).classList.add('hide');
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
+  for (const k in ALT) delete ALT[k];
   try {
     const r = await parse(RAW);
     PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor; FIELDS = r.fields; FPL = r.fpl;
@@ -737,6 +916,7 @@ async function load(f){
     if (st){
       $('#etd').value = st.etd || ''; $('#alt').checked = !!st.alt;
       Object.assign(ACT, st.act || {}); Object.assign(TXT, st.txt || {});
+      Object.assign(ALT, st.alt2 || {});
     }
     renderFields();
     if (FIELDS.length) $('#c4').classList.remove('hide');
@@ -962,6 +1142,7 @@ $('#calc').onclick = () => {
   const t0 = parseTime($('#etd').value);
   if (t0 === null){ msg('#m2', 'Enter the time as HHMM, for example 0210', 'err'); return; }
   if (!PLAN){ msg('#m2', 'Load a PDF first', 'err'); return; }
+  T0 = t0;
   const main = PLAN.filter(p => p.sec === 1);
   const arr = main.length ? t0 + main[main.length - 1].cum : t0;
   RESULT = PLAN.filter(p => p.sec === 1 || ($('#alt').checked && p.sec === 2))
@@ -969,9 +1150,129 @@ $('#calc').onclick = () => {
   const drift = RESULT.filter(p => p.drift).length;
   drift ? msg('#m2', `Warning: at ${drift} waypoints the ET sum did not match T/T.`, 'warn') : hide('#m2');
   render(t0, arr);
+  renderAlt();
   $('#c3').classList.remove('hide');
+  if (CHECKS.length) $('#c6').classList.remove('hide');
   save();
 };
+
+/* ---- due-time monitoring ---- */
+const nowUtc = () => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+function sinceDue(target){                      // minutes past the due time, wrapped to ±12 h
+  let d = nowUtc() - norm(target);
+  while (d < -720) d += 1440;
+  while (d >= 720) d -= 1440;
+  return d;
+}
+const chkState = c => {
+  const v = ALT[c.mark] || {};
+  const n = ['a1','sb','a2'].filter(k => v[k]).length;
+  if (n === 3) return 'done';
+  if (n > 0) return 'part';
+  const d = sinceDue(c.due);
+  return d >= 0 ? 'late' : d >= -10 ? 'soon' : 'wait';
+};
+
+let AC = null, alerted = new Set();
+function beep(){
+  const Ctx = (typeof AudioContext !== 'undefined' && AudioContext)
+           || (typeof webkitAudioContext !== 'undefined' && webkitAudioContext);
+  if (!Ctx) return;
+  try {
+    AC = AC || new Ctx();
+    if (AC.state === 'suspended') AC.resume();
+    for (let i = 0; i < 2; i++){
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.connect(g); g.connect(AC.destination);
+      o.type = 'sine'; o.frequency.value = 880;
+      const t = AC.currentTime + i * 0.35;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+      o.start(t); o.stop(t + 0.32);
+    }
+  } catch(e){}
+}
+
+function refreshAlt(){
+  const u = $('#utc');
+  if (u) u.textContent = 'UTC now ' + fmt(nowUtc());
+  if (!CHECKS.length){ hide('#m4'); return; }
+  let late = 0, fresh = false;
+  for (const c of CHECKS){
+    const st = chkState(c), row = document.getElementById('altrow' + c.mark),
+          tag = document.getElementById('altst' + c.mark);
+    if (st === 'late'){
+      late++;
+      if (!alerted.has(c.mark)){ alerted.add(c.mark); fresh = true; }
+    } else if (st === 'done' || st === 'part') alerted.delete(c.mark);
+    if (row) row.classList.toggle('late', st === 'late');
+    if (tag){
+      const d = sinceDue(c.due);
+      tag.className = 'st ' + st;
+      tag.textContent = st === 'done' ? 'recorded'
+        : st === 'part' ? 'incomplete — finish this entry'
+        : st === 'late' ? `overdue by ${d} min — due at ${fmt(c.due)}`
+        : st === 'soon' ? `due at ${fmt(c.due)}, in ${-d} min`
+        : `due at ${fmt(c.due)}`;
+    }
+  }
+  late ? msg('#m4', late === 1
+          ? 'One altimeter cross-check is due and not recorded.'
+          : `${late} altimeter cross-checks are due and not recorded.`, 'err')
+       : hide('#m4');
+  if (fresh && $('#altAlert').checked) beep();
+}
+setInterval(refreshAlt, 15000);
+document.addEventListener('visibilitychange', refreshAlt);
+
+// waypoints reached at each full hour after takeoff
+function hourlyChecks(){
+  const main = RESULT.filter(p => p.sec === 1);
+  if (!main.length) return [];
+  const total = main[main.length - 1].cum, out = [];
+  for (let mark = 60; mark <= total; mark += 60){
+    const wp = main.find(p => p.cum >= mark);
+    if (!wp || out.some(c => c.wp === wp)) continue;
+    out.push({ mark, wp, due: T0 + mark });
+  }
+  return out;
+}
+
+function renderAlt(){
+  CHECKS = hourlyChecks();
+  const box = $('#altrows'); box.innerHTML = '';
+  for (const c of CHECKS){
+    const row = document.createElement('div'); row.className = 'altrow'; row.id = 'altrow' + c.mark;
+    const tag = document.createElement('div'); tag.className = 'tag';
+    tag.innerHTML = `+${c.mark / 60}:00 &nbsp; <b>${fmt(c.wp.t)}</b> &nbsp; at ${c.wp.wp}`
+                  + `<br><span class="st wait" id="altst${c.mark}"></span>`;
+    row.appendChild(tag);
+    for (const [key, cap] of [['a1','ALTM1'],['sb','STBY'],['a2','ALTM2']]){
+      const cell = document.createElement('div'); cell.className = 'cell';
+      const s = document.createElement('small'); s.textContent = cap;
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.maxLength = 5; inp.inputMode = 'numeric'; inp.pattern = '[0-9]*';
+      inp.autocomplete = 'off'; inp.spellcheck = false; inp.enterKeyHint = 'next';
+      inp.setAttribute('autocorrect', 'off');
+      inp.placeholder = '....';
+      inp.value = (ALT[c.mark] || {})[key] || '';
+      inp.oninput = () => {
+        inp.value = inp.value.replace(/\D/g, '').slice(0, 5);
+        ALT[c.mark] = ALT[c.mark] || {};
+        ALT[c.mark][key] = inp.value;
+        if (!ALT[c.mark].a1 && !ALT[c.mark].sb && !ALT[c.mark].a2) delete ALT[c.mark];
+        refreshAlt(); save();
+      };
+      inp.onfocus = () => inp.select();
+      cell.append(s, inp);
+      row.appendChild(cell);
+    }
+    box.appendChild(row);
+  }
+  alerted.clear();
+  refreshAlt();
+}
 
 function render(t0, arr){
   const last = RESULT.filter(p => p.sec === 1).slice(-1)[0];
@@ -1123,7 +1424,7 @@ function save(){
   saveT = setTimeout(() => {
     try {
       localStorage.setItem(KEY, JSON.stringify({
-        etd: $('#etd').value, alt: $('#alt').checked, act: ACT, txt: TXT }));
+        etd: $('#etd').value, alt: $('#alt').checked, act: ACT, txt: TXT, alt2: ALT }));
       const d = new Date();
       $('#saved').textContent = 'saved ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
     } catch(e){ $('#saved').textContent = 'storage unavailable'; }
@@ -1170,6 +1471,19 @@ function build(){
     }
   }
 
+  const PGS = DOC.pages();
+  for (const c of CHECKS){
+    const v = ALT[c.mark];
+    if (!v || (!v.a1 && !v.sb && !v.a2)) continue;
+    const p = c.wp, o = ops(p.page), cw = p.cw, lh = p.ey - p.ay;
+    const pad = s => (s || '....').padStart(4, ' ');
+    const line = 'ALTM CHK   ALTM1 ' + pad(v.a1) + '   STBY ' + pad(v.sb) + '   ALTM2 ' + pad(v.a2);
+    const mb = (PGS[p.page] && PGS[p.page].MediaBox) || [0, 0, 612, 792];
+    const x = mb[0] + ((mb[2] - mb[0]) - line.length * cw) / 2;   // centred on the page
+    o.rect(x - 1, p.ay - lh - 2.6, cw * line.length + 2, p.size + .5, WHITE);
+    o.text(BOLD, p.size, x, p.ay - lh, line, C_DOC);
+  }
+
   for (const f of FIELDS){
     const v = TXT[f.i] || '';
     if (!v) continue;
@@ -1189,6 +1503,10 @@ function build(){
 const outName = () => NAME.replace(/\.pdf$/i, '') + '_ETO.pdf';
 
 $('#dl').onclick = async () => {
+  const missing = CHECKS.filter(c => ['late','part','soon','wait'].includes(chkState(c)));
+  if (missing.length && !confirm(
+        `${missing.length} altimeter cross-check${missing.length > 1 ? 's are' : ' is'} not recorded `
+        + `(${missing.map(c => '+' + c.mark / 60 + 'h').join(', ')}).\n\nSave anyway?`)) return;
   const b = $('#dl'); b.disabled = true; b.textContent = 'Building…';
   try {
     const blob = build(), name = outName();
@@ -1223,9 +1541,10 @@ $('#reset').onclick = () => {
   RAW = null; DOC = null; PLAN = null; RESULT = []; FIELDS = []; FPL = null; KEY = '';
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
+  for (const k in ALT) delete ALT[k];
   $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
   $('#fname').textContent = ''; $('#saved').textContent = '';
-  for (const c of ['#c2','#c3','#c4','#c5']) $(c).classList.add('hide');
+  for (const c of ['#c2','#c3','#c4','#c5','#c6']) $(c).classList.add('hide');
   $('#fpl').className = 'hint hide';
   hide('#m1'); hide('#m2'); hide('#m3');
 };
