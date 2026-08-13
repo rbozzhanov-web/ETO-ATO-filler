@@ -54,11 +54,16 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 
 ## Using it
 
-1. Load the flight plan PDF. The app shows STD / ETD / STA / ETA read from the document.
+1. Load the flight plan PDF. The app shows STD / ETD / STA / ETA read from the
+   document, and displays the ICAO flight plan. Where that plan is printed across
+   a page break it is reassembled into one text with the page headers stripped out;
+   Copy puts it on the clipboard as a single line.
 2. Fill in the document fields: ATIS, ATC CLRNC, ALTM1 / STBY / ALTM2, PIC BLOCK
-   and REASON FOR EXTRA FUEL. Length is capped by the size of the blank in the
-   form and the counter shows how much room is left. ATIS spans two printed
-   lines but is entered as one box — the text wraps between them on a space.
+   and REASON FOR EXTRA FUEL. Free-text fields are not limited to the dots: the
+   app also claims the empty space to the right of the blank and the spare line
+   underneath, then wraps the text between them on a space. REASON FOR EXTRA FUEL
+   grows from 13 to 67 characters this way, ATC CLRNC to 149. The counter under
+   each box shows how much room is left.
 3. Enter the takeoff (airborne) time in UTC, four digits: `0210`.
    The button next to it fills in the ETD from the plan — but that is off-block
    time and takeoff is normally later, so check it.

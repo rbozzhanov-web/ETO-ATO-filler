@@ -66,6 +66,13 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 #drop b{color:var(--acc)}
 #drop .fn{margin-top:8px;font-size:13px;color:var(--dim);word-break:break-all}
 .disc{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:12.5px;color:var(--dim)}
+.fplbox{margin-top:14px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);overflow:hidden}
+.fplhead{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);
+  font-size:12px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--dim)}
+.fplhead em{flex:1;font-style:normal;font-weight:400;letter-spacing:0;text-transform:none;font-size:12px}
+.fplbox pre{margin:0;padding:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--txt);white-space:pre-wrap;
+  word-break:break-word}
 .disc::before{content:"";flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--gold)}
 
 .row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
@@ -220,7 +227,15 @@ td.diff{text-align:right;font-weight:700}
       <div class="fn" id="fname"></div>
     </div>
     <input type="file" id="file" accept="application/pdf,.pdf" class="hide">
-    <p class="disc">Only Air Astana computerized flight plans are supported.</p>
+    <p class="disc" id="disc">Only Air Astana computerized flight plans are supported.</p>
+    <div class="fplbox hide" id="fplBox">
+      <div class="fplhead">
+        <span>ICAO flight plan</span>
+        <em id="fplSrc"></em>
+        <button type="button" class="ghost sm" id="fplCopy">Copy</button>
+      </div>
+      <pre id="fplText"></pre>
+    </div>
     <div class="msg" id="m1"></div>
   </div>
 
@@ -298,9 +313,13 @@ td.diff{text-align:right;font-weight:700}
 
       <h3>Quick start</h3>
       <ol>
-        <li><b>Load</b> the flight plan PDF.</li>
+        <li><b>Load</b> the flight plan PDF. The ICAO flight plan is pulled out and shown
+            under the box. When it is printed across a page break it is stitched back into
+            one text, page headers removed, and <b>Copy</b> gives it as a single line.</li>
         <li><b>Document fields</b> — ATIS, ATC CLRNC, altimeter settings, PIC BLOCK.
-            Each box is capped at the width of the blank in the form.</li>
+            Free-text boxes also use the empty space to the right of the blank and the
+            spare line under it, so there is far more room than the dots suggest. The
+            counter shows what is left, and text wraps between lines on a space.</li>
         <li><b>Takeoff time</b> in UTC, four digits. Every calculation follows from it.</li>
         <li><b>Actuals</b> — ATO and remaining fuel per waypoint. The grey hint in each box is
             the calculated value, so you only type where reality differed. Enter moves on.</li>
@@ -886,6 +905,7 @@ async function load(f){
   try {
     const r = await parse(RAW);
     PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor; FIELDS = r.fields; FPL = r.fpl;
+    showIcao(r.icao);
     const s1 = PLAN.filter(p => p.sec === 1).length;
     msg('#m1', `Found: ${s1} main route waypoints`
              + (PLAN.length - s1 ? `, ${PLAN.length - s1} alternate` : '')
@@ -904,6 +924,34 @@ async function load(f){
     $('#etd').focus();
   } catch (err){ msg('#m1', 'Could not parse the document: ' + err.message, 'err'); }
 }
+
+/* ================= ICAO flight plan ================= */
+let ICAO = null;
+function showIcao(p){
+  ICAO = p;
+  const box = $('#fplBox');
+  if (!p){ box.classList.add('hide'); $('#disc').classList.remove('hide'); return; }
+  $('#disc').classList.add('hide');
+  box.classList.remove('hide');
+  $('#fplText').textContent = p.lines.join('\n');
+  $('#fplSrc').textContent = p.split
+    ? `reassembled from pages ${p.pages[0]}\u2013${p.pages[p.pages.length - 1]}`
+    : `page ${p.pages[0]}`;
+}
+$('#fplCopy').onclick = async () => {
+  if (!ICAO) return;
+  const btn = $('#fplCopy'), txt = ICAO.oneLine;
+  let ok = false;
+  try { await navigator.clipboard.writeText(txt); ok = true; } catch(e){}
+  if (!ok) try {
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    ok = document.execCommand('copy'); ta.remove();
+  } catch(e){}
+  btn.textContent = ok ? 'Copied' : 'Copy failed';
+  setTimeout(() => { btn.textContent = 'Copy'; }, 1600);
+};
 
 /* ================= PDF parsing ================= */
 function courierName(doc, page){
@@ -981,11 +1029,72 @@ function layout(value, segs){
   return out;
 }
 
+/* Free-text blanks are often shorter than the room actually available: give them
+   whatever is empty to the right, and a second line below when that is free too. */
+function growFields(fields, raw, page0){
+  if (!fields.length || !page0.length) return;
+  const cw = raw[0].cw;
+  const RIGHT = Math.max(...raw.map(r => r.x + r.n * cw));        // right edge the form itself uses
+  const bases = [...new Set(page0.map(l => l.base))].sort((a, b) => b - a);
+  let lineH = 12.05;
+  for (let i = 1; i < bases.length; i++){
+    const d = bases[i - 1] - bases[i];
+    if (d > 6 && d < lineH + 0.01) lineH = d;
+  }
+  const lineAt = y => page0.find(l => Math.abs(l.base - y) < 1);
+  const busy = new Set(raw.map(r => Math.round(r.base)));         // lines already holding blanks
+  const snap = x => 30 + Math.ceil((x - 30) / cw - 0.001) * cw;
+
+  for (const f of fields){
+    if (f.n < 12) continue;                                       // leave short numeric boxes alone
+    const seg = f.segs[f.segs.length - 1];
+    const line = lineAt(seg.base);
+
+    // 1) nothing to the right on its own line -> take that room
+    const end = seg.x + seg.n * cw;
+    if (line && end >= line.maxX - 0.5){
+      const grow = Math.floor((RIGHT - end) / cw + 0.001);
+      if (grow > 0){ seg.n += grow; f.n += grow; }
+    }
+    // 2) the line below is free -> continue there
+    const nb = seg.base - lineH;
+    if (busy.has(Math.round(nb))) continue;
+    const bl = lineAt(nb);
+    const startX = snap(bl ? bl.maxX + 2 * cw : 30);
+    const room = Math.floor((RIGHT - startX) / cw + 0.001);
+    if (room < 12) continue;
+    f.segs.push({ page: seg.page, base: nb, x: startX, n: room,
+                  size: seg.size, cw, font: seg.font });
+    f.n += room;
+    busy.add(Math.round(nb));
+  }
+}
+
+/* The ICAO plan is printed between two markers and often breaks across a page,
+   with headers and footers landing in the middle. Stitch it back into one text. */
+function icaoPlan(lines){
+  const s = lines.findIndex(l => /START OF ICAO FLIGHT PLAN/i.test(l.text));
+  const e = lines.findIndex(l => /END OF ICAO FLIGHT PLAN/i.test(l.text));
+  if (s < 0 || e <= s) return null;
+  const slice = lines.slice(s + 1, e);
+  const pages = [...new Set(slice.map(l => l.page + 1))];
+  const body = slice.map(l => l.text.trim())
+    .filter(t => t && !/^AIR ASTANA BRIEF/i.test(t) && !/^PAGE \d+ OF \d+$/i.test(t));
+  if (!body.length) return null;
+  const fieldsOut = [];                       // a line starting with '-' opens a new ICAO field
+  for (const t of body){
+    if (fieldsOut.length && !t.startsWith('-')) fieldsOut[fieldsOut.length - 1] += ' ' + t;
+    else fieldsOut.push(t);
+  }
+  return { lines: fieldsOut, oneLine: fieldsOut.join(''), pages,
+           split: pages.length > 1 };
+}
+
 async function parse(buf){
   const doc = new PDFMini.Doc(new Uint8Array(buf));
   DOC = doc;
   const pages = doc.pages();
-  const dotRows = [], headers = [], rawFields = [], page0 = [];
+  const dotRows = [], headers = [], rawFields = [], page0 = [], allLines = [];
   let anchor = 0, fpl = null;
 
   for (let p = 0; p < pages.length; p++){
@@ -1010,12 +1119,14 @@ async function parse(buf){
       const cw = last.cw;
 
       if (p === 0){
-        page0.push({ base: last.base, chars, cw });
+        page0.push({ base: last.base, chars, cw, maxX: last.x + cw,
+                     size: last.size, dots: chars.some(c => c.ch === '.') });
         const runs = dotFields(chars, cw);
         runs.forEach((f, k) => rawFields.push({ page: p, base: last.base, size: last.size, cw, font,
           x: f.x, n: f.n, label: f.label, rowLabel: k === 0 ? (runs.rowLabel || '') : '' }));
       }
       const tk = tokenize(chars, cw);
+      allLines.push({ page: p, base: last.base, text: tk.join(' ') });
       if (tk[tk.length - 1] === 'ATO' && last.x > 460 && last.x < 540){
         headers.push({ page: p, base: last.base, size: last.size, cw, font });
         continue;
@@ -1039,6 +1150,7 @@ async function parse(buf){
     if (!r.label && prev){ prev.segs.push(r); prev.n += r.n; continue; }
     fields.push({ i: fields.length, label: r.label, rowLabel: r.rowLabel, n: r.n, segs: [r] });
   }
+  growFields(fields, rawFields, page0);
 
   // flight header: STD ETD STA ETA and the row of values
   page0.sort((a, b) => b.base - a.base);
@@ -1082,7 +1194,8 @@ async function parse(buf){
   }
   if (!pairs.length) throw new Error('ETO column not found — unexpected plan format');
   if (pairs.some(p => !p.font)) throw new Error('no Courier font on the page');
-  return { pairs, headers, anchor, fields, fpl };
+  allLines.sort((a, b) => a.page - b.page || b.base - a.base);
+  return { pairs, headers, anchor, fields, fpl, icao: icaoPlan(allLines) };
 }
 
 /* ================= calculation ================= */
@@ -1521,6 +1634,7 @@ $('#reset').onclick = () => {
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
+  showIcao(null);
   $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
   $('#fname').textContent = ''; $('#saved').textContent = '';
   for (const c of ['#c2','#c3','#c4','#c5','#c6']) $(c).classList.add('hide');
