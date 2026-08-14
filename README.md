@@ -81,10 +81,10 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    for a time read off the plan, next to the waypoint you are running to.
    The table follows the clock: passed
    points fade back, the last one passed is shaded and the one you are running to
-   is highlighted, with the list scrolling itself to keep that row in the middle.
-   It follows the plan rather than your typing, so the highlight stays right when
-   the actuals are a few points behind; scrolling by hand or tapping into a box
-   stops the automatic scrolling for twenty seconds.
+   is highlighted. The marking changes in place — the table never scrolls itself,
+   so what is on screen stays where you put it. The highlight follows the plan
+   rather than your typing, so it stays right when the actuals are a few points
+   behind.
 5. Record the hourly altimeter cross-checks. The app works out which waypoint
    falls on each full hour after takeoff and lists one row per hour; enter
    ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly

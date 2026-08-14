@@ -417,10 +417,11 @@ td.diff{text-align:right;font-weight:700}
       <h3>Following the flight</h3>
       <p>The waypoint table watches the clock in UTC. Points already behind you fade back, the
       last one passed is shaded, and the one you are running to is highlighted with a bar down
-      its left edge. The list scrolls itself to keep that row in the middle.</p>
-      <p>It follows the plan, not your typing, so the highlight is right even when the actuals
-      are a few points behind. Scrolling the table by hand, or tapping into a box, stops the
-      automatic scrolling for twenty seconds so it never moves under your finger.</p>
+      its left edge.</p>
+      <p>The marking changes underneath you; the table never scrolls itself. What is on screen
+      stays where you put it, so nothing moves under your finger while you are typing. The
+      highlight follows the plan rather than your typing, so it stays right even when the
+      actuals are a few points behind.</p>
 
       <h3>Weather and NOTAMs</h3>
       <p>Everything on the card is read out of the loaded package itself — the METAR, TAF and
@@ -1824,9 +1825,10 @@ function refreshAlt(){
   if (fresh && $('#altAlert').checked) beep();
 }
 /* ---- where the flight has got to ----
+   Marks the rows and leaves the view alone: the table never scrolls itself, so
+   what is on screen stays where the crew put it.
    Kept out of refreshAlt because that one returns early when the plan is shorter
    than an hour and has no checks — the table still needs its highlight. */
-let scrolledAt = 0, autoUntil = 0, lastNext = null;
 function refreshProgress(){
   if (!RESULT.length) return;
   let ci = -1, ni = -1;
@@ -1849,20 +1851,7 @@ function refreshProgress(){
     st.querySelector('span').textContent = next
       ? `Next · ${fmt(next.t)} · in ${mins} min` : 'All waypoints passed';
   }
-  // Follow the flight, but never fight the hands: no scrolling while a box in the
-  // table has focus, or within 20 s of the user having scrolled it themselves.
-  const box = document.querySelector('.tblbox'), row = next && rowOf(next.i);
-  if (box && row && next.i !== lastNext && Date.now() - scrolledAt > 20000
-      && !box.contains(document.activeElement)){
-    lastNext = next.i;
-    autoUntil = Date.now() + 1500;          // do not read our own scroll back as the user's
-    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }
 }
-document.querySelector('.tblbox').addEventListener('scroll', () => {
-  if (Date.now() < autoUntil) return;
-  scrolledAt = Date.now();
-}, { passive: true });
 
 const tick = () => { refreshProgress(); refreshAlt(); };
 setInterval(tick, 15000);
@@ -1949,7 +1938,7 @@ function render(t0, arr){
        <td class="diff" data-d="${p.i}"></td><td class="num">${p.page + 1}</td>`;
     paint(p.i);
   }
-  bindInputs(); countFilled(); lastNext = null; refreshProgress();
+  bindInputs(); countFilled(); refreshProgress();
 }
 
 const rowOf = i => $(`#tbl tbody tr[data-i="${i}"]`);
