@@ -226,6 +226,8 @@ td.diff{text-align:right;font-weight:700}
 .credit{margin:26px 0 0;padding-top:14px;border-top:1px solid var(--line);
   font-size:12.5px;color:var(--dim)}
 .credit b{color:var(--txt);font-weight:600}
+.credit .build{display:inline-block;margin-top:6px;
+  font:11.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.3px}
 .paper{display:inline-block;background:#fff;border:1px solid #c8ced6;border-radius:4px;
   padding:4px 9px;font:700 13px/1.3 ui-monospace,Menlo,monospace;letter-spacing:.5px}
 .paper b+b{margin-left:10px}
@@ -490,7 +492,11 @@ td.diff{text-align:right;font-weight:700}
             waypoints by hand.</li>
       </ul>
 
-      <p class="credit">Built by <b>Ramil Bozzhanov 9871</b> with Claude.</p>
+      <p class="credit">Built by <b>Ramil Bozzhanov 9871</b> with Claude.<br>
+      <!-- Written out rather than computed, so it names the version actually
+           running: on a stale cache it still reads the old number. Keep the
+           number in step with V in sw.js. -->
+      <span class="build">Version 5 &nbsp;·&nbsp; published 14 Aug 2026 14:05 UTC</span></p>
 
     </div>
   </div>
