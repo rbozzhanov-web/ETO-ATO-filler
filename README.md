@@ -54,7 +54,9 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 
 ## Using it
 
-1. Load the flight plan PDF. The app shows STD / ETD / STA / ETA read from the
+1. Load the flight plan PDF. The header then shows the OFP number and its release
+   time, so the document on screen can be checked against the one you were given.
+   The app shows STD / ETD / STA / ETA read from the
    document, and displays the ICAO flight plan. Where that plan is printed across
    a page break it is reassembled into one text with the page headers stripped out;
    Copy puts it on the clipboard as a single line.
@@ -68,7 +70,12 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    The button next to it fills in the ETD from the plan — but that is off-block
    time and takeoff is normally later, so check it.
 4. Enter actual ATO and remaining fuel per waypoint. Enter jumps to the next
-   field. Everything is saved automatically.
+   field. Everything is saved automatically. The table follows the clock: passed
+   points fade back, the last one passed is shaded and the one you are running to
+   is highlighted, with the list scrolling itself to keep that row in the middle.
+   It follows the plan rather than your typing, so the highlight stays right when
+   the actuals are a few points behind; scrolling by hand or tapping into a box
+   stops the automatic scrolling for twenty seconds.
 5. Record the hourly altimeter cross-checks. The app works out which waypoint
    falls on each full hour after takeoff and lists one row per hour; enter
    ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly
@@ -82,31 +89,30 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 
 The button in the header switches between light and dark themes; the choice is remembered.
 
-## AI briefing (optional)
+## If iPadOS closes the app
 
-When the device is online an extra card appears at the bottom. It sends the loaded plan to a
-model and returns a cockpit-length summary: seven headings — fuel, time, route, weather,
-turbulence, NOTAMs, specials — at most five short lines each. Only what changes a decision,
-with anything limiting marked ATTENTION.
+iPadOS drops background apps when it needs memory. The loaded plan is kept on the device
+alongside everything typed into it, so opening the app again brings the same document back
+with the takeoff time, the actuals and the altimeter readings already in place — no need to
+find the file again. Cross-checks that have already sounded do not sound a second time.
+**Reset** is what clears it and returns to an empty drop zone.
 
-It runs on the Anthropic API and needs your own key. The card has a **How to get a key** button
-with the steps: an account on console.anthropic.com (separate from claude.ai — a subscription
-there does not include API access), a card added under Settings → Billing with a minimum 5 USD
-prepaid top-up, then API Keys → Create Key. The key is shown once, so copy it immediately.
+## Weather and NOTAMs
 
-Paste the key and nothing else. The app asks which models the key can use and picks the
-cheapest suitable one, and re-checks if that model is ever withdrawn.
+A card at the bottom shows the METAR, TAF and NOTAMs carried by the loaded package. Pick an
+aerodrome from the dropdown and the reports for it are listed: raw METAR and TAF as printed,
+and each NOTAM with its number and validity above the text.
 
-Cost is kept down by default: the plan is sent as text, not as rasterised pages, which for a
-typical 81-page plan is about 29k input tokens instead of 146k; the cheapest suitable model is
-chosen; and the answer is capped at 1.8k tokens. Two tick boxes
-change it — **strongest model** for a sharper read at several times the price, and **whole PDF**
-to include the chart and scan pages that carry no text, which multiplies the input roughly
-fivefold. The key is stored on this device only, never written into the app file,
-and is sent nowhere except api.anthropic.com. API requests are not used to train models.
+The list covers every aerodrome the package has reports for, ordered departure, destination,
+alternates, then the rest. Roles come from the ICAO flight plan in the same document.
 
-The summary is machine-generated, may be wrong, and
-never replaces studying the flight documentation.
+Everything is read out of the PDF on the device. There is no network request, no account and
+no key — the card works in airplane mode like the rest of the app. The reports are therefore
+exactly as old as the document: re-brief from the current source before acting on them.
+
+Parsing follows the ICAO report formats (`METAR`/`SPECI`, `TAF`, and NOTAM items with their
+Q/A/B/C/E fields) rather than the operator's page layout, so a change of heading text does not
+quietly empty the card.
 
 ## Print colours
 

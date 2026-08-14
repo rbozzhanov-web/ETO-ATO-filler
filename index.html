@@ -34,6 +34,8 @@ body{margin:0;background:var(--bg);color:var(--txt);-webkit-tap-highlight-color:
   padding:max(20px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) 70px max(18px,env(safe-area-inset-left))}
 h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 .sub{color:var(--dim);font-size:13px}
+.ofp{margin-top:3px;font:700 12.5px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;
+  color:var(--acc);letter-spacing:.4px}
 
 .hd{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
   padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--gold)}
@@ -74,6 +76,16 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
   font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--txt);white-space:pre-wrap;
   word-break:break-word}
 .disc::before{content:"";flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--gold)}
+#wxApt{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:5px;
+  padding:8px 10px;font:700 15px/1 ui-monospace,Menlo,monospace;min-width:200px}
+#wxOut .fplbox:first-child{margin-top:14px}
+.wxrole{font-weight:400;letter-spacing:0;text-transform:none}
+.ntm{padding:12px;border-bottom:1px solid var(--line2)}
+.ntm:last-child{border-bottom:0}
+.ntm .id{font:700 12px/1.4 ui-monospace,Menlo,monospace;color:var(--acc)}
+.ntm .val{font-size:11.5px;color:var(--dim);margin-left:8px}
+.ntm p{margin:5px 0 0;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:pre-wrap;word-break:break-word}
 
 .row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
 label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px}
@@ -129,6 +141,10 @@ td.num{text-align:right;color:var(--dim)}
 tr.hdr td{background:var(--hdr);color:var(--dim);font-size:11px;letter-spacing:.8px;
   text-transform:uppercase;font-weight:700;padding:8px}
 tr.filled{background:color-mix(in srgb,var(--ok) 8%,transparent)}
+tr.past td{opacity:.45}
+tr.now td{background:color-mix(in srgb,var(--dim) 12%,transparent)}
+tr.next td{background:color-mix(in srgb,var(--acc) 16%,transparent);font-weight:700;opacity:1}
+tr.next td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
 td input,.fld input,.altrow input{background:transparent;border:1px solid var(--line);color:var(--txt);
   border-radius:5px;padding:7px 4px;font:700 16px/1 ui-monospace,Menlo,monospace;
   width:78px;text-align:center}
@@ -193,38 +209,6 @@ td.diff{text-align:right;font-weight:700}
 .guide table{width:100%;border-collapse:collapse;font-size:13.5px;margin:0 0 12px}
 .guide th,.guide td{text-align:left;padding:8px;border-bottom:1px solid var(--line2);vertical-align:top}
 .guide th{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
-.keyrow{display:grid;grid-template-columns:150px 1fr;gap:10px 14px;align-items:center;
-  background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:12px}
-.keyrow label{margin:0;text-align:right;font-size:12.5px}
-.keyrow input,.keyrow select{background:var(--bg);border:1px solid var(--line);color:var(--txt);
-  border-radius:6px;padding:10px;font:15px/1 ui-monospace,Menlo,monospace;width:100%}
-.keyrow select{font-family:inherit;height:40px}
-.keyrow .note2{grid-column:1/-1;font-size:12px;color:var(--dim);line-height:1.6}
-.keyline{display:flex;gap:10px;align-items:center}
-.keyline input{flex:1;min-width:0}
-.keyline input:read-only{color:var(--dim);background:var(--panel2);letter-spacing:1px}
-.setup{grid-column:1/-1}
-.setup h5{margin:0 0 8px;font-size:12px;letter-spacing:.7px;text-transform:uppercase;color:var(--acc)}
-.setup ol{margin:0;padding-left:20px;font-size:13px;line-height:1.7;color:var(--dim)}
-.setup li{margin-bottom:6px}
-.setup b{color:var(--txt);font-weight:600}
-.setup a{color:var(--acc)}
-.setup code{background:var(--bg);padding:1px 5px;border-radius:3px;font:12px/1 ui-monospace,Menlo,monospace}
-.keyrow .note2 a{color:var(--acc)}
-@media(max-width:640px){.keyrow{grid-template-columns:1fr}.keyrow label{text-align:left}}
-.brief{border:1px solid var(--line);border-radius:8px;background:var(--panel2);padding:16px 18px;margin-top:12px}
-.brief h4{margin:18px 0 7px;font-size:12px;letter-spacing:.7px;text-transform:uppercase;color:var(--acc)}
-.brief h4:first-child{margin-top:0}
-.brief p{margin:0 0 8px;font-size:14px;line-height:1.65}
-.brief li{font-size:14px;line-height:1.65;margin-bottom:4px}
-.brief ul{margin:0 0 8px;padding-left:20px}
-.brief b{font-weight:700}
-.brief .att{color:var(--err);font-weight:700}
-.aidisc{border-left:3px solid var(--warn);padding:2px 0 2px 14px;margin:0 0 14px;
-  font-size:13px;line-height:1.65;color:var(--dim)}
-.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);
-  border-top-color:var(--acc);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:8px}
-@keyframes sp{to{transform:rotate(360deg)}}
 .credit{margin:26px 0 0;padding-top:14px;border-top:1px solid var(--line);
   font-size:12.5px;color:var(--dim)}
 .credit b{color:var(--txt);font-weight:600}
@@ -245,6 +229,7 @@ td.diff{text-align:right;font-weight:700}
     <div>
       <h1>ETO / ATO Filler</h1>
       <div class="sub">Operational flight plan filler</div>
+      <div class="ofp hide" id="ofpNo"></div>
     </div>
     <div class="grow"></div>
     <button id="guideBtn" type="button" class="ghost">User guide</button>
@@ -257,7 +242,7 @@ td.diff{text-align:right;font-weight:700}
   <div class="card">
     <div class="step"><i>1</i> Load the flight plan PDF</div>
     <div id="drop">
-      Tap to choose a file<br><b>or drop a PDF here</b>
+      Tap to choose a PDF
       <div class="fn" id="fname"></div>
     </div>
     <input type="file" id="file" accept="application/pdf,.pdf" class="hide">
@@ -295,7 +280,6 @@ td.diff{text-align:right;font-weight:700}
     <div class="step"><i>4</i> Actuals by waypoint</div>
     <div class="stats" id="stats"></div>
     <div class="toolbar">
-      <button class="ghost sm" id="copyEto">Set ATO = ETO everywhere</button>
       <button class="ghost sm" id="clearAct">Clear actuals</button>
       <span class="sep"></span>
       <span class="saved" id="saved"></span>
@@ -335,68 +319,15 @@ td.diff{text-align:right;font-weight:700}
       Fully offline: the PDF is parsed and written on this device.
     </div>
   </div>
-  <div class="card hide" id="c7">
-    <div class="step"><i>AI</i> Briefing &nbsp;·&nbsp; optional</div>
-    <p class="disc" id="aiOffline">AI briefing needs an internet connection. It is unavailable offline.</p>
-    <div class="hide" id="aiPanel">
-      <div class="keyrow hide" id="aiKeyRow">
-        <div class="setup">
-          <h5>Getting a Claude API key</h5>
-          <ol>
-            <li>Open <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>
-                and sign up. This is a developer account, separate from claude.ai — a Claude.ai
-                subscription does not include API access.</li>
-            <li>Go to <b>Settings → Billing</b> and add a card. The API runs on prepaid credit;
-                the smallest top-up is 5 USD and covers a great many briefings.</li>
-            <li>Open <b>API Keys</b> in the sidebar and press <b>Create Key</b>. Name it something
-                like <code>eto-filler-ipad</code>.</li>
-            <li>Copy the key straight away — it is shown once and cannot be retrieved later.</li>
-            <li>Paste it below. It is stored on this iPad only, never in the app file, and goes
-                nowhere except api.anthropic.com.</li>
-          </ol>
-        </div>
-        <label for="aiKey">API key</label>
-        <div class="keyline">
-          <input type="password" id="aiKey" placeholder="sk-ant-..." autocomplete="off"
-                 spellcheck="false" enterkeyhint="done">
-          <button type="button" class="ghost sm hide" id="aiKeyClear">Remove</button>
-        </div>
-        <p class="note2" id="aiModelInfo">Model: chosen automatically.</p>
-      </div>
-      <label class="chk" style="padding:0 0 6px"><input type="checkbox" id="aiBest">
-        Use the strongest model — sharper, several times the cost</label>
-      <label class="chk" style="padding:0 0 12px"><input type="checkbox" id="aiFull">
-        Send the whole PDF including charts and scans — slower and dearer</label>
-      <div class="row">
-        <button id="aiRun">Generate briefing</button>
-        <button id="aiKeyBtn" class="ghost">How to get a key</button>
-        <span class="saved" id="aiMeta"></span>
-      </div>
-      <div class="msg" id="m5"></div>
-      <div class="brief hide" id="aiOut"></div>
-    </div>
-  </div>
-</div>
 
-<div class="ovl hide" id="aiDisc">
-  <div class="sheet">
-    <div class="top"><h2>Before you read an AI briefing</h2></div>
-    <div class="guide">
-      <p><b>This summary is generated by a language model and may be wrong.</b> It can misread a
-      figure, miss a NOTAM entirely, or state something the document does not say.</p>
-      <p>It is an aid to orientation only. It is not an operational document, it does not replace
-      any part of the flight documentation, and nothing in it may be used as the basis for a
-      decision on its own.</p>
-      <p>The commander remains responsible for studying the flight plan, NOTAMs, weather and all
-      other briefing material in full, and for verifying every figure against the source document
-      before acting on it.</p>
-      <p>The flight plan is sent to Anthropic for processing when you continue. API requests
-      are not used to train models.</p>
-      <div class="row" style="margin-top:20px">
-        <button id="aiAgree">I understand — generate</button>
-        <button id="aiCancel" class="ghost">Cancel</button>
-      </div>
+  <div class="card hide" id="c7">
+    <div class="step"><i>WX</i> Weather &amp; NOTAMs</div>
+    <p class="disc">Read out of this flight plan package — nothing is fetched from the network.</p>
+    <div class="row">
+      <div><label for="wxApt">Aerodrome</label><select id="wxApt"></select></div>
+      <span class="saved" id="wxMeta"></span>
     </div>
+    <div id="wxOut"></div>
   </div>
 </div>
 
@@ -422,6 +353,8 @@ td.diff{text-align:right;font-weight:700}
             the calculated value, so you only type where reality differed. Enter moves on.</li>
         <li><b>Altimeter cross-checks</b> — one row per hour of flight.</li>
         <li><b>Save PDF</b> — the share sheet offers Save to Files, AirDrop, Print, ForeFlight.</li>
+        <li><b>Weather &amp; NOTAMs</b> — pick an aerodrome to read the METAR, TAF and NOTAMs
+            that came with this package.</li>
       </ol>
       <div class="tip">The ETD button under the time box inserts the off-block time from the plan.
       Takeoff is normally later, so treat it as a starting point.</div>
@@ -444,31 +377,28 @@ td.diff{text-align:right;font-weight:700}
       <p>Rows watch the clock in UTC: amber when a check is close, red once it is overdue, with a
       short tone the first time. Saving with checks still missing asks for confirmation.</p>
 
-      <h3>AI briefing (optional)</h3>
-      <p>With an internet connection an extra card appears at the bottom. It sends the loaded
-      flight plan to a model and returns a cockpit-length summary — seven headings, at most five
-      short lines each, covering fuel, times, route, weather, turbulence, NOTAMs and specials.
-      It is deliberately terse: only what changes a decision, with anything limiting marked
-      ATTENTION.</p>
-      <p>It runs on the Anthropic API and needs your own key. Press <b>How to get a key</b> in
-      that card for the steps — an account on console.anthropic.com, a small prepaid balance,
-      then a key you paste once. It is kept on this iPad, never written into the app file, and
-      goes nowhere but api.anthropic.com. API requests are not used to train models.</p>
-      <p>Paste the key and nothing else: the app asks which models that key can use and picks the
-      best one itself, preferring the current fast tier over previews, and looks again if the
-      model is ever withdrawn. Once entered the key is locked and shown only as
-      <code>sk-ant-a…6789</code>; <b>Remove</b> deletes it and lets you enter another.</p>
-      <p>The briefing is written out as it arrives rather than appearing all at once. If nothing
-      comes back for a minute the request is dropped so you can try again, and tapping the button
-      while it runs cancels it.</p>
-      <p>By default the plan goes as text and the cheapest suitable model is used, which keeps a
-      briefing to a fraction of a cent and a few seconds. Two tick boxes change that:
-      <b>strongest model</b> for a sharper read at several times the cost, and <b>whole PDF</b>
-      to include the chart and scan pages that carry no text — that one multiplies the input
-      roughly fivefold, so leave it off unless you need the charts.</p>
-      <div class="tip">The summary is machine-generated and may be wrong or incomplete. It is an
-      aid to orientation, never a substitute for studying the flight documentation, and every
-      figure must be verified against the source before it is acted on.</div>
+      <h3>Following the flight</h3>
+      <p>The waypoint table watches the clock in UTC. Points already behind you fade back, the
+      last one passed is shaded, and the one you are running to is highlighted with a bar down
+      its left edge. The list scrolls itself to keep that row in the middle.</p>
+      <p>It follows the plan, not your typing, so the highlight is right even when the actuals
+      are a few points behind. Scrolling the table by hand, or tapping into a box, stops the
+      automatic scrolling for twenty seconds so it never moves under your finger.</p>
+
+      <h3>Weather and NOTAMs</h3>
+      <p>Everything on the card is read out of the loaded package itself — the METAR, TAF and
+      NOTAM pages that came with the flight plan. Nothing is fetched from the network and no
+      account or key is needed. The dropdown lists every aerodrome the package carries reports
+      for, departure first, then destination and alternates.</p>
+      <p>They are as old as the document. Re-brief from the current source before acting on
+      anything here.</p>
+
+      <h3>If iPadOS closes the app</h3>
+      <p>iPadOS drops background apps when it needs memory. The plan and everything typed into
+      it are kept on the device, so opening the app again brings the same document back with
+      the takeoff time, the actuals and the altimeter readings already in place, and the header
+      shows which OFP it is. Checks already announced do not sound a second time.</p>
+      <p><b>Reset</b> is what clears it and returns to an empty drop zone.</p>
 
       <h3>Print colours</h3>
       <p>Fixed, so every document comes out the same. Samples below are shown on white,
@@ -492,10 +422,11 @@ td.diff{text-align:right;font-weight:700}
         <li>Only Air Astana computerized flight plans are supported.</li>
         <li>Entries are saved on the device as you type and come back when you reload the same plan.
             Reset clears them.</li>
-        <li>Nothing leaves the iPad and no connection is needed.</li>
+        <li>Nothing leaves the iPad and no connection is ever needed.</li>
+        <li>The OFP number and its release time sit under the title in the header, so the document
+            on screen can be checked against the one you were given.</li>
         <li>The sun and moon buttons in the header switch the screen theme; the choice is
             remembered. Print colours never change.</li>
-        <li><b>Set ATO = ETO everywhere</b> fills every row at once when the flight is on plan.</li>
         <li>A warning about ET and T/T means the plan's own columns disagree — check those
             waypoints by hand.</li>
       </ul>
@@ -994,7 +925,6 @@ guide.onclick = e => { if (e.target === guide) showGuide(false); };
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   showGuide(false);
-  if (!$('#aiDisc').classList.contains('hide')) closeDisc();
 });
 
 document.querySelectorAll('[data-theme-set]').forEach(b =>
@@ -1016,13 +946,19 @@ drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over');
 $('#file').onchange = e => { if (e.target.files[0]) load(e.target.files[0]); };
 
 async function load(f){
+  return loadBuffer(f.name, f.size, await f.arrayBuffer(), false);
+}
+
+// Shared by the file picker and by the session resumed out of IndexedDB after
+// iPadOS has evicted the app from memory.
+async function loadBuffer(name, size, buf, resumed){
   if (typeof DecompressionStream === 'undefined'){
     msg('#m1', 'Browser too old: no DecompressionStream. Safari 16.4+ / iPadOS 16.4+ required.', 'err');
-    return;
+    return false;
   }
-  NAME = f.name; KEY = 'etofill:' + f.name + ':' + f.size;
-  RAW = await f.arrayBuffer();
-  $('#fname').textContent = f.name + '  ·  ' + (f.size / 1048576).toFixed(1) + ' MB';
+  NAME = name; KEY = 'etofill:' + name + ':' + size;
+  RAW = buf;
+  $('#fname').textContent = name + '  ·  ' + (size / 1048576).toFixed(1) + ' MB';
   hide('#m1'); hide('#m3');
   $('#c2').classList.remove('hide');
   for (const c of ['#c3','#c4','#c5','#c6','#c7']) $(c).classList.add('hide');
@@ -1033,8 +969,8 @@ async function load(f){
     const r = await parse(RAW);
     PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor; FIELDS = r.fields; FPL = r.fpl;
     showIcao(r.icao);
-    TEXT_ALL = r.text || '';
-    aiRefresh();
+    showOfp(r.ofp);
+    showWx(r.wx);
     const s1 = PLAN.filter(p => p.sec === 1).length;
     msg('#m1', `Found: ${s1} main route waypoints`
              + (PLAN.length - s1 ? `, ${PLAN.length - s1} alternate` : '')
@@ -1045,362 +981,25 @@ async function load(f){
       $('#etd').value = st.etd || ''; $('#alt').checked = !!st.alt;
       Object.assign(ACT, st.act || {}); Object.assign(TXT, st.txt || {});
       Object.assign(ALT, st.alt2 || {});
+      // Checks already announced before the app was evicted must not beep again.
+      alerted.clear(); for (const m of st.alerted || []) alerted.add(m);
     }
     renderFields();
     if (FIELDS.length) $('#c4').classList.remove('hide');
     $('#c5').classList.remove('hide');
-    if (st && st.etd){ $('#calc').click(); msg('#m1', 'Restored previously entered data for this file.', 'ok'); }
-    $('#etd').focus();
-  } catch (err){ msg('#m1', 'Could not parse the document: ' + err.message, 'err'); }
-}
-
-/* ================= AI briefing ================= */
-let TEXT_ALL = '', aiBusy = false, aiAbort = null, aiTimedOut = false;
-const AI_TIMEOUT = 60;                                   // seconds before the request is dropped
-
-const CLAUDE = {
-  label: 'Claude', keyStore: 'etofill:aikey', modelStore: 'etofill:aimodel',
-  fallbacks: ['claude-haiku-4-5-20251001', 'claude-sonnet-5'],
-  async list(key, signal){
-    const r = await fetch('https://api.anthropic.com/v1/models?limit=100', {
-      signal,
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01',
-                 'anthropic-dangerous-direct-browser-access': 'true' } });
-    if (!r.ok) throw new Error('models ' + r.status);
-    return ((await r.json()).data || []).map(m => m.id);
-  },
-  send(key, model, pdf, text, signal, noThink){
-    return fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', signal,
-      headers: { 'content-type': 'application/json', 'x-api-key': key,
-                 'anthropic-version': '2023-06-01',
-                 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model, max_tokens: 1800, stream: true,
-        ...(noThink ? { thinking: { type: 'disabled' } } : {}),
-        messages: [{ role: 'user', content: pdf
-        ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdf } },
-           { type: 'text', text: PROMPT }]
-        : [{ type: 'text', text: PROMPT + '\n\nFLIGHT PLAN TEXT:\n' + text }] }] })
-    });
-  },
-};
-
-/* Server-sent events: show the briefing as it is written instead of waiting for the whole
-   answer, and treat silence — not total duration — as the thing worth timing out. */
-async function readStream(res, onText, onIdle){
-  const reader = res.body.getReader(), dec = new TextDecoder();
-  let buf = '', text = '', stop = '', usage = {}, thinking = false;
-  for (;;){
-    const { value, done } = await reader.read();
-    if (done) break;
-    onIdle();
-    buf += dec.decode(value, { stream: true });
-    const chunks = buf.split('\n\n');
-    buf = chunks.pop();
-    for (const c of chunks){
-      const line = c.split('\n').find(l => l.startsWith('data:'));
-      if (!line) continue;
-      let ev; try { ev = JSON.parse(line.slice(5).trim()); } catch(e){ continue; }
-      if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta'){
-        text += ev.delta.text; onText(text);
-      } else if (ev.type === 'content_block_delta' && ev.delta
-                 && /thinking/.test(ev.delta.type || '')){
-        thinking = true;
-      } else if (ev.type === 'message_start' && ev.message){
-        usage.in = (ev.message.usage || {}).input_tokens;
-      } else if (ev.type === 'message_delta'){
-        if (ev.delta && ev.delta.stop_reason) stop = ev.delta.stop_reason;
-        if (ev.usage) usage.out = ev.usage.output_tokens;
-      } else if (ev.type === 'error'){
-        throw new Error((ev.error && ev.error.message) || 'stream error');
-      }
+    if (st && st.etd){
+      $('#calc').click();
+      msg('#m1', resumed
+        ? `Continued where you left off — ${name}, saved ${st.at ? fmt(st.at) + 'Z' : 'earlier'}.`
+        : 'Restored previously entered data for this file.', 'ok');
     }
+    if (!resumed) keepSession(name, size, buf);
+    if (!resumed) $('#etd').focus();
+    return true;
+  } catch (err){
+    msg('#m1', 'Could not parse the document: ' + err.message, 'err');
+    return false;
   }
-  return { text: text.trim(), stop, thinking, in: usage.in, out: usage.out };
-}
-const prov = () => CLAUDE;
-
-/* Rank the models a key can use. Cost comes first: Haiku is an order of magnitude cheaper
-   than Sonnet and reads a flight plan perfectly well. Tick "strongest model" to invert it. */
-function rankModel(id, best){
-  const s = id.toLowerCase();
-  if (!/^claude/.test(s)) return -1e9;
-  const v = parseFloat((s.match(/claude[a-z-]*?-(\d+(?:\.\d+)?)/) || [0, 0])[1]) || 0;
-  let k = v * 10;                              // generation matters, but less than tier
-  if (best){
-    if (/opus/.test(s)) k += 400;
-    else if (/sonnet/.test(s)) k += 300;
-    else if (/haiku/.test(s)) k += 100;
-  } else {
-    if (/haiku/.test(s)) k += 400;             // cheapest tier
-    else if (/sonnet/.test(s)) k += 150;
-    else if (/opus/.test(s)) k += 0;
-  }
-  if (/preview|exp|beta/.test(s)) k -= 60;     // preview quotas are tighter
-  if (/latest/.test(s)) k += 2;
-  return k;
-}
-async function pickModel(p, key, force, signal){
-  if (!force){
-    try {
-      const c = JSON.parse(localStorage.getItem(p.modelStore) || 'null');
-      if (c && c.id && Date.now() - c.at < 7 * 24 * 3600e3) return c.id;
-    } catch(e){}
-  }
-  let id = p.fallbacks[0];
-  try {
-    const strongest = $('#aiBest').checked;
-    const list = await p.list(key, signal);
-    const top = list.filter(m => rankModel(m, strongest) > -1e8)
-                    .sort((a, b) => rankModel(b, strongest) - rankModel(a, strongest))[0];
-    if (top) id = top;
-  } catch(e){ if (e.name === 'AbortError') throw e; }
-  try { localStorage.setItem(p.modelStore, JSON.stringify({ id, at: Date.now() })); } catch(e){}
-  return id;
-}
-function showModel(id){
-  $('#aiModelInfo').innerHTML = id
-    ? `Model: <b>${id}</b> — chosen automatically for your key.`
-    : 'Model: chosen automatically.';
-}
-
-const online = () => navigator.onLine !== false;
-function aiRefresh(){
-  const has = !!(RAW && DOC);
-  $('#c7').classList.toggle('hide', !has);
-  $('#aiPanel').classList.toggle('hide', !online());
-  $('#aiOffline').classList.toggle('hide', online());
-}
-addEventListener('online', aiRefresh);
-addEventListener('offline', aiRefresh);
-
-let AIKEY = '';
-const maskKey = k => k.length > 14 ? k.slice(0, 8) + '\u2026' + k.slice(-4) : '\u2026'.repeat(6);
-
-function lockKey(on){
-  const i = $('#aiKey');
-  i.readOnly = on;
-  i.type = on ? 'text' : 'password';
-  i.value = on ? maskKey(AIKEY) : '';
-  $('#aiKeyClear').classList.toggle('hide', !on);
-  if (!on) i.focus();
-}
-function loadProv(){
-  const p = prov();
-  let cached = null;
-  try {
-    AIKEY = localStorage.getItem(p.keyStore) || '';
-    cached = JSON.parse(localStorage.getItem(p.modelStore) || 'null');
-  } catch(e){}
-  lockKey(!!AIKEY);
-  showModel(cached && cached.id);
-}
-loadProv();
-$('#aiKeyBtn').onclick = () => $('#aiKeyRow').classList.toggle('hide');
-$('#aiBest').onchange = () => {                 // different tier -> choose again
-  try { localStorage.removeItem(prov().modelStore); } catch(e){}
-  showModel(null);
-};
-function commitKey(){
-  const i = $('#aiKey');
-  if (i.readOnly) return;
-  const v = i.value.trim();
-  if (!v) return;
-  AIKEY = v;
-  try {
-    localStorage.setItem(prov().keyStore, AIKEY);
-    localStorage.removeItem(prov().modelStore);      // new key -> detect the model again
-  } catch(e){}
-  showModel(null);
-  lockKey(true);                                     // one entry, then read-only
-  hide('#m5');
-}
-$('#aiKey').onblur = commitKey;
-$('#aiKey').onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); commitKey(); } };
-$('#aiKeyClear').onclick = () => {
-  if (!confirm('Remove the stored API key from this device?')) return;
-  AIKEY = '';
-  try { localStorage.removeItem(prov().keyStore); localStorage.removeItem(prov().modelStore); } catch(e){}
-  showModel(null);
-  lockKey(false);
-};
-
-const PROMPT = `Brief the operating crew from the attached Air Astana operational flight plan.
-
-This is a cockpit briefing, not a report. Hard limits, and they are limits, not targets:
-at most five lines per section, at most eighteen words per line. Leave out anything that does not
-change what the crew does, but do carry the figures they will be asked for.
-
-Write these seven sections in this order, each heading alone on its line, nothing before or after:
-
-FUEL
-TIME
-ROUTE
-WEATHER
-TURBULENCE
-NOTAMS
-SPECIALS
-
-What belongs under each:
-FUEL - block, trip, alternate and final reserve. Extra with its reason. The tightest margin there is.
-TIME - trip time, time to alternate, endurance, arrival estimate.
-ROUTE - departure and destination, cruise levels and where they change, top of descent, alternate routing.
-WEATHER - SIGMET and AIRMET with area, levels and validity. Worst wind and lowest temperature. Tropopause.
-TURBULENCE - where along this route, at what levels, how severe. Jet stream if it matters.
-NOTAMS - only those that change what the crew can do. Aerodrome, what is affected, validity.
-SPECIALS - permits with numbers, ETOPS or ERA, RVSM, PBN, MEL, slots, restrictions. Only if limiting.
-
-Rules:
-- Quote figures exactly as printed, with units. Never calculate, estimate or round anything.
-- Nothing significant in a section: write None and nothing else.
-- Section not covered by the document: write Not in document and nothing else.
-- Begin a line with ATTENTION: only when it is limiting or out of the ordinary. Sparingly.
-- No introduction, no closing summary, no advice on how to fly. Plain text. Times in UTC.`;
-
-function b64(buf){
-  const u8 = new Uint8Array(buf); let s = '', C = 0x8000;
-  for (let i = 0; i < u8.length; i += C) s += String.fromCharCode.apply(null, u8.subarray(i, i + C));
-  return btoa(s);
-}
-
-$('#aiRun').onclick = () => {
-  if (aiBusy){ if (aiAbort) aiAbort.abort(); return; }    // second press cancels
-  if (!RAW){ msg('#m5', 'Load a flight plan first.', 'err'); return; }
-  commitKey();
-  if (!AIKEY){
-    msg('#m5', 'No API key set. Press “How to get a key” to set one up.', 'err');
-    return;
-  }
-  $('#aiDisc').classList.remove('hide');
-  document.body.style.overflow = 'hidden';
-};
-const closeDisc = () => { $('#aiDisc').classList.add('hide'); document.body.style.overflow = ''; };
-$('#aiCancel').onclick = closeDisc;
-$('#aiDisc').onclick = e => { if (e.target === $('#aiDisc')) closeDisc(); };
-$('#aiAgree').onclick = () => { closeDisc(); runBriefing(); };
-
-async function runBriefing(){
-  const btn = $('#aiRun'), out = $('#aiOut');
-  aiBusy = true; aiTimedOut = false;
-  aiAbort = new AbortController();
-  const signal = aiAbort.signal;
-  const t0 = Date.now();
-  let kill = setTimeout(() => { aiTimedOut = true; aiAbort.abort(); }, AI_TIMEOUT * 1000);
-  let streaming = false;
-  const idle = () => {                                   // a chunk arrived: restart the clock
-    clearTimeout(kill);
-    kill = setTimeout(() => { aiTimedOut = true; aiAbort.abort(); }, AI_TIMEOUT * 1000);
-  };
-  const label = () => {
-    const s = Math.round((Date.now() - t0) / 1000);
-    btn.innerHTML = `<span class="spin"></span>${streaming ? 'Writing the briefing' : 'Reading the plan'}`
-                  + `… ${s}s · tap to cancel`;
-  };
-  const tick = setInterval(label, 500);
-  label();
-  hide('#m5'); out.classList.add('hide');
-
-  try {
-    const p = prov(), key = AIKEY;
-    // Text is the fast path: this OFP is ~36k tokens as text against ~146k when every page is
-    // rasterised. The whole PDF is opt-in, for the chart and scan pages that carry no text.
-    const usePdf = $('#aiFull').checked
-                && DOC.pages().length <= 100 && RAW.byteLength < 22 * 1024 * 1024;
-    const pdf = usePdf ? b64(RAW) : null;
-    if ($('#aiFull').checked && !usePdf)
-      msg('#m5', 'The document is too big to send whole — sending the text instead.', 'warn');
-
-    let model = await pickModel(p, key, false, signal);
-    showModel(model);
-    let res = await p.send(key, model, pdf, TEXT_ALL, signal);
-    if (res.status === 404){                       // stale choice — look the list up again
-      model = await pickModel(p, key, true, signal);
-      showModel(model);
-      res = await p.send(key, model, pdf, TEXT_ALL, signal);
-    }
-
-    if (!res.ok){
-      let detail = '';
-      try { const j = await res.json(); detail = (j.error && j.error.message) || ''; } catch(e){}
-      const hint = (res.status === 401 || res.status === 403) ? 'The API key was rejected.'
-                 : res.status === 400 && /API_KEY|API key/i.test(detail) ? 'The API key was rejected.'
-                 : res.status === 404 ? 'No usable model was found for this key.'
-                 : res.status === 429 ? 'Rate limit reached — wait a minute and try again.'
-                 : res.status === 413 ? 'The document is too large for one request.'
-                 : `Request failed (${res.status}).`;
-      throw new Error(hint + (detail ? ' ' + detail : ''));
-    }
-    let last = 0;
-    const paint = t => {
-      streaming = true;
-      if (Date.now() - last < 120) return;             // repaint a few times a second, no more
-      last = Date.now();
-      out.innerHTML = renderBrief(t);
-    };
-    out.innerHTML = ''; out.classList.remove('hide');
-    let r = await readStream(res, paint, idle);
-
-    // budget spent on internal reasoning and nothing written: ask again with it turned off
-    if (!r.text && r.stop === 'max_tokens'){
-      msg('#m5', 'First attempt produced no text — retrying.', 'warn');
-      const res2 = await p.send(key, model, pdf, TEXT_ALL, signal, true);
-      if (res2.ok) r = await readStream(res2, paint, idle);
-    }
-    out.innerHTML = renderBrief(r.text);
-
-    if (!r.text){
-      out.classList.add('hide');
-      throw new Error(r.stop === 'max_tokens'
-        ? 'The model used its whole output budget without writing a briefing. Try again, or '
-          + 'untick the whole-PDF option to send less.'
-        : `The model returned no text${r.stop ? ' (stop reason: ' + r.stop + ')' : ''}.`);
-    }
-    if (r.stop === 'max_tokens')
-      msg('#m5', 'The briefing was cut short at the length limit — the end may be missing.', 'warn');
-    $('#aiMeta').textContent = `${p.label} · ${model} · ${Math.round((Date.now()-t0)/1000)}s`
-      + (r.in ? ` · ${r.in} in / ${r.out} out` : '')
-      + (usePdf ? ' · full PDF' : ' · text only');
-    if (r.stop !== 'max_tokens')
-      msg('#m5', 'Generated by a language model. Verify every figure against the document.', 'warn');
-  } catch (e){
-    const off = /Failed to fetch|NetworkError|Load failed/i.test(e.message);
-    msg('#m5',
-      e.name === 'AbortError'
-        ? (aiTimedOut
-            ? `Nothing received for ${AI_TIMEOUT} s — the request was dropped. Press Generate briefing to try again.`
-            : 'Cancelled. Press Generate briefing to start again.')
-        : off ? 'Could not reach Anthropic — check the connection.'
-              : e.message, aiTimedOut || e.name === 'AbortError' ? 'warn' : 'err');
-  }
-  clearTimeout(kill); clearInterval(tick);
-  aiAbort = null; aiBusy = false; btn.disabled = false; btn.textContent = 'Generate briefing';
-}
-
-function renderBrief(t){
-  const esc = s => s.replace(/[&<>]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[c]));
-  const heads = /^(FLIGHT|FUEL|TIME|ROUTE(?: AND LEVELS)?|WEATHER|TURBULENCE|NOTAMS?|SPECIALS?)\b[:\s]*$/i;
-  const out = []; let inList = false;
-  for (const raw of t.split(/\r?\n/)){
-    const line = raw.trim();
-    if (!line){ if (inList){ out.push('</ul>'); inList = false; } continue; }
-    if (heads.test(line)){
-      if (inList){ out.push('</ul>'); inList = false; }
-      out.push('<h4>' + esc(line.replace(/[:\s]+$/, '')) + '</h4>'); continue;
-    }
-    let body = esc(line.replace(/^[-*\u2022]\s*/, ''))
-      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-      .replace(/^(ATTENTION:)/i, '<span class="att">$1</span>');
-    if (/^[-*\u2022]/.test(line)){
-      if (!inList){ out.push('<ul>'); inList = true; }
-      out.push('<li>' + body + '</li>');
-    } else {
-      if (inList){ out.push('</ul>'); inList = false; }
-      out.push('<p>' + body + '</p>');
-    }
-  }
-  if (inList) out.push('</ul>');
-  return '<p class="aidisc">Machine-generated summary. It may be wrong or incomplete — '
-       + 'the flight documentation remains the only authority.</p>' + out.join('');
 }
 
 /* ================= ICAO flight plan ================= */
@@ -1416,6 +1015,52 @@ function showIcao(p){
     ? `reassembled from pages ${p.pages[0]}\u2013${p.pages[p.pages.length - 1]}`
     : `page ${p.pages[0]}`;
 }
+
+/* ================= OFP identity ================= */
+function showOfp(o){
+  const el = $('#ofpNo');
+  if (!o){ el.classList.add('hide'); el.textContent = ''; return; }
+  el.textContent = (o.no ? 'OFP ' + o.no : 'OFP') + (o.issued ? '  ·  issued ' + o.issued : '');
+  el.classList.remove('hide');
+}
+
+/* ================= weather and NOTAMs ================= */
+let WX = null;
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[c]));
+// NOTAM B) and C) are YYMMDDHHMM; show them the way they are read out loud.
+const stamp = s => /^\d{10}$/.test(s)
+  ? `${s.slice(4, 6)}/${s.slice(2, 4)}/${s.slice(0, 2)} ${s.slice(6)}Z` : s;
+
+function showWx(w){
+  WX = w && w.airports.length ? w : null;
+  const card = $('#c7'), sel = $('#wxApt');
+  if (!WX){ card.classList.add('hide'); sel.innerHTML = ''; $('#wxOut').innerHTML = ''; return; }
+  sel.innerHTML = WX.airports.map((a, n) =>
+    `<option value="${n}">${a.icao}${a.role ? ' — ' + a.role : ''}</option>`).join('');
+  sel.selectedIndex = 0;
+  card.classList.remove('hide');
+  renderWx();
+}
+
+function renderWx(){
+  if (!WX) return;
+  const a = WX.airports[+$('#wxApt').value] || WX.airports[0];
+  const counts = [[a.metar.length, 'METAR'], [a.taf.length, 'TAF'], [a.notams.length, 'NOTAM']]
+    .filter(([n]) => n).map(([n, s]) => n + ' ' + s);
+  $('#wxMeta').textContent = counts.join('  ·  ');
+  const block = (title, body) => `<div class="fplbox"><div class="fplhead"><span>${title}</span></div>${body}</div>`;
+  const pre = arr => `<pre>${arr.map(esc).join('\n\n')}</pre>`;
+  let html = '';
+  if (a.metar.length) html += block('METAR', pre(a.metar));
+  if (a.taf.length)   html += block('TAF', pre(a.taf));
+  if (a.notams.length) html += block(`NOTAM <em class="wxrole">${a.icao}</em>`,
+    a.notams.map(n => `<div class="ntm"><span class="id">${esc(n.id)}</span>` +
+      (n.from || n.to ? `<span class="val">${esc(stamp(n.from || '?'))} → ${esc(stamp(n.to || '?'))}</span>` : '') +
+      `<p>${esc(n.text)}</p></div>`).join(''));
+  $('#wxOut').innerHTML = html || '<p class="disc">Nothing recorded for this aerodrome.</p>';
+}
+$('#wxApt').onchange = renderWx;
+
 $('#fplCopy').onclick = async () => {
   if (!ICAO) return;
   const btn = $('#fplCopy'), txt = ICAO.oneLine;
@@ -1568,6 +1213,134 @@ function icaoPlan(lines){
            split: pages.length > 1 };
 }
 
+/* ---- OFP identity and briefing sections ---- */
+const CHROME = t => /^AIR ASTANA BRIEF/i.test(t) || /^PAGE \d+ OF \d+$/i.test(t);
+
+// Aerodromes named by the ICAO plan: field 13 is departure, field 16 destination + alternates.
+function routeAirports(icao){
+  const role = new Map();
+  if (!icao) return role;
+  const dep = icao.lines.find(l => /^-[A-Z]{4}\d{4}$/.test(l.replace(/\s+/g, '')));
+  if (dep) role.set(dep.replace(/[^A-Z]/g, '').slice(0, 4), 'departure');
+  const dst = icao.lines.find(l => /^-[A-Z]{4}\d{4}(\s+[A-Z]{4})*\s*$/.test(l) && l !== dep);
+  if (dst){
+    const codes = dst.slice(1).trim().split(/\s+/);
+    role.set(codes[0].slice(0, 4), 'destination');
+    for (const c of codes.slice(1)) if (/^[A-Z]{4}$/.test(c) && !role.has(c)) role.set(c, 'alternate');
+  }
+  return role;
+}
+
+// OFP number and release stamp, read from the first page.
+function ofpIdent(lines){
+  const page1 = lines.filter(l => l.page === 0 && !CHROME(l.text)).map(l => l.text.trim());
+  let no = null, issued = null;
+  const NUM = [
+    /\bOFP\s*(?:NO|NR|NUM(?:BER)?|#)?\.?\s*:?\s*([A-Z0-9][A-Z0-9\-\/]{0,14})\b/i,
+    /\bFLIGHT\s+PLAN\s+(?:NO|NR|NUMBER)\.?\s*:?\s*([A-Z0-9][A-Z0-9\-\/]{0,14})\b/i,
+    /\bRLSE\s*(?:NO)?\.?\s*:?\s*([A-Z0-9][A-Z0-9\-\/]{0,14})\b/i,
+  ];
+  const STAMP = /\b(\d{1,2}[A-Z]{3}\d{2,4})\s+(\d{4})\s*Z?\b/;
+  const STAMP6 = /\b(\d{6})Z\b/;
+  const LABEL = /\b(PREPARED|ISSUED|COMPUTED|RELEASED|RLSE|CREATED|DATE|DOF)\b/i;
+  for (const t of page1){
+    if (!no) for (const re of NUM){ const m = t.match(re); if (m){ no = m[1]; break; } }
+    if (!issued && LABEL.test(t)){
+      const m = t.match(STAMP);
+      if (m) issued = m[1] + ' ' + m[2] + 'Z';
+      else { const m6 = t.match(STAMP6); if (m6) issued = m6[1] + 'Z'; }
+    }
+  }
+  return (no || issued) ? { no, issued } : null;
+}
+
+/* ---- METAR / TAF / NOTAM ----------------------------------------------------
+   Driven by the ICAO report grammar rather than by the operator's page layout,
+   so a change of heading text does not silently empty the card. Section headings
+   only decide whether a bare "UAAA 141200Z" line may be taken as a report. */
+const WX_HEAD    = /\b(METAR|TAF|WEATHER|WX\b|AERODROME (?:FORECAST|REPORT)|TERMINAL FORECAST)\b/i;
+const NOTAM_HEAD = /\bNOTAM/i;
+const RE_METAR   = /^(?:METAR|SPECI)\b\s+(?:COR\s+|AMD\s+)?([A-Z]{4})\s+(\d{6}Z)/;
+const RE_TAF     = /^TAF\b(?:\s+(?:AMD|COR))?\s+([A-Z]{4})\s+(\d{6}Z)/;
+const RE_BARE    = /^([A-Z]{4})\s+(\d{6}Z)\b/;
+const RE_NOTAM   = /^([A-Z]\d{3,4}\/\d{2})\s*(?:NOTAM[NRC]\b)?/;
+const RE_APTHEAD = /^([A-Z]{4})\b(?:\s*[-\/]\s*[A-Z ]+)?\s*$/;
+
+function weatherNotams(lines, icao){
+  const role = routeAirports(icao);
+  const by = new Map();
+  const at = code => {
+    if (!by.has(code)) by.set(code, { icao: code, role: role.get(code) || null,
+                                      metar: [], taf: [], notams: [] });
+    return by.get(code);
+  };
+  const src = lines.filter(l => l.text.trim() && !CHROME(l.text.trim()));
+  let mode = null, ctx = null, open = null;
+  const close = () => {
+    if (!open) return;
+    const body = open.buf.join(' ').replace(/\s+/g, ' ').trim();
+    if (body){
+      if (open.kind === 'notams'){
+        const b = body.match(/\bB\)\s*(\d{10})/), c = body.match(/\bC\)\s*(\d{10}|PERM\b)/);
+        const e = body.match(/\bE\)\s*(.+?)(?=\s+[A-DF-Z]\)|$)/);
+        at(open.code).notams.push({ id: open.id, from: b ? b[1] : null, to: c ? c[1] : null,
+                                    text: e ? e[1].trim() : body, raw: body });
+      } else at(open.code)[open.kind].push(body);
+    }
+    open = null;
+  };
+
+  for (const l of src){
+    const t = l.text.trim();
+    // A heading is a short bare line. The field-marker test keeps "E) THIS NOTAM
+    // REPLACES ..." from being mistaken for one and truncating the item it sits in.
+    const head = t.length <= 60 && !/\b[A-Z]\)/.test(t)
+              && !RE_METAR.test(t) && !RE_TAF.test(t) && !RE_BARE.test(t) && !RE_NOTAM.test(t);
+    if (head && WX_HEAD.test(t)){ close(); mode = 'wx'; continue; }
+    if (head && NOTAM_HEAD.test(t)){ close(); mode = 'notam'; continue; }
+
+    const mHead = t.match(RE_APTHEAD);
+    if (mHead && !/^\d/.test(mHead[1])){ close(); ctx = mHead[1]; continue; }
+
+    let m;
+    if ((m = t.match(RE_METAR))){ close(); ctx = m[1]; open = { kind: 'metar', code: m[1], buf: [t] }; continue; }
+    if ((m = t.match(RE_TAF)))  { close(); ctx = m[1]; open = { kind: 'taf',   code: m[1], buf: [t] }; continue; }
+    if (mode === 'wx' && (m = t.match(RE_BARE))){
+      close(); ctx = m[1]; open = { kind: 'metar', code: m[1], buf: [t] }; continue;
+    }
+    if ((m = t.match(RE_NOTAM)) && (mode === 'notam' || /NOTAM[NRC]\b/.test(t))){
+      close();
+      open = { kind: 'notams', code: ctx || 'ZZZZ', id: m[1], buf: [t.slice(m[0].length).trim()] };
+      continue;
+    }
+    if (open){
+      // An A) field inside a NOTAM is authoritative for which aerodrome it belongs to.
+      if (open.kind === 'notams'){
+        const a = t.match(/\bA\)\s*([A-Z]{4})/);
+        if (a) open.code = a[1];
+      }
+      open.buf.push(t);
+    }
+  }
+  close();
+
+  // Re-home NOTAMs whose A) field only appeared after the item was opened.
+  for (const [code, ap] of [...by]){
+    if (code !== 'ZZZZ') continue;
+    by.delete(code);
+    for (const n of ap.notams){
+      const a = n.raw.match(/\bA\)\s*([A-Z]{4})/);
+      if (a) at(a[1]).notams.push(n);
+    }
+  }
+
+  const rank = { departure: 0, destination: 1, alternate: 2 };
+  const airports = [...by.values()]
+    .filter(a => a.metar.length || a.taf.length || a.notams.length)
+    .sort((a, b) => (rank[a.role] ?? 3) - (rank[b.role] ?? 3) || a.icao.localeCompare(b.icao));
+  return { airports };
+}
+
 async function parse(buf){
   const doc = new PDFMini.Doc(new Uint8Array(buf));
   DOC = doc;
@@ -1673,15 +1446,10 @@ async function parse(buf){
   if (!pairs.length) throw new Error('ETO column not found — unexpected plan format');
   if (pairs.some(p => !p.font)) throw new Error('no Courier font on the page');
   allLines.sort((a, b) => a.page - b.page || b.base - a.base);
-  const out = [];
-  let cur = -1;
-  for (const l of allLines){
-    if (l.page !== cur){ cur = l.page; out.push(`\n===== PAGE ${cur + 1} =====`); }
-    if (!/^AIR ASTANA BRIEF PAGE|^PAGE \d+ OF \d+$/.test(l.text)) out.push(l.text);
-  }
-  return { pairs, headers, anchor, fields, fpl, icao: icaoPlan(allLines),
-           text: out.join('\n').trim(),
-           imagePages: [] };
+  const icao = icaoPlan(allLines);
+  return { pairs, headers, anchor, fields, fpl, icao,
+           ofp: ofpIdent(allLines),
+           wx: weatherNotams(allLines, icao) };
 }
 
 /* ================= calculation ================= */
@@ -1801,8 +1569,50 @@ function refreshAlt(){
        : hide('#m4');
   if (fresh && $('#altAlert').checked) beep();
 }
-setInterval(refreshAlt, 15000);
-document.addEventListener('visibilitychange', refreshAlt);
+/* ---- where the flight has got to ----
+   Kept out of refreshAlt because that one returns early when the plan is shorter
+   than an hour and has no checks — the table still needs its highlight. */
+let scrolledAt = 0, autoUntil = 0, lastNext = null;
+function refreshProgress(){
+  if (!RESULT.length) return;
+  let ci = -1, ni = -1;
+  RESULT.forEach((p, n) => {
+    if (sinceDue(p.t) >= 0) ci = n;
+    else if (ni < 0) ni = n;
+  });
+  const cur = ci >= 0 ? RESULT[ci] : null, next = ni >= 0 ? RESULT[ni] : null;
+  RESULT.forEach((p, n) => {
+    const row = rowOf(p.i);
+    if (!row) return;
+    row.classList.toggle('past', n < ci);
+    row.classList.toggle('now', n === ci);
+    row.classList.toggle('next', n === ni);
+  });
+  const st = $('#stNext');
+  if (st){
+    const mins = next ? -sinceDue(next.t) : null;
+    st.querySelector('b').textContent = next ? next.wp : '—';
+    st.querySelector('span').textContent = next
+      ? `Next · ${fmt(next.t)} · in ${mins} min` : 'All waypoints passed';
+  }
+  // Follow the flight, but never fight the hands: no scrolling while a box in the
+  // table has focus, or within 20 s of the user having scrolled it themselves.
+  const box = document.querySelector('.tblbox'), row = next && rowOf(next.i);
+  if (box && row && next.i !== lastNext && Date.now() - scrolledAt > 20000
+      && !box.contains(document.activeElement)){
+    lastNext = next.i;
+    autoUntil = Date.now() + 1500;          // do not read our own scroll back as the user's
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+document.querySelector('.tblbox').addEventListener('scroll', () => {
+  if (Date.now() < autoUntil) return;
+  scrolledAt = Date.now();
+}, { passive: true });
+
+const tick = () => { refreshProgress(); refreshAlt(); };
+setInterval(tick, 15000);
+document.addEventListener('visibilitychange', tick);
 
 // waypoints reached at each full hour after takeoff
 function hourlyChecks(){
@@ -1859,7 +1669,8 @@ function render(t0, arr){
     <div class="stat"><b>${last ? fmt(arr) : '—'}</b><span>Arrival (ETO)</span></div>
     <div class="stat"><b>${last ? hhmm(last.cum) : '—'}</b><span>Time en route</span></div>
     <div class="stat"><b>${RESULT.length}</b><span>Waypoints</span></div>
-    <div class="stat" id="stFilled"><b>0</b><span>Actuals entered</span></div>`;
+    <div class="stat" id="stFilled"><b>0</b><span>Actuals entered</span></div>
+    <div class="stat" id="stNext"><b>—</b><span>Next waypoint</span></div>`;
 
   const tb = $('#tbl tbody'); tb.innerHTML = '';
   let lastSec = 0;
@@ -1882,7 +1693,7 @@ function render(t0, arr){
        <td class="diff" data-d="${p.i}"></td><td class="num">${p.page + 1}</td>`;
     paint(p.i);
   }
-  bindInputs(); countFilled();
+  bindInputs(); countFilled(); lastNext = null; refreshProgress();
 }
 
 const rowOf = i => $(`#tbl tbody tr[data-i="${i}"]`);
@@ -1982,11 +1793,6 @@ function renderFields(){
   }
 }
 
-$('#copyEto').onclick = () => {
-  for (const p of RESULT){ ACT[p.i] = ACT[p.i] || {}; ACT[p.i].ato = fmt(p.t); }
-  document.querySelectorAll('#tbl input.ato').forEach(i => i.value = ACT[i.dataset.i].ato);
-  RESULT.forEach(p => paint(p.i)); countFilled(); save();
-};
 $('#clearAct').onclick = () => {
   if (!confirm('Clear all entered ATO and fuel values?')) return;
   for (const k in ACT) delete ACT[k];
@@ -1996,21 +1802,83 @@ $('#clearAct').onclick = () => {
 
 /* ================= autosave ================= */
 let saveT = null;
+function writeState(){
+  if (!KEY) return;
+  try {
+    localStorage.setItem(KEY, JSON.stringify({
+      etd: $('#etd').value, alt: $('#alt').checked, act: ACT, txt: TXT, alt2: ALT,
+      alerted: [...alerted], at: nowUtc() }));
+    const d = new Date();
+    $('#saved').textContent = 'saved ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  } catch(e){ $('#saved').textContent = 'storage unavailable'; }
+}
 function save(){
   if (!KEY) return;
   clearTimeout(saveT);
-  saveT = setTimeout(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify({
-        etd: $('#etd').value, alt: $('#alt').checked, act: ACT, txt: TXT, alt2: ALT }));
-      const d = new Date();
-      $('#saved').textContent = 'saved ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
-    } catch(e){ $('#saved').textContent = 'storage unavailable'; }
-  }, 250);
+  saveT = setTimeout(writeState, 250);
 }
+function flushSave(){ if (saveT){ clearTimeout(saveT); saveT = null; writeState(); } }
 function restore(){
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch(e){ return null; }
 }
+// iPadOS evicts backgrounded tabs without warning, and the 250 ms debounce would
+// swallow the last keystrokes. Both events fire before the app is frozen.
+addEventListener('pagehide', flushSave);
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
+
+/* ================= session survival =================
+   The form state fits in localStorage, the PDF does not — it goes to IndexedDB so
+   a cold start can pick the flight up where it stopped instead of showing an empty
+   drop zone. Every failure here is non-fatal: the app just loses the resume. */
+const LAST = 'etofill:last';
+function idb(){
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open('etofill', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('pdf');
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+async function idbSet(key, val){
+  const db = await idb();
+  await new Promise((res, rej) => {
+    const tx = db.transaction('pdf', 'readwrite');
+    tx.objectStore('pdf').put(val, key);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+  db.close();
+}
+async function idbGet(key){
+  const db = await idb();
+  const v = await new Promise((res, rej) => {
+    const rq = db.transaction('pdf', 'readonly').objectStore('pdf').get(key);
+    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+  });
+  db.close();
+  return v;
+}
+async function keepSession(name, size, buf){
+  if (typeof indexedDB === 'undefined') return;
+  try {
+    await idbSet('last', { name, size, buf });
+    localStorage.setItem(LAST, JSON.stringify({ name, size, at: Date.now() }));
+  } catch(e){ /* quota or private mode — carry on without resume */ }
+}
+async function dropSession(){
+  try { localStorage.removeItem(LAST); } catch(e){}
+  try { await idbSet('last', null); } catch(e){}
+}
+async function resumeSession(){
+  if (typeof indexedDB === 'undefined') return;
+  let meta;
+  try { meta = JSON.parse(localStorage.getItem(LAST) || 'null'); } catch(e){ return; }
+  if (!meta) return;
+  let rec;
+  try { rec = await idbGet('last'); } catch(e){ return; }
+  if (!rec || !rec.buf || rec.name !== meta.name || rec.size !== meta.size) return;
+  await loadBuffer(rec.name, rec.size, rec.buf, true);
+}
+resumeSession();
 
 /* ================= PDF generation ================= */
 function build(){
@@ -2116,12 +1984,14 @@ $('#open').onclick = () => {
 $('#reset').onclick = () => {
   if (!confirm('Reset everything?\n\nThe loaded plan and all entered data will be discarded.')) return;
   if (KEY){ try { localStorage.removeItem(KEY); } catch(e){} }
+  clearTimeout(saveT); saveT = null;
+  dropSession();
   RAW = null; DOC = null; PLAN = null; RESULT = []; FIELDS = []; FPL = null; KEY = '';
+  alerted.clear();
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
-  showIcao(null); TEXT_ALL = '';
-  $('#aiOut').classList.add('hide'); $('#aiMeta').textContent = ''; hide('#m5');
+  showIcao(null); showOfp(null); showWx(null);
   $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
   $('#fname').textContent = ''; $('#saved').textContent = '';
   for (const c of ['#c2','#c3','#c4','#c5','#c6','#c7']) $(c).classList.add('hide');
