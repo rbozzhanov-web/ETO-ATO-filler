@@ -127,6 +127,8 @@ button.sm{padding:9px 15px;font-size:13.5px;min-height:38px}
 .stats{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px}
 .stat b{display:block;font:700 20px/1.3 ui-monospace,Menlo,monospace;color:var(--acc)}
 .stat span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
+/* The wall clock is the one figure here that is not read off the plan. */
+.stat.live b{color:var(--gold);font-variant-numeric:tabular-nums}
 
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .toolbar .sep{flex:1}
@@ -250,6 +252,8 @@ td.diff{text-align:right;font-weight:700}
       <button type="button" data-theme-set="dark" aria-label="Dark theme" title="Dark theme"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
     </div>
   </header>
+
+  <div class="msg" id="mUpd"></div>
 
   <div class="card">
     <div class="step"><i>1</i> Load the flight plan PDF</div>
@@ -429,6 +433,14 @@ td.diff{text-align:right;font-weight:700}
       NOTAMs. Long NOTAM lists scroll inside the card.</p>
       <p>They are as old as the document. Re-brief from the current source before acting on
       anything here.</p>
+
+      <h3>Updates</h3>
+      <p>The app updates itself; the icon never needs removing and adding again. Open it once
+      with a connection and, if no plan is loaded, it comes straight back on the new version.
+      If you are already working on a document it only says a new version is ready and waits
+      for the next launch, so nothing you have entered moves while you are using it.</p>
+      <p>Offline it does not update at all — the version you leave the ground with is the
+      version you fly with.</p>
 
       <h3>Wind components and weather charts</h3>
       <p>The package carries a handful of full-page pictures — the wind components,
@@ -931,8 +943,25 @@ const NUM = 'inputmode="numeric" pattern="[0-9]*" autocomplete="off" ' +
 const msg = (el, t, k) => { const e = $(el); e.className = 'msg show ' + (k || 'ok'); e.textContent = t; };
 const hide = el => { $(el).className = 'msg'; };
 
-if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  // True on every launch after the first install: there is already a version
+  // running, so a change of controller means a newer one has just replaced it.
+  const replaced = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!replaced || reloading) return;
+    if (RAW){
+      // Never pull the page out from under the crew: entries, scroll position
+      // and the open plan all survive only if the reload waits.
+      msg('#mUpd', 'A new version has been installed. It will be used the next '
+                 + 'time you open the app — nothing you have entered is affected.', 'ok');
+      return;
+    }
+    reloading = true;
+    location.reload();
+  });
   navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 
 /* ================= theme ================= */
 const hex2rgb = h => { const n = parseInt(h.slice(1), 16);
@@ -1716,6 +1745,19 @@ $('#calc').onclick = () => {
   save();
 };
 
+/* ---- the clock ----
+   Ticks once a second on its own. The heavier refreshes below run every 15 s,
+   which is fine for due times but would make a wall clock lie by a quarter minute. */
+const pad2 = n => String(n).padStart(2, '0');
+function clockTick(){
+  const d = new Date();
+  const t = pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ':' + pad2(d.getUTCSeconds());
+  const s = $('#stUtc'); if (s) s.textContent = t;
+  const u = $('#utc');   if (u) u.textContent = 'UTC now ' + t;
+}
+setInterval(clockTick, 1000);
+clockTick();
+
 /* ---- due-time monitoring ---- */
 const nowUtc = () => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
 function sinceDue(target){                      // minutes past the due time, wrapped to ±12 h
@@ -1755,8 +1797,6 @@ function beep(){
 }
 
 function refreshAlt(){
-  const u = $('#utc');
-  if (u) u.textContent = 'UTC now ' + fmt(nowUtc());
   if (!CHECKS.length){ hide('#m4'); return; }
   let late = 0, fresh = false;
   for (const c of CHECKS){
@@ -1884,7 +1924,9 @@ function render(t0, arr){
     <div class="stat"><b>${last ? hhmm(last.cum) : '—'}</b><span>Time en route</span></div>
     <div class="stat"><b>${RESULT.length}</b><span>Waypoints</span></div>
     <div class="stat" id="stFilled"><b>0</b><span>Actuals entered</span></div>
+    <div class="stat live"><b id="stUtc">--:--:--</b><span>UTC now</span></div>
     <div class="stat" id="stNext"><b>—</b><span>Next waypoint</span></div>`;
+  clockTick();
 
   const tb = $('#tbl tbody'); tb.innerHTML = '';
   let lastSec = 0;

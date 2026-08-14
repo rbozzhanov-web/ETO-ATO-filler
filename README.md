@@ -31,8 +31,13 @@ pwa/icon-512.png
 3. Share button → **Add to Home Screen** → Add.
 4. Turn on airplane mode and launch the icon. If it opens, the offline cache is in place.
 
-To update: upload the new `index.html`, bump the `V` constant in `sw.js`,
-then open the app once while online.
+To update: upload the new `index.html` and bump the `V` constant in `sw.js`.
+
+The app then updates itself — there is no need to remove and re-add the icon. Open it once
+while online: if no plan is loaded it reloads straight into the new version, and if you are
+already working on a document it says a new version is ready and leaves it for the next
+launch, so nothing you have entered moves under your hands. Offline it never updates, which
+means the version you leave the ground with is the version you fly with.
 
 `ETO-Filler.html` in the archive root and `pwa/index.html` are the same file
 under two names, for the two scenarios.
@@ -71,7 +76,10 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    The button next to it fills in the ETD from the plan — but that is off-block
    time and takeoff is normally later, so check it.
 4. Enter actual ATO and remaining fuel per waypoint. Enter jumps to the next
-   field. Everything is saved automatically. The table follows the clock: passed
+   field. Everything is saved automatically. The figures above the table carry
+   the UTC clock, ticking every second and shown in gold so it is not mistaken
+   for a time read off the plan, next to the waypoint you are running to.
+   The table follows the clock: passed
    points fade back, the last one passed is shaded and the one you are running to
    is highlighted, with the list scrolling itself to keep that row in the middle.
    It follows the plan rather than your typing, so the highlight stays right when
