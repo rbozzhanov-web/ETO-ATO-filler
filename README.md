@@ -87,6 +87,8 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    asks for confirmation first.
 6. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
    or send it to ForeFlight.
+7. **Open charts** to page through the wind components and the significant
+   weather sheets on their own.
 
 The button in the header switches between light and dark themes; the choice is remembered.
 
@@ -121,6 +123,23 @@ exactly as old as the document: re-brief from the current source before acting o
 
 What is not on the card: SIGMETs, runway lengths, and the company NOTAMs that belong to no
 aerodrome (ADMIN, RELEASE, EQUIP and the like).
+
+## Wind components and weather charts
+
+**Open charts** pages through the full-page pictures in the package on their own: the wind
+components / tropopause / MORA profile along the route, and the significant weather charts
+with the route drawn on them. Arrow keys or Prev / Next move between them, **Zoom** switches
+between fitting the whole sheet on screen and full size with scrolling, Escape closes.
+
+A page is taken for a chart when its whole content is one large image and it carries no body
+text beyond the header and footer — which is what these sheets are. The scanned paperwork at
+the back of the package has three image layers and is left out. A typical Almaty–Incheon
+package yields five charts.
+
+The images are pulled straight out of the PDF, so nothing is re-rendered or re-compressed.
+Both encodings these packages use are handled: a raw RGB or palette bitmap under
+`FlateDecode`, and a plain JPEG under `DCTDecode`. Decoding happens the first time a chart is
+opened, not while the plan is loading.
 
 ## Print colours
 
