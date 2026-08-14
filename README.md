@@ -33,11 +33,18 @@ pwa/icon-512.png
 
 To update: upload the new `index.html` and bump the `V` constant in `sw.js`.
 
-The app then updates itself — there is no need to remove and re-add the icon. Open it once
-while online: if no plan is loaded it reloads straight into the new version, and if you are
-already working on a document it says a new version is ready and leaves it for the next
-launch, so nothing you have entered moves under your hands. Offline it never updates, which
-means the version you leave the ground with is the version you fly with.
+The app then updates itself — there is no need to remove and re-add the icon.
+
+The page is fetched from the network whenever there is one, so a new version is picked up on
+the next launch rather than waiting on a service-worker update check. If the network does not
+answer within 2.5 seconds the app starts from its cache instead, so a slow link never delays
+it, and everything other than the page stays cache-first. Should a replacement worker take
+over while the app is open, it reloads only when no plan is loaded; with a document open it
+says a new version is ready and leaves it for the next launch, so nothing you have entered
+moves under your hands.
+
+Offline it never updates, which means the version you leave the ground with is the version you
+fly with.
 
 `ETO-Filler.html` in the archive root and `pwa/index.html` are the same file
 under two names, for the two scenarios.

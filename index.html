@@ -446,6 +446,9 @@ td.diff{text-align:right;font-weight:700}
       with a connection and, if no plan is loaded, it comes straight back on the new version.
       If you are already working on a document it only says a new version is ready and waits
       for the next launch, so nothing you have entered moves while you are using it.</p>
+      <p>The page itself is fetched fresh whenever there is a connection, so a new version is
+      picked up on the next launch. If the network does not answer within a couple of seconds
+      the app starts from its cache instead, and a slow link never delays it.</p>
       <p>Offline it does not update at all — the version you leave the ground with is the
       version you fly with.</p>
 
@@ -500,7 +503,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 6 &nbsp;·&nbsp; published 14 Aug 2026 14:11 UTC</span></p>
+      <span class="build">Version 7 &nbsp;·&nbsp; published 14 Aug 2026 14:19 UTC</span></p>
 
     </div>
   </div>
