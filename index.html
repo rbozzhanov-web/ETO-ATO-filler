@@ -80,10 +80,14 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
   padding:8px 10px;font:700 15px/1 ui-monospace,Menlo,monospace;min-width:200px}
 #wxOut .fplbox:first-child{margin-top:14px}
 .wxrole{font-weight:400;letter-spacing:0;text-transform:none}
+.ntms{max-height:min(52vh,480px);overflow:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain}
 .ntm{padding:12px;border-bottom:1px solid var(--line2)}
 .ntm:last-child{border-bottom:0}
 .ntm .id{font:700 12px/1.4 ui-monospace,Menlo,monospace;color:var(--acc)}
 .ntm .val{font-size:11.5px;color:var(--dim);margin-left:8px}
+.ntm .subj{display:block;margin-top:3px;font-size:11px;font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;color:var(--gold)}
 .ntm p{margin:5px 0 0;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
   white-space:pre-wrap;word-break:break-word}
 
@@ -388,8 +392,12 @@ td.diff{text-align:right;font-weight:700}
       <h3>Weather and NOTAMs</h3>
       <p>Everything on the card is read out of the loaded package itself — the METAR, TAF and
       NOTAM pages that came with the flight plan. Nothing is fetched from the network and no
-      account or key is needed. The dropdown lists every aerodrome the package carries reports
-      for, departure first, then destination and alternates.</p>
+      account or key is needed.</p>
+      <p>The dropdown holds three groups: <b>this flight</b> — departure, destination, alternate
+      and en-route alternate; <b>areas along the route</b> — the FIRs the plan crosses; and
+      <b>other aerodromes</b> the package happens to carry. Pick one and you get its METAR and
+      TAF as printed, then each NOTAM with its number, validity and subject, then the company
+      NOTAMs. Long NOTAM lists scroll inside the card.</p>
       <p>They are as old as the document. Re-brief from the current source before acting on
       anything here.</p>
 
@@ -423,8 +431,8 @@ td.diff{text-align:right;font-weight:700}
         <li>Entries are saved on the device as you type and come back when you reload the same plan.
             Reset clears them.</li>
         <li>Nothing leaves the iPad and no connection is ever needed.</li>
-        <li>The OFP number and its release time sit under the title in the header, so the document
-            on screen can be checked against the one you were given.</li>
+        <li>The route ID, request number and release time sit under the title in the header, so
+            the document on screen can be checked against the one you were given.</li>
         <li>The sun and moon buttons in the header switch the screen theme; the choice is
             remembered. Print colours never change.</li>
         <li>A warning about ET and T/T means the plan's own columns disagree — check those
@@ -1020,23 +1028,31 @@ function showIcao(p){
 function showOfp(o){
   const el = $('#ofpNo');
   if (!o){ el.classList.add('hide'); el.textContent = ''; return; }
-  el.textContent = (o.no ? 'OFP ' + o.no : 'OFP') + (o.issued ? '  ·  issued ' + o.issued : '');
+  el.textContent = [o.route, o.req && 'REQ ' + o.req, o.issued].filter(Boolean).join('  ·  ');
   el.classList.remove('hide');
 }
 
 /* ================= weather and NOTAMs ================= */
 let WX = null;
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[c]));
-// NOTAM B) and C) are YYMMDDHHMM; show them the way they are read out loud.
-const stamp = s => /^\d{10}$/.test(s)
-  ? `${s.slice(4, 6)}/${s.slice(2, 4)}/${s.slice(0, 2)} ${s.slice(6)}Z` : s;
+// NOTAM validity is DDMMMHHMM, or a word such as PERM / WIE / UFN.
+const stamp = s => /^\d{2}[A-Z]{3}\d{4}$/.test(s) ? s.slice(0, 5) + ' ' + s.slice(5) + 'Z' : s;
+// The back-of-package bulletin runs the keyword into the code: "SPECIZWYN".
+const spaced = s => s.replace(/^(METAR|SPECI|TAF)([A-Z]{4}\s)/, '$1 $2');
+
+const GROUPS = [['flight', 'This flight'], ['fir', 'Areas along the route'], ['other', 'Other aerodromes']];
 
 function showWx(w){
   WX = w && w.airports.length ? w : null;
   const card = $('#c7'), sel = $('#wxApt');
   if (!WX){ card.classList.add('hide'); sel.innerHTML = ''; $('#wxOut').innerHTML = ''; return; }
-  sel.innerHTML = WX.airports.map((a, n) =>
-    `<option value="${n}">${a.icao}${a.role ? ' — ' + a.role : ''}</option>`).join('');
+  sel.innerHTML = GROUPS.map(([g, label]) => {
+    const items = WX.airports.map((a, n) => [a, n]).filter(([a]) => a.group === g);
+    if (!items.length) return '';
+    return `<optgroup label="${label}">` + items.map(([a, n]) =>
+      `<option value="${n}">${a.icao}${a.role ? ' — ' + a.role : a.name ? ' — ' + esc(a.name) : ''}</option>`
+    ).join('') + '</optgroup>';
+  }).join('');
   sel.selectedIndex = 0;
   card.classList.remove('hide');
   renderWx();
@@ -1045,18 +1061,27 @@ function showWx(w){
 function renderWx(){
   if (!WX) return;
   const a = WX.airports[+$('#wxApt').value] || WX.airports[0];
-  const counts = [[a.metar.length, 'METAR'], [a.taf.length, 'TAF'], [a.notams.length, 'NOTAM']]
-    .filter(([n]) => n).map(([n, s]) => n + ' ' + s);
-  $('#wxMeta').textContent = counts.join('  ·  ');
-  const block = (title, body) => `<div class="fplbox"><div class="fplhead"><span>${title}</span></div>${body}</div>`;
-  const pre = arr => `<pre>${arr.map(esc).join('\n\n')}</pre>`;
+  $('#wxMeta').textContent = [[a.metar.length, 'METAR'], [a.taf.length, 'TAF'],
+                              [a.notams.length, 'NOTAM'], [a.co.length, 'COMPANY']]
+    .filter(([n]) => n).map(([n, s]) => n + ' ' + s).join('  ·  ');
+  // A busy aerodrome carries eighty-odd NOTAMs; they scroll inside the card
+  // rather than pushing everything else off the screen.
+  const block = (title, body, scroll) =>
+    `<div class="fplbox"><div class="fplhead"><span>${title}</span></div>` +
+    (scroll ? `<div class="ntms">${body}</div>` : body) + '</div>';
+  const pre = arr => `<pre>${arr.map(t => esc(spaced(t))).join('\n\n')}</pre>`;
+  const item = n =>
+    `<div class="ntm"><span class="id">${esc(n.id)}</span>` +
+    (n.from ? `<span class="val">${esc(stamp(n.from))} → ${esc(stamp(n.to || '?'))}` +
+              `${n.year ? ' ' + n.year : ''}${n.est ? ' EST' : ''}</span>` : '') +
+    (n.subject ? `<span class="subj">${esc(n.subject)}</span>` : '') +
+    `<p>${esc(n.text)}</p></div>`;
   let html = '';
   if (a.metar.length) html += block('METAR', pre(a.metar));
   if (a.taf.length)   html += block('TAF', pre(a.taf));
-  if (a.notams.length) html += block(`NOTAM <em class="wxrole">${a.icao}</em>`,
-    a.notams.map(n => `<div class="ntm"><span class="id">${esc(n.id)}</span>` +
-      (n.from || n.to ? `<span class="val">${esc(stamp(n.from || '?'))} → ${esc(stamp(n.to || '?'))}</span>` : '') +
-      `<p>${esc(n.text)}</p></div>`).join(''));
+  if (a.notams.length) html += block(`NOTAM <em class="wxrole">${a.notams.length} items</em>`,
+                                     a.notams.map(item).join(''), true);
+  if (a.co.length) html += block('Company NOTAMs', a.co.map(item).join(''), true);
   $('#wxOut').innerHTML = html || '<p class="disc">Nothing recorded for this aerodrome.</p>';
 }
 $('#wxApt').onchange = renderWx;
@@ -1216,128 +1241,153 @@ function icaoPlan(lines){
 /* ---- OFP identity and briefing sections ---- */
 const CHROME = t => /^AIR ASTANA BRIEF/i.test(t) || /^PAGE \d+ OF \d+$/i.test(t);
 
-// Aerodromes named by the ICAO plan: field 13 is departure, field 16 destination + alternates.
+// Aerodromes and areas named by the ICAO flight plan: field 13 is departure,
+// field 16 destination + alternates, field 18 carries EET/ (the FIRs crossed)
+// and RALT/ (en-route alternates).
 function routeAirports(icao){
-  const role = new Map();
-  if (!icao) return role;
-  const dep = icao.lines.find(l => /^-[A-Z]{4}\d{4}$/.test(l.replace(/\s+/g, '')));
-  if (dep) role.set(dep.replace(/[^A-Z]/g, '').slice(0, 4), 'departure');
+  const role = new Map(), fir = new Set();
+  if (!icao) return { role, fir };
+  const dep = icao.lines.find(l => /^-[A-Z]{4}\d{4}$/.test(l.trim()));
+  if (dep) role.set(dep.trim().slice(1, 5), 'departure');
   const dst = icao.lines.find(l => /^-[A-Z]{4}\d{4}(\s+[A-Z]{4})*\s*$/.test(l) && l !== dep);
   if (dst){
-    const codes = dst.slice(1).trim().split(/\s+/);
+    const codes = dst.trim().slice(1).split(/\s+/);
     role.set(codes[0].slice(0, 4), 'destination');
     for (const c of codes.slice(1)) if (/^[A-Z]{4}$/.test(c) && !role.has(c)) role.set(c, 'alternate');
   }
-  return role;
+  const all = icao.lines.join(' ');
+  const eet = all.match(/\bEET\/((?:[A-Z]{4}\d{4}\s*)+)/);
+  if (eet) for (const m of eet[1].matchAll(/([A-Z]{4})\d{4}/g)) fir.add(m[1]);
+  const ralt = all.match(/\bRALT\/([A-Z]{4}(?:\s+[A-Z]{4})*)/);
+  if (ralt) for (const c of ralt[1].split(/\s+/)) if (!role.has(c)) role.set(c, 'en-route alternate');
+  return { role, fir };
 }
 
-// OFP number and release stamp, read from the first page.
+// OFP identity, read from the first page. Air Astana prints it as
+// "ROUTE ID: ALAICN01  GENERATED: 13/08/2026 15:26 GMT  --- REQUEST # 83104 ---".
 function ofpIdent(lines){
   const page1 = lines.filter(l => l.page === 0 && !CHROME(l.text)).map(l => l.text.trim());
-  let no = null, issued = null;
-  const NUM = [
+  let route = null, req = null, issued = null;
+  const FALLBACK = [
     /\bOFP\s*(?:NO|NR|NUM(?:BER)?|#)?\.?\s*:?\s*([A-Z0-9][A-Z0-9\-\/]{0,14})\b/i,
     /\bFLIGHT\s+PLAN\s+(?:NO|NR|NUMBER)\.?\s*:?\s*([A-Z0-9][A-Z0-9\-\/]{0,14})\b/i,
-    /\bRLSE\s*(?:NO)?\.?\s*:?\s*([A-Z0-9][A-Z0-9\-\/]{0,14})\b/i,
   ];
-  const STAMP = /\b(\d{1,2}[A-Z]{3}\d{2,4})\s+(\d{4})\s*Z?\b/;
-  const STAMP6 = /\b(\d{6})Z\b/;
-  const LABEL = /\b(PREPARED|ISSUED|COMPUTED|RELEASED|RLSE|CREATED|DATE|DOF)\b/i;
   for (const t of page1){
-    if (!no) for (const re of NUM){ const m = t.match(re); if (m){ no = m[1]; break; } }
-    if (!issued && LABEL.test(t)){
-      const m = t.match(STAMP);
-      if (m) issued = m[1] + ' ' + m[2] + 'Z';
-      else { const m6 = t.match(STAMP6); if (m6) issued = m6[1] + 'Z'; }
-    }
+    let m;
+    if (!route && (m = t.match(/\bROUTE\s*ID\s*:\s*(\S+)/i))) route = m[1];
+    if (!req   && (m = t.match(/\bREQUEST\s*#?\s*(\d+)/i))) req = m[1];
+    if (!issued && (m = t.match(/\bGENERATED\s*:\s*(\S+)\s+(\d{1,2}:\d{2})/i)))
+      issued = m[1] + ' ' + m[2] + 'Z';
+    if (!req) for (const re of FALLBACK){ const f = t.match(re); if (f){ req = f[1]; break; } }
   }
-  return (no || issued) ? { no, issued } : null;
+  return (route || req || issued) ? { route, req, issued } : null;
 }
 
 /* ---- METAR / TAF / NOTAM ----------------------------------------------------
-   Driven by the ICAO report grammar rather than by the operator's page layout,
-   so a change of heading text does not silently empty the card. Section headings
-   only decide whether a bare "UAAA 141200Z" line may be taken as a report. */
-const WX_HEAD    = /\b(METAR|TAF|WEATHER|WX\b|AERODROME (?:FORECAST|REPORT)|TERMINAL FORECAST)\b/i;
-const NOTAM_HEAD = /\bNOTAM/i;
-const RE_METAR   = /^(?:METAR|SPECI)\b\s+(?:COR\s+|AMD\s+)?([A-Z]{4})\s+(\d{6}Z)/;
-const RE_TAF     = /^TAF\b(?:\s+(?:AMD|COR))?\s+([A-Z]{4})\s+(\d{6}Z)/;
-const RE_BARE    = /^([A-Z]{4})\s+(\d{6}Z)\b/;
-const RE_NOTAM   = /^([A-Z]\d{3,4}\/\d{2})\s*(?:NOTAM[NRC]\b)?/;
-const RE_APTHEAD = /^([A-Z]{4})\b(?:\s*[-\/]\s*[A-Z ]+)?\s*$/;
+   Every report and NOTAM item in this package names its own aerodrome, so the
+   grouping keys off the item lines themselves and never off the page headings.
+   Headings are used only to end the item above them and to label the aerodrome. */
+// The raw bulletin at the back of the package runs the keyword into the code
+// ("SPECIZLIC"), exactly as it does for NOTAMs, hence \s* rather than \s+.
+const RE_METAR  = /^(?:METAR|SPECI)(?:\s+(?:COR|AMD))?\s*([A-Z]{4})\s+\d{6}Z/;
+const RE_TAF    = /^TAF(?:\s+(?:AMD|COR))?\s*([A-Z]{4})\s+\d{6}Z/;
+// "- UAAA A3725/26 30JUN0500-30SEP0500", "NOTAMUAAA A4947/26 ... EST" and the
+// year-spanning form "... 31JUL1600-31JAN1559 2027".
+const RE_NTM    = /^(?:-\s*|NOTAM)([A-Z]{4})\s+([A-Z]\d{3,4}\/\d{2})\s+([A-Z0-9]+-[A-Z0-9]+)(?:\s+(EST|\d{4}))?\s*$/;
+// "UAAA-00001 Oper: Y 28MAY25/0432" and the route form "UAAA-RKSI-00002 Oper: ..."
+const RE_CONTM  = /^([A-Z]{4})(?:-([A-Z]{4}))?-(\d{4,6})\s+Oper:/;
+const RE_VALID  = /^VALID FROM:\s*(\S+)\s+TO:\s*(\S+)/;
+const RE_APT    = /^([A-Z]{4})\s+([A-Z]{3})\s+RWY/;          // "UAAA ALA RWY05L 4500M ..."
+const RE_ROLE   = /^(DEPARTURE|ARRIVAL|OTHER):\s*(.+)$/;
+const RE_CONHD  = /\bCOMPANY NOTAMS\b/;
 
 function weatherNotams(lines, icao){
-  const role = routeAirports(icao);
-  const by = new Map();
+  const { role, fir } = routeAirports(icao);
+  const by = new Map(), named = new Set();
   const at = code => {
-    if (!by.has(code)) by.set(code, { icao: code, role: role.get(code) || null,
-                                      metar: [], taf: [], notams: [] });
+    if (!by.has(code)) by.set(code, { icao: code, iata: null, name: null,
+                                      role: role.get(code) || null,
+                                      metar: [], taf: [], notams: [], co: [] });
     return by.get(code);
   };
-  const src = lines.filter(l => l.text.trim() && !CHROME(l.text.trim()));
-  let mode = null, ctx = null, open = null;
+  const src = lines.filter(l => l.text.trim() && !CHROME(l.text.trim())).map(l => l.text.trim());
+
+  let open = null, pending = null, subject = null;
   const close = () => {
     if (!open) return;
     const body = open.buf.join(' ').replace(/\s+/g, ' ').trim();
-    if (body){
-      if (open.kind === 'notams'){
-        const b = body.match(/\bB\)\s*(\d{10})/), c = body.match(/\bC\)\s*(\d{10}|PERM\b)/);
-        const e = body.match(/\bE\)\s*(.+?)(?=\s+[A-DF-Z]\)|$)/);
-        at(open.code).notams.push({ id: open.id, from: b ? b[1] : null, to: c ? c[1] : null,
-                                    text: e ? e[1].trim() : body, raw: body });
-      } else at(open.code)[open.kind].push(body);
+    if (body || open.kind === 'notams' || open.kind === 'co'){
+      if (open.kind === 'notams')
+        for (const c of open.codes)
+          at(c).notams.push({ id: open.id, from: open.from, to: open.to, est: open.est,
+                              year: open.year, subject: open.subject, text: body });
+      else if (open.kind === 'co')
+        for (const c of open.codes)
+          at(c).co.push({ id: open.id, from: open.from, to: open.to, text: body });
+      else at(open.code)[open.kind].push(body.replace(/\s*=$/, ''));   // bulletin terminator
     }
     open = null;
   };
 
-  for (const l of src){
-    const t = l.text.trim();
-    // A heading is a short bare line. The field-marker test keeps "E) THIS NOTAM
-    // REPLACES ..." from being mistaken for one and truncating the item it sits in.
-    const head = t.length <= 60 && !/\b[A-Z]\)/.test(t)
-              && !RE_METAR.test(t) && !RE_TAF.test(t) && !RE_BARE.test(t) && !RE_NOTAM.test(t);
-    if (head && WX_HEAD.test(t)){ close(); mode = 'wx'; continue; }
-    if (head && NOTAM_HEAD.test(t)){ close(); mode = 'notam'; continue; }
-
-    const mHead = t.match(RE_APTHEAD);
-    if (mHead && !/^\d/.test(mHead[1])){ close(); ctx = mHead[1]; continue; }
-
+  for (let i = 0; i < src.length; i++){
+    const t = src[i];
     let m;
-    if ((m = t.match(RE_METAR))){ close(); ctx = m[1]; open = { kind: 'metar', code: m[1], buf: [t] }; continue; }
-    if ((m = t.match(RE_TAF)))  { close(); ctx = m[1]; open = { kind: 'taf',   code: m[1], buf: [t] }; continue; }
-    if (mode === 'wx' && (m = t.match(RE_BARE))){
-      close(); ctx = m[1]; open = { kind: 'metar', code: m[1], buf: [t] }; continue;
-    }
-    if ((m = t.match(RE_NOTAM)) && (mode === 'notam' || /NOTAM[NRC]\b/.test(t))){
-      close();
-      open = { kind: 'notams', code: ctx || 'ZZZZ', id: m[1], buf: [t.slice(m[0].length).trim()] };
+
+    // Headings: they close whatever is open and never become part of it.
+    if ((m = t.match(RE_ROLE))){
+      close(); subject = null;
+      // "OTHER:" names an aerodrome without giving it a part in this flight.
+      pending = { role: m[1] === 'OTHER' ? null : m[1].toLowerCase(), name: m[2].trim() };
       continue;
     }
-    if (open){
-      // An A) field inside a NOTAM is authoritative for which aerodrome it belongs to.
-      if (open.kind === 'notams'){
-        const a = t.match(/\bA\)\s*([A-Z]{4})/);
-        if (a) open.code = a[1];
-      }
-      open.buf.push(t);
+    if ((m = t.match(RE_APT))){
+      close(); subject = null;
+      const a = at(m[1]);
+      a.iata = m[2]; named.add(m[1]);
+      if (pending){ a.name = pending.name; if (!a.role) a.role = pending.role; pending = null; }
+      continue;
     }
+    if (RE_CONHD.test(t)){ close(); subject = null; continue; }
+
+    if ((m = t.match(RE_METAR))){ close(); open = { kind: 'metar', code: m[1], buf: [t] }; continue; }
+    if ((m = t.match(RE_TAF)))  { close(); open = { kind: 'taf',   code: m[1], buf: [t] }; continue; }
+
+    if ((m = t.match(RE_NTM))){
+      close();
+      const [from, to] = m[3].split('-');
+      open = { kind: 'notams', codes: [m[1]], id: m[2], from, to,
+               est: m[4] === 'EST', year: /^\d{4}$/.test(m[4] || '') ? m[4] : null, subject, buf: [] };
+      continue;
+    }
+    if ((m = t.match(RE_CONTM))){
+      close();
+      // A route company NOTAM (UAAA-RKSI-00002) belongs to both ends of the leg.
+      const codes = m[2] ? [m[1], m[2]] : [m[1]];
+      open = { kind: 'co', codes, id: m[0].split(/\s+/)[0], from: null, to: null, buf: [] };
+      continue;
+    }
+    if (open && open.kind === 'co' && !open.buf.length && (m = t.match(RE_VALID))){
+      open.from = m[1]; open.to = m[2]; continue;
+    }
+
+    // A bare short line directly above a NOTAM item is that item's subject
+    // ("ILS III", "APCH LGT"), not a continuation of the item above it.
+    if (t.length <= 40 && !/[.,:]$/.test(t) && RE_NTM.test(src[i + 1] || '')){
+      close(); subject = t; continue;
+    }
+    if (open) open.buf.push(t);
   }
   close();
 
-  // Re-home NOTAMs whose A) field only appeared after the item was opened.
-  for (const [code, ap] of [...by]){
-    if (code !== 'ZZZZ') continue;
-    by.delete(code);
-    for (const n of ap.notams){
-      const a = n.raw.match(/\bA\)\s*([A-Z]{4})/);
-      if (a) at(a[1]).notams.push(n);
-    }
-  }
-
-  const rank = { departure: 0, destination: 1, alternate: 2 };
+  const rank = { departure: 0, arrival: 1, destination: 1, alternate: 2, 'en-route alternate': 3 };
+  // "Areas" are the FIRs the plan crosses that are not aerodromes in their own right.
+  const group = a => a.role ? 'flight'
+                   : (fir.has(a.icao) && !named.has(a.icao)) ? 'fir'
+                   : 'other';
   const airports = [...by.values()]
-    .filter(a => a.metar.length || a.taf.length || a.notams.length)
-    .sort((a, b) => (rank[a.role] ?? 3) - (rank[b.role] ?? 3) || a.icao.localeCompare(b.icao));
+    .filter(a => a.metar.length || a.taf.length || a.notams.length || a.co.length)
+    .map(a => ({ ...a, group: group(a) }))
+    .sort((a, b) => (rank[a.role] ?? 9) - (rank[b.role] ?? 9) || a.icao.localeCompare(b.icao));
   return { airports };
 }
 

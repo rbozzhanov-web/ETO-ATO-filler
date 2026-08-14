@@ -54,8 +54,9 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 
 ## Using it
 
-1. Load the flight plan PDF. The header then shows the OFP number and its release
-   time, so the document on screen can be checked against the one you were given.
+1. Load the flight plan PDF. The header then shows the route ID, the request
+   number and the release time — `ALAICN01 · REQ 83104 · 13/08/2026 15:26Z` — so
+   the document on screen can be checked against the one you were given.
    The app shows STD / ETD / STA / ETA read from the
    document, and displays the ICAO flight plan. Where that plan is printed across
    a page break it is reassembled into one text with the page headers stripped out;
@@ -100,19 +101,26 @@ find the file again. Cross-checks that have already sounded do not sound a secon
 ## Weather and NOTAMs
 
 A card at the bottom shows the METAR, TAF and NOTAMs carried by the loaded package. Pick an
-aerodrome from the dropdown and the reports for it are listed: raw METAR and TAF as printed,
-and each NOTAM with its number and validity above the text.
+aerodrome from the dropdown and its reports are listed: METAR and TAF raw as printed, then
+each NOTAM with its number, validity and subject line above the text, then the Air Astana
+company NOTAMs. A busy aerodrome runs to eighty-odd NOTAMs, so the list scrolls inside the
+card instead of pushing the rest of the page away.
 
-The list covers every aerodrome the package has reports for, ordered departure, destination,
-alternates, then the rest. Roles come from the ICAO flight plan in the same document.
+The dropdown holds everything the package covers, in three groups: **this flight** (departure,
+destination, alternate and en-route alternate), **areas along the route** (the FIRs from the
+`EET/` field), and **other aerodromes**. Roles and areas come from the ICAO flight plan in the
+same document; names and IATA codes from the weather pages. A typical Almaty–Incheon package
+gives 4 / 6 / 36.
+
+Both the per-aerodrome weather pages and the raw bulletin at the back are read, so aerodromes
+listed there as "NO METAR REPORTS FOUND" still get their reports.
 
 Everything is read out of the PDF on the device. There is no network request, no account and
 no key — the card works in airplane mode like the rest of the app. The reports are therefore
 exactly as old as the document: re-brief from the current source before acting on them.
 
-Parsing follows the ICAO report formats (`METAR`/`SPECI`, `TAF`, and NOTAM items with their
-Q/A/B/C/E fields) rather than the operator's page layout, so a change of heading text does not
-quietly empty the card.
+What is not on the card: SIGMETs, runway lengths, and the company NOTAMs that belong to no
+aerodrome (ADMIN, RELEASE, EQUIP and the like).
 
 ## Print colours
 
