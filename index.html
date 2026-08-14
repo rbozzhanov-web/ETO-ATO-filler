@@ -1077,8 +1077,12 @@ function showOfp(o){
 /* ================= weather and NOTAMs ================= */
 let WX = null;
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[c]));
-// NOTAM validity is DDMMMHHMM, or a word such as PERM / WIE / UFN.
-const stamp = s => /^\d{2}[A-Z]{3}\d{4}$/.test(s) ? s.slice(0, 5) + ' ' + s.slice(5) + 'Z' : s;
+// NOTAM validity is DDMMMHHMM, sometimes with a spanning year, or a word such
+// as PERM / WIE / UFN.
+const stamp = s => {
+  const m = String(s).match(/^(\d{2}[A-Z]{3})(\d{4})(?:\s+(\d{4}))?$/);
+  return m ? `${m[1]} ${m[2]}Z${m[3] ? ' ' + m[3] : ''}` : s;
+};
 // The back-of-package bulletin runs the keyword into the code: "SPECIZWYN".
 const spaced = s => s.replace(/^(METAR|SPECI|TAF)([A-Z]{4}\s)/, '$1 $2');
 
@@ -1115,7 +1119,7 @@ function renderWx(){
   const item = n =>
     `<div class="ntm"><span class="id">${esc(n.id)}</span>` +
     (n.from ? `<span class="val">${esc(stamp(n.from))} → ${esc(stamp(n.to || '?'))}` +
-              `${n.year ? ' ' + n.year : ''}${n.est ? ' EST' : ''}</span>` : '') +
+              `${n.est ? ' EST' : ''}</span>` : '') +
     (n.subject ? `<span class="subj">${esc(n.subject)}</span>` : '') +
     `<p>${esc(n.text)}</p></div>`;
   let html = '';
@@ -1439,9 +1443,19 @@ function ofpIdent(lines){
 // ("SPECIZLIC"), exactly as it does for NOTAMs, hence \s* rather than \s+.
 const RE_METAR  = /^(?:METAR|SPECI)(?:\s+(?:COR|AMD))?\s*([A-Z]{4})\s+\d{6}Z/;
 const RE_TAF    = /^TAF(?:\s+(?:AMD|COR))?\s*([A-Z]{4})\s+\d{6}Z/;
-// "- UAAA A3725/26 30JUN0500-30SEP0500", "NOTAMUAAA A4947/26 ... EST" and the
-// year-spanning form "... 31JUL1600-31JAN1559 2027".
-const RE_NTM    = /^(?:-\s*|NOTAM)([A-Z]{4})\s+([A-Z]\d{3,4}\/\d{2})\s+([A-Z0-9]+-[A-Z0-9]+)(?:\s+(EST|\d{4}))?\s*$/;
+// "- UAAA A3725/26 30JUN0500-30SEP0500" and the run-together "NOTAMUAAA A4947/26 ...".
+// The validity that follows comes in half a dozen shapes — PERM, a trailing EST,
+// and a spanning year that may sit against either date — so it is captured whole
+// and split on its first hyphen rather than enumerated.
+const RE_NTM    = /^(?:-\s*|NOTAM)([A-Z]{4})\s+([A-Z]\d{3,4}\/\d{2})\s+((?:\d{2}[A-Z]{3}\d{4}|WIE)\b[^]*?)\s*$/;
+
+function validity(s){
+  const i = s.indexOf('-');
+  if (i < 0) return null;
+  const cut = t => ({ est: /\bEST\b/.test(t), t: t.replace(/\s*\bEST\b/g, '').trim() });
+  const a = cut(s.slice(0, i)), b = cut(s.slice(i + 1));
+  return { from: a.t, to: b.t, est: a.est || b.est };
+}
 // "UAAA-00001 Oper: Y 28MAY25/0432" and the route form "UAAA-RKSI-00002 Oper: ..."
 const RE_CONTM  = /^([A-Z]{4})(?:-([A-Z]{4}))?-(\d{4,6})\s+Oper:/;
 const RE_VALID  = /^VALID FROM:\s*(\S+)\s+TO:\s*(\S+)/;
@@ -1468,7 +1482,7 @@ function weatherNotams(lines, icao){
       if (open.kind === 'notams')
         for (const c of open.codes)
           at(c).notams.push({ id: open.id, from: open.from, to: open.to, est: open.est,
-                              year: open.year, subject: open.subject, text: body });
+                              subject: open.subject, text: body });
       else if (open.kind === 'co')
         for (const c of open.codes)
           at(c).co.push({ id: open.id, from: open.from, to: open.to, text: body });
@@ -1501,11 +1515,12 @@ function weatherNotams(lines, icao){
     if ((m = t.match(RE_TAF)))  { close(); open = { kind: 'taf',   code: m[1], buf: [t] }; continue; }
 
     if ((m = t.match(RE_NTM))){
-      close();
-      const [from, to] = m[3].split('-');
-      open = { kind: 'notams', codes: [m[1]], id: m[2], from, to,
-               est: m[4] === 'EST', year: /^\d{4}$/.test(m[4] || '') ? m[4] : null, subject, buf: [] };
-      continue;
+      const v = validity(m[3]);
+      if (v){
+        close();
+        open = { kind: 'notams', codes: [m[1]], id: m[2], ...v, subject, buf: [] };
+        continue;
+      }
     }
     if ((m = t.match(RE_CONTM))){
       close();
