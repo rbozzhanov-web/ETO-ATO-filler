@@ -68,7 +68,9 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 
 1. Load the flight plan PDF. The header then shows the route ID, the request
    number and the release time — `ALAICN01 · REQ 83104 · 13/08/2026 15:26Z` — so
-   the document on screen can be checked against the one you were given.
+   the document on screen can be checked against the one you were given, with the
+   weights and cost index on the line under it — `TOW 145979 · LW 122928 · ZFW
+   116632 · PLD 22500 · CI027`.
    The app shows STD / ETD / STA / ETA read from the
    document — with the TRIP time beside them — and displays the ICAO flight plan. Where that plan is printed across
    a page break it is reassembled into one text with the page headers stripped out;
@@ -107,12 +109,24 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    clock beside it no longer knocks it off). No check is raised inside the last
    hour before arrival. Saving the PDF with checks still missing asks for
    confirmation first.
-6. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
+6. Watch the **fuel checks**. Company rule is a fuel check on overflying a
+   waypoint, or at least every 30 minutes; the card lists a window per half hour
+   and turns green as soon as any waypoint inside it has its fuel entered in the
+   table, so there is nothing extra to type. Overdue windows go red and saving
+   asks for confirmation.
+7. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
    or send it to ForeFlight.
-7. **Open charts** to page through the wind components and the significant
+8. **Open charts** to page through the wind components and the significant
    weather sheets on their own.
 
 The button in the header switches between light and dark themes; the choice is remembered.
+
+## Pasting a flight plan
+
+Besides picking the file, the plan can be pasted: copy the PDF and either press **Paste a PDF**
+or paste into the page. On a computer this always works. On the iPad it depends on what Safari
+exposes to a page through the Clipboard API and it may refuse — the app says so plainly, and
+the box above still picks the file.
 
 ## If iPadOS closes the app
 

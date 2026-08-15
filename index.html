@@ -36,6 +36,8 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 .sub{color:var(--dim);font-size:13px}
 .ofp{margin-top:3px;font:700 12.5px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;
   color:var(--acc);letter-spacing:.4px}
+.figs{margin-top:3px;font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+  color:var(--dim);letter-spacing:.3px}
 
 .hd{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
   padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--gold)}
@@ -269,6 +271,7 @@ td.diff{text-align:right;font-weight:700}
       <h1>OFP Companion</h1>
       <div class="sub">Operational flight plan — in flight</div>
       <div class="ofp hide" id="ofpNo"></div>
+      <div class="figs hide" id="ofpFigs"></div>
     </div>
     <div class="grow"></div>
     <button id="guideBtn" type="button" class="ghost">User guide</button>
@@ -287,6 +290,7 @@ td.diff{text-align:right;font-weight:700}
       <div class="fn" id="fname"></div>
     </div>
     <input type="file" id="file" accept="application/pdf,.pdf" class="hide">
+    <div class="row" style="margin-top:12px"><button type="button" class="ghost sm" id="paste">Paste a PDF</button></div>
     <p class="disc" id="disc">Only Air Astana computerized flight plans are supported.</p>
     <div class="fplbox hide" id="fplBox">
       <div class="fplhead">
@@ -345,6 +349,15 @@ td.diff{text-align:right;font-weight:700}
     </div>
     <div class="msg" id="m4"></div>
     <div class="alt" id="altrows"></div>
+  </div>
+
+  <div class="card hide" id="c9">
+    <div class="step"><i>FUEL</i> Fuel checks</div>
+    <p class="disc">Company rule: a fuel check on overflying a waypoint, or at least every
+      30 minutes. A window counts as done once any waypoint inside it has its fuel recorded
+      in the table above — there is nothing extra to type here.</p>
+    <div class="msg" id="m6"></div>
+    <div class="alt" id="fuelrows"></div>
   </div>
 
   <div class="card hide" id="c5">
@@ -408,18 +421,12 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 9</h3>
+        <h3>New in version 10</h3>
         <ul>
-          <li>Renamed to <b>OFP Companion</b> — it long ago stopped being only a filler.</li>
-          <li><b>Save PDF</b> no longer sticks on “Building…” after you back out of the share sheet.</li>
-          <li>The <b>alert tick</b> can no longer be knocked off by tapping the clock beside it,
-              and it is remembered between launches.</li>
-          <li>No altimeter check is raised inside the last hour before arrival.</li>
-          <li><b>TRIP</b> time added to the plan line.</li>
-          <li>PIC BLOCK now names the reference: <b>PLANNED BLKF</b>.</li>
-          <li>The table centres the waypoint you are running to again — inside the table only,
-              the page no longer moves with it.</li>
-          <li>Lists that continue below the fold now show a fade and a chevron.</li>
+          <li>The header carries the weights and cost index: <b>TOW, LW, ZFW, PLD, CI</b>.</li>
+          <li><b>Fuel checks</b> — the company's 30-minute rule, watched like the altimeter ones
+              and satisfied by the fuel you already record in the table.</li>
+          <li>A flight plan can be <b>pasted</b> instead of picked.</li>
         </ul>
       </div>
 
@@ -467,11 +474,20 @@ td.diff{text-align:right;font-weight:700}
       <p>Rows watch the clock in UTC: amber when a check is close, red once it is overdue, with a
       short tone the first time. Saving with checks still missing asks for confirmation.</p>
 
+      <h3 class="new">Fuel checks</h3>
+      <p class="new">Company rule: a fuel check on overflying a waypoint, or at least every
+      30 minutes. The card lists a window per half hour with the waypoints that fall inside it,
+      and watches the clock exactly as the altimeter rows do — amber as one comes due, red once
+      it has passed unrecorded.</p>
+      <p class="new">There is nothing extra to type. A window turns green as soon as any
+      waypoint inside it has its fuel entered in the table, so recording fuel where you already
+      do satisfies the check. Saving with a window overdue asks for confirmation.</p>
+
       <h3>Following the flight</h3>
       <p>The waypoint table watches the clock in UTC. Points already behind you fade back, the
       last one passed is shaded, and the one you are running to is highlighted with a bar down
       its left edge.</p>
-      <p class="new">The table brings that row to its middle as the flight moves on. Only the
+      <p>The table brings that row to its middle as the flight moves on. Only the
       table scrolls — the page stays where you left it. It holds still while a box in the table
       has focus, and for twenty seconds after you scroll it by hand, so it never moves under
       your finger while you are typing.</p>
@@ -489,6 +505,12 @@ td.diff{text-align:right;font-weight:700}
       NOTAMs. Long NOTAM lists scroll inside the card.</p>
       <p>They are as old as the document. Re-brief from the current source before acting on
       anything here.</p>
+
+      <h3 class="new">Pasting a flight plan</h3>
+      <p class="new">Besides picking the file, the plan can be pasted: copy the PDF and either
+      press <b>Paste a PDF</b> or paste into the page. On a computer this always works. On the
+      iPad it depends on what Safari lets a page read from the clipboard, and it may refuse —
+      the app says so plainly and the box above still picks the file.</p>
 
       <h3>Updates</h3>
       <p>The app updates itself; the icon never needs removing and adding again. Open it once
@@ -552,7 +574,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 9 &nbsp;·&nbsp; published 15 Aug 2026 11:41 UTC</span></p>
+      <span class="build">Version 10 &nbsp;·&nbsp; published 15 Aug 2026 11:55 UTC</span></p>
 
     </div>
   </div>
@@ -993,7 +1015,7 @@ if (false && typeof module !== 'undefined') module.exports = PDFMini;
 <script>
 const $ = s => document.querySelector(s);
 let RAW = null, DOC = null, NAME = '', KEY = '';
-let PLAN = null, HDRS = [], ANCHOR = 0, RESULT = [], FIELDS = [], FPL = null, CHECKS = [], T0 = null;
+let PLAN = null, HDRS = [], ANCHOR = 0, RESULT = [], FIELDS = [], FPL = null, CHECKS = [], FUEL = [], T0 = null;
 const ACT = {}, TXT = {}, ALT = {};
 
 /* fixed print palette */
@@ -1103,6 +1125,36 @@ drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over');
   if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); };
 $('#file').onchange = e => { if (e.target.files[0]) load(e.target.files[0]); };
 
+/* ---- pasting a PDF ----
+   Two routes, because they are available in different places: the paste event
+   carries the file on a desktop, while the button asks the Clipboard API, which
+   is all iPadOS offers — and only for the types Safari chooses to expose. */
+const pdfOf = list => [...(list || [])].find(f => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name));
+document.addEventListener('paste', e => {
+  const f = pdfOf(e.clipboardData && e.clipboardData.files);
+  if (!f) return;
+  e.preventDefault();
+  load(f);
+});
+$('#paste').onclick = async () => {
+  if (!navigator.clipboard || !navigator.clipboard.read){
+    msg('#m1', 'This browser cannot read the clipboard. Use the box above to pick the file.', 'warn');
+    return;
+  }
+  try {
+    for (const item of await navigator.clipboard.read()){
+      const type = item.types.find(t => /pdf$/i.test(t));
+      if (!type) continue;
+      const blob = await item.getType(type);
+      return loadBuffer('pasted.pdf', blob.size, await blob.arrayBuffer(), false);
+    }
+    msg('#m1', 'No PDF on the clipboard — copy the flight plan first, then paste.', 'warn');
+  } catch (err){
+    msg('#m1', 'The clipboard could not be read here (' + err.message
+             + '). Use the box above to pick the file.', 'warn');
+  }
+};
+
 async function load(f){
   return loadBuffer(f.name, f.size, await f.arrayBuffer(), false);
 }
@@ -1119,7 +1171,7 @@ async function loadBuffer(name, size, buf, resumed){
   $('#fname').textContent = name + '  ·  ' + (size / 1048576).toFixed(1) + ' MB';
   hide('#m1'); hide('#m3');
   $('#c2').classList.remove('hide');
-  for (const c of ['#c3','#c4','#c5','#c6','#c7','#c8']) $(c).classList.add('hide');
+  for (const c of ['#c3','#c4','#c5','#c6','#c7','#c8','#c9']) $(c).classList.add('hide');
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
@@ -1128,6 +1180,7 @@ async function loadBuffer(name, size, buf, resumed){
     PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor; FIELDS = r.fields; FPL = r.fpl;
     showIcao(r.icao);
     showOfp(r.ofp);
+    showFigs(r.figs);
     showWx(r.wx);
     showCharts(r.charts);
     const s1 = PLAN.filter(p => p.sec === 1).length;
@@ -1177,6 +1230,14 @@ function showIcao(p){
 }
 
 /* ================= OFP identity ================= */
+function showFigs(f){
+  const el = $('#ofpFigs');
+  if (!f){ el.classList.add('hide'); el.textContent = ''; return; }
+  el.textContent = ['TOW','LW','ZFW','PLD','CI'].filter(k => f[k])
+    .map(k => k === 'CI' ? f.CI : k + ' ' + f[k]).join('   ·   ');
+  el.classList.remove('hide');
+}
+
 function showOfp(o){
   const el = $('#ofpNo');
   if (!o){ el.classList.add('hide'); el.textContent = ''; return; }
@@ -1549,6 +1610,25 @@ function ofpIdent(lines){
   return (route || req || issued) ? { route, req, issued } : null;
 }
 
+// The weights the crew checks at a glance, from page 1:
+// "TOW 145979 LW 122928 ZFW 116632 PLD 22500 BLKF 29647 DOI 46.59",
+// plus the cost index printed in the SPEED column of the flight row.
+// Each label is anchored to a word boundary so MTOW, MLW and MPLD on the line
+// above cannot be mistaken for the planned figures.
+function keyFigures(lines){
+  const page1 = lines.filter(l => l.page === 0 && !CHROME(l.text)).map(l => l.text.trim());
+  const out = {};
+  for (const t of page1){
+    for (const k of ['TOW', 'LW', 'ZFW', 'PLD']){
+      if (out[k]) continue;
+      const m = t.match(new RegExp('(?:^|\\s)' + k + '\\s+(\\d{3,7})(?:\\s|$)'));
+      if (m) out[k] = m[1];
+    }
+    if (!out.CI){ const m = t.match(/\bCI(\d{2,3})\b/); if (m) out.CI = 'CI' + m[1]; }
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 /* ---- METAR / TAF / NOTAM ----------------------------------------------------
    Every report and NOTAM item in this package names its own aerodrome, so the
    grouping keys off the item lines themselves and never off the page headings.
@@ -1787,7 +1867,7 @@ async function parse(buf){
   allLines.sort((a, b) => a.page - b.page || b.base - a.base);
   const icao = icaoPlan(allLines);
   return { pairs, headers, anchor, fields, fpl, icao, charts,
-           ofp: ofpIdent(allLines),
+           ofp: ofpIdent(allLines), figs: keyFigures(allLines),
            wx: weatherNotams(allLines, icao) };
 }
 
@@ -1837,8 +1917,10 @@ $('#calc').onclick = () => {
   drift ? msg('#m2', `Warning: at ${drift} waypoints the ET sum did not match T/T.`, 'warn') : hide('#m2');
   render(t0, arr);
   renderAlt();
+  renderFuel();
   $('#c3').classList.remove('hide');
   if (CHECKS.length) $('#c6').classList.remove('hide');
+  if (FUEL.length) $('#c9').classList.remove('hide');
   save();
 };
 
@@ -1976,7 +2058,7 @@ document.querySelector('.tblbox').addEventListener('scroll', () => {
   scrolledAt = Date.now();
 }, { passive: true });
 
-const tick = () => { refreshProgress(); refreshAlt(); };
+const tick = () => { refreshProgress(); refreshAlt(); refreshFuel(); };
 setInterval(tick, 15000);
 document.addEventListener('visibilitychange', tick);
 
@@ -2028,6 +2110,64 @@ function renderAlt(){
   }
   alerted.clear();
   refreshAlt();
+}
+
+/* ---- fuel checks ----
+   "A fuel check must be done when overflying the waypoint or at least every 30
+   minutes." The record already exists: the fuel column of the waypoint table. So
+   these rows only watch the clock and read that column — nothing to type twice. */
+function fuelChecks(){
+  const main = RESULT.filter(p => p.sec === 1);
+  if (!main.length) return [];
+  const total = main[main.length - 1].cum, out = [];
+  for (let mark = 30; total - mark >= 30; mark += 30)
+    out.push({ mark, from: mark - 30, to: mark, due: T0 + mark });
+  return out;
+}
+const fuelWps = c => RESULT.filter(p => p.sec === 1 && p.cum > c.from && p.cum <= c.to);
+const fuelState = c => {
+  if (fuelWps(c).some(p => (ACT[p.i] || {}).fuel)) return 'done';
+  const d = sinceDue(c.due);
+  return d >= 0 ? 'late' : d >= -10 ? 'soon' : 'wait';
+};
+
+function renderFuel(){
+  FUEL = fuelChecks();
+  const box = $('#fuelrows'); box.innerHTML = '';
+  for (const c of FUEL){
+    const row = document.createElement('div');
+    row.className = 'altrow fuelrow'; row.id = 'fuelrow' + c.mark;
+    const wps = fuelWps(c);
+    const span = wps.length ? wps[0].wp + (wps.length > 1 ? ' … ' + wps[wps.length - 1].wp : '') : '—';
+    row.innerHTML = `<div class="tag">+${Math.floor(c.mark / 60)}:${String(c.mark % 60).padStart(2,'0')}`
+                  + ` &nbsp; <b>${fmt(c.due)}</b> &nbsp; ${span}`
+                  + `<br><span class="st wait" id="fuelst${c.mark}"></span></div>`;
+    box.appendChild(row);
+  }
+  refreshFuel();
+}
+
+function refreshFuel(){
+  if (!FUEL.length){ hide('#m6'); return; }
+  let late = 0;
+  for (const c of FUEL){
+    const st = fuelState(c), row = document.getElementById('fuelrow' + c.mark),
+          tag = document.getElementById('fuelst' + c.mark);
+    if (st === 'late') late++;
+    if (row) row.classList.toggle('late', st === 'late');
+    if (tag){
+      const d = sinceDue(c.due);
+      tag.className = 'st ' + st;
+      tag.textContent = st === 'done' ? 'fuel recorded'
+        : st === 'late' ? `overdue by ${d} min — due at ${fmt(c.due)}`
+        : st === 'soon' ? `due at ${fmt(c.due)}, in ${-d} min`
+        : `due at ${fmt(c.due)}`;
+    }
+  }
+  late ? msg('#m6', late === 1
+          ? 'One fuel check is due and no fuel recorded for it.'
+          : `${late} fuel checks are due with no fuel recorded.`, 'err')
+       : hide('#m6');
 }
 
 function render(t0, arr){
@@ -2098,7 +2238,7 @@ function bindInputs(){
       if (!ACT[i].ato && !ACT[i].fuel) delete ACT[i];
       inp.classList.toggle('bad', isAto && inp.value.length > 0 &&
                                   (inp.value.length !== 4 || parseTime(inp.value) === null));
-      paint(i); countFilled(); save();
+      paint(i); countFilled(); refreshFuel(); save();
     };
     inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
       const nx = inputs[idx + 1]; if (nx){ nx.focus(); nx.select(); } else inp.blur(); } };
@@ -2178,7 +2318,7 @@ $('#clearAct').onclick = () => {
   if (!confirm('Clear all entered ATO and fuel values?')) return;
   for (const k in ACT) delete ACT[k];
   document.querySelectorAll('#tbl input').forEach(i => { i.value = ''; i.classList.remove('bad'); });
-  RESULT.forEach(p => paint(p.i)); countFilled(); save();
+  RESULT.forEach(p => paint(p.i)); countFilled(); refreshFuel(); save();
 };
 
 /* ================= autosave ================= */
@@ -2331,9 +2471,14 @@ const outName = () => NAME.replace(/\.pdf$/i, '') + '_ETO.pdf';
 
 $('#dl').onclick = async () => {
   const missing = CHECKS.filter(c => ['late','part','soon','wait'].includes(chkState(c)));
-  if (missing.length && !confirm(
-        `${missing.length} altimeter cross-check${missing.length > 1 ? 's are' : ' is'} not recorded `
-        + `(${missing.map(c => '+' + c.mark / 60 + 'h').join(', ')}).\n\nSave anyway?`)) return;
+  const noFuel = FUEL.filter(c => fuelState(c) === 'late');
+  const warn = [];
+  if (missing.length) warn.push(
+    `${missing.length} altimeter cross-check${missing.length > 1 ? 's are' : ' is'} not recorded `
+    + `(${missing.map(c => '+' + c.mark / 60 + 'h').join(', ')}).`);
+  if (noFuel.length) warn.push(
+    `${noFuel.length} fuel check${noFuel.length > 1 ? 's are' : ' is'} overdue with no fuel recorded.`);
+  if (warn.length && !confirm(warn.join('\n') + '\n\nSave anyway?')) return;
   const b = $('#dl'); b.disabled = true; b.textContent = 'Building…';
   // Both the share-succeeded and the share-cancelled paths return from inside the
   // try, so the button has to be restored in a finally or it stays dead.
@@ -2374,10 +2519,10 @@ $('#reset').onclick = () => {
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
-  showIcao(null); showOfp(null); showWx(null); showCharts(null); openCharts(false);
+  showIcao(null); showOfp(null); showFigs(null); showWx(null); showCharts(null); openCharts(false);
   $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
   $('#fname').textContent = ''; $('#saved').textContent = '';
-  for (const c of ['#c2','#c3','#c4','#c5','#c6','#c7','#c8']) $(c).classList.add('hide');
+  for (const c of ['#c2','#c3','#c4','#c5','#c6','#c7','#c8','#c9']) $(c).classList.add('hide');
   $('#fpl').className = 'hint hide';
   hide('#m1'); hide('#m2'); hide('#m3');
 };
