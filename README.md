@@ -119,6 +119,13 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 8. **Open charts** to page through the wind components and the significant
    weather sheets on their own.
 
+When a scroll comes to rest near the start of a card, it is carried the rest of the way onto it.
+This runs from the scroll gesture, not from CSS snapping: it fires only once your own scroll has
+stopped, so it can never move the page while a plan is being read in and cards are appearing. It
+holds still while a box has focus or a sheet is open, and the top of the page counts as a resting
+place of its own, so a short scroll near the header comes back to it rather than being pulled
+past.
+
 The button in the header switches between light and dark themes; the choice is remembered.
 
 ## Pasting a flight plan

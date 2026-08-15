@@ -189,11 +189,12 @@ tr.skipped td:first-child{text-decoration:line-through}
   font:700 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.5px;margin-left:4px}
 .dctchip b{cursor:pointer;font-size:13px;line-height:1}
 /* Experimental: a short flick settles on a card, a long drag scrolls past freely. */
-/* Snapping the page to card starts was tried and withdrawn: the snap engine
-   re-snaps whenever the layout changes, and this page reveals cards as a plan
-   loads, so it dragged the view down on its own. No anchor fixed it — a snap
-   point on the wrapper or the header made no difference, and exempting the first
-   card made it worse. */
+/* CSS scroll-snap was tried for this and withdrawn: the engine re-snaps on every
+   layout change, and this page reveals cards as a plan is parsed, so it moved the
+   view by itself. The settling is done from JS instead — see settle() — which can
+   be made to run only after the crew's own scroll has come to rest.
+   --topgap is where the top of a settled card should sit. */
+:root{--topgap:calc(env(safe-area-inset-top, 0px) + 12px)}
 td input,.fld input,.altrow input{background:transparent;border:1px solid var(--line);color:var(--txt);
   border-radius:5px;padding:7px 4px;font:700 16px/1 ui-monospace,Menlo,monospace;
   width:78px;text-align:center}
@@ -454,13 +455,15 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 13</h3>
+        <h3>New in version 14</h3>
         <ul>
           <li>Loading a plan no longer throws the page down past the header. The takeoff-time
               box still takes the cursor; it just stopped dragging the view with it.</li>
-          <li>The snap-to-card scrolling introduced in v11 is <b>withdrawn</b>. It re-snapped
-              every time a card appeared, which moved the page on its own — there was no
-              settling for it.</li>
+          <li>A scroll now <b>finishes onto the start of a card</b> when it comes to rest near
+              one. It runs only after your own scroll has stopped — never while a plan is being
+              read in — holds still while a box has focus or a sheet is open, and treats the top
+              of the page as a resting place of its own, so a short scroll there comes back to
+              the header.</li>
         </ul>
       </div>
 
@@ -621,7 +624,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 13 &nbsp;·&nbsp; published 15 Aug 2026 13:27 UTC</span></p>
+      <span class="build">Version 14 &nbsp;·&nbsp; published 15 Aug 2026 13:34 UTC</span></p>
 
     </div>
   </div>
@@ -1074,6 +1077,48 @@ const NUM = 'inputmode="numeric" pattern="[0-9]*" autocomplete="off" ' +
 
 const msg = (el, t, k) => { const e = $(el); e.className = 'msg show ' + (k || 'ok'); e.textContent = t; };
 const hide = el => { $(el).className = 'msg'; };
+
+/* ---- settling on a card ----
+   Finishes the crew's scroll onto the start of the nearest card. Driven from the
+   scroll gesture rather than by CSS snap, so it cannot fire while a plan is being
+   parsed and cards are appearing: nothing happens until a real wheel, touch or key
+   has been seen and the scrolling has stopped. */
+let userScrolled = false, settleT = null, settleUntil = 0;
+
+for (const ev of ['wheel', 'touchstart', 'pointerdown', 'keydown'])
+  addEventListener(ev, () => { userScrolled = true; }, { passive: true });
+
+addEventListener('scroll', () => {
+  if (!userScrolled || Date.now() < settleUntil) return;
+  clearTimeout(settleT);
+  settleT = setTimeout(settle, 140);      // fires once the momentum has run out
+}, { passive: true });
+
+function settle(){
+  userScrolled = false;
+  // Not while the keyboard is up, not under an overlay, and never away from the
+  // very top — resting with the header in view is a legitimate place to be.
+  const a = document.activeElement;
+  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+  if (!$('#charts').classList.contains('hide') || !$('#guide').classList.contains('hide')) return;
+  const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topgap')) || 12;
+  if (scrollY <= gap) return;
+
+  const reach = Math.min(220, innerHeight * 0.3);
+  const max = document.documentElement.scrollHeight - innerHeight;
+  // The top of the page is a resting place in its own right, so a short scroll
+  // near it comes back to the header rather than being pulled past it.
+  let best = scrollY <= reach ? 0 : null, bd = scrollY <= reach ? scrollY : reach;
+  for (const c of document.querySelectorAll('.card:not(.hide)')){
+    const want = Math.round(scrollY + c.getBoundingClientRect().top - gap);
+    if (want < 0 || want > max) continue;
+    const d = Math.abs(want - scrollY);
+    if (d < bd){ bd = d; best = want; }
+  }
+  if (best === null || Math.abs(best - scrollY) < 4) return;
+  settleUntil = Date.now() + 700;         // ignore the scroll events we are about to cause
+  scrollTo({ top: best, behavior: 'smooth' });
+}
 
 // Marks a scrollable box while there is more below it, so the crew can see at a
 // glance that the list goes on. Idempotent: safe to call again on the same box.
