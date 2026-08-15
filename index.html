@@ -193,8 +193,12 @@ tr.skipped td:first-child{text-decoration:line-through}
    layout change, and this page reveals cards as a plan is parsed, so it moved the
    view by itself. The settling is done from JS instead — see settle() — which can
    be made to run only after the crew's own scroll has come to rest.
-   --topgap is where the top of a settled card should sit. */
+   --topgap is where the top of a settled card should sit. It is also assigned to
+   scroll-padding-top, which is how settle() reads it: a custom property is handed
+   back unresolved by getComputedStyle — literally "calc(env(…) + 12px)" — while a
+   real property resolves to used pixels. */
 :root{--topgap:calc(env(safe-area-inset-top, 0px) + 12px)}
+html{scroll-padding-top:var(--topgap)}
 td input,.fld input,.altrow input{background:transparent;border:1px solid var(--line);color:var(--txt);
   border-radius:5px;padding:7px 4px;font:700 16px/1 ui-monospace,Menlo,monospace;
   width:78px;text-align:center}
@@ -455,7 +459,7 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 14</h3>
+        <h3>New in version 15</h3>
         <ul>
           <li>Loading a plan no longer throws the page down past the header. The takeoff-time
               box still takes the cursor; it just stopped dragging the view with it.</li>
@@ -463,7 +467,7 @@ td.diff{text-align:right;font-weight:700}
               one. It runs only after your own scroll has stopped — never while a plan is being
               read in — holds still while a box has focus or a sheet is open, and treats the top
               of the page as a resting place of its own, so a short scroll there comes back to
-              the header.</li>
+              the header. It settles clear of the status bar.</li>
         </ul>
       </div>
 
@@ -624,7 +628,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 14 &nbsp;·&nbsp; published 15 Aug 2026 13:34 UTC</span></p>
+      <span class="build">Version 15 &nbsp;·&nbsp; published 15 Aug 2026 13:41 UTC</span></p>
 
     </div>
   </div>
@@ -1101,7 +1105,7 @@ function settle(){
   const a = document.activeElement;
   if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
   if (!$('#charts').classList.contains('hide') || !$('#guide').classList.contains('hide')) return;
-  const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topgap')) || 12;
+  const gap = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
   if (scrollY <= gap) return;
 
   const reach = Math.min(220, innerHeight * 0.3);
