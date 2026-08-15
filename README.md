@@ -152,9 +152,6 @@ flight is running from the plan, and every later waypoint is judged against that
 example, `-12 on plan`. A fuel window left with nothing to overfly after a direct is dropped
 rather than sitting red for the rest of the flight.
 
-The page settles on the start of a card when you flick it, while a long drag scrolls past
-freely. That part is experimental.
-
 ## Weather and NOTAMs
 
 A card at the bottom shows the METAR, TAF and NOTAMs carried by the loaded package. Pick an

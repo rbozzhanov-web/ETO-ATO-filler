@@ -189,10 +189,11 @@ tr.skipped td:first-child{text-decoration:line-through}
   font:700 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.5px;margin-left:4px}
 .dctchip b{cursor:pointer;font-size:13px;line-height:1}
 /* Experimental: a short flick settles on a card, a long drag scrolls past freely. */
-/* The app is full-bleed under a translucent status bar, so a snapped card must
-   rest below the safe area — otherwise its heading settles behind the clock. */
-html{scroll-snap-type:y proximity;scroll-padding-top:calc(env(safe-area-inset-top, 0px) + 12px)}
-.card{scroll-snap-align:start}
+/* Snapping the page to card starts was tried and withdrawn: the snap engine
+   re-snaps whenever the layout changes, and this page reveals cards as a plan
+   loads, so it dragged the view down on its own. No anchor fixed it — a snap
+   point on the wrapper or the header made no difference, and exempting the first
+   card made it worse. */
 td input,.fld input,.altrow input{background:transparent;border:1px solid var(--line);color:var(--txt);
   border-radius:5px;padding:7px 4px;font:700 16px/1 ui-monospace,Menlo,monospace;
   width:78px;text-align:center}
@@ -453,14 +454,13 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 12</h3>
+        <h3>New in version 13</h3>
         <ul>
-          <li>A scrolling list now says so at <b>both ends</b> — a fade and a chevron above as
-              well as below, each clearing itself at its own end.</li>
-          <li>A card no longer settles with its heading behind the clock: the resting point of
-              the snap is measured from the safe area.</li>
-          <li>The document fields stack properly on a phone-width screen instead of being
-              squeezed into a narrow column.</li>
+          <li>Loading a plan no longer throws the page down past the header. The takeoff-time
+              box still takes the cursor; it just stopped dragging the view with it.</li>
+          <li>The snap-to-card scrolling introduced in v11 is <b>withdrawn</b>. It re-snapped
+              every time a card appeared, which moved the page on its own — there was no
+              settling for it.</li>
         </ul>
       </div>
 
@@ -621,7 +621,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 12 &nbsp;·&nbsp; published 15 Aug 2026 13:01 UTC</span></p>
+      <span class="build">Version 13 &nbsp;·&nbsp; published 15 Aug 2026 13:27 UTC</span></p>
 
     </div>
   </div>
@@ -1258,7 +1258,9 @@ async function loadBuffer(name, size, buf, resumed){
         : 'Restored previously entered data for this file.', 'ok');
     }
     if (!resumed) keepSession(name, size, buf);
-    if (!resumed) $('#etd').focus();
+    // preventScroll, or focusing this box hauls the page past the header and the
+    // whole ICAO plan — on a phone that is well over a thousand pixels.
+    if (!resumed) $('#etd').focus({ preventScroll: true });
     return true;
   } catch (err){
     msg('#m1', 'Could not parse the document: ' + err.message, 'err');
