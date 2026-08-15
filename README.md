@@ -79,6 +79,10 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    underneath, then wraps the text between them on a space. REASON FOR EXTRA FUEL
    grows from 13 to 67 characters this way, ATC CLRNC to 149. The counter under
    each box shows how much room is left.
+   PIC BLOCK carries the planned block fuel greyed in brackets at the right of the
+   box — `(29647)` — read off the same line of the form, where it is printed just
+   left of the blank. It stays visible while you type, so the figure you enter can
+   be compared against the planned one, and it is never written into the document.
 3. Enter the takeoff (airborne) time in UTC, four digits: `0210`.
    The button next to it fills in the ETD from the plan — but that is off-block
    time and takeoff is normally later, so check it.

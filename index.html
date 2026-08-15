@@ -169,6 +169,11 @@ td.diff{text-align:right;font-weight:700}
 .fld label{margin:0;font-size:12.5px;text-align:right;color:var(--dim);
   font-family:ui-monospace,Menlo,monospace;text-transform:uppercase;line-height:1.3}
 .fld input{width:100%;text-align:left;padding:10px;font-size:15px;color:var(--c-eto)}
+/* The planned figure sits in the box and stays there while the crew types. */
+.fld .withref{position:relative;display:block}
+.fld .withref input{padding-right:96px}
+.fld .ref{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;
+  font:15px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fld)}
 .fld .cnt{grid-column:2;font-size:11px;color:var(--fld);margin:-2px 0 8px}
 .fld .multi{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px}
 .fld .multi>div{display:flex;flex-direction:column;gap:5px}
@@ -388,7 +393,10 @@ td.diff{text-align:right;font-weight:700}
         <li><b>Document fields</b> — ATIS, ATC CLRNC, altimeter settings, PIC BLOCK.
             Free-text boxes also use the empty space to the right of the blank and the
             spare line under it, so there is far more room than the dots suggest. The
-            counter shows what is left, and text wraps between lines on a space.</li>
+            counter shows what is left, and text wraps between lines on a space.
+            <b>PIC BLOCK</b> carries the planned block fuel greyed in brackets at the right of
+            the box, straight off the same line of the form. It stays there as you type, so the
+            two figures can be compared, and it is never written into the document.</li>
         <li><b>Takeoff time</b> in UTC, four digits. Every calculation follows from it.</li>
         <li><b>Actuals</b> — ATO and remaining fuel per waypoint. The grey hint in each box is
             the calculated value, so you only type where reality differed. Enter moves on.</li>
@@ -503,7 +511,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 7 &nbsp;·&nbsp; published 14 Aug 2026 14:19 UTC</span></p>
+      <span class="build">Version 8 &nbsp;·&nbsp; published 15 Aug 2026 03:22 UTC</span></p>
 
     </div>
   </div>
@@ -1631,7 +1639,12 @@ async function parse(buf){
                      size: last.size, dots: chars.some(c => c.ch === '.') });
         const runs = dotFields(chars, cw);
         runs.forEach((f, k) => rawFields.push({ page: p, base: last.base, size: last.size, cw, font,
-          x: f.x, n: f.n, label: f.label, rowLabel: k === 0 ? (runs.rowLabel || '') : '' }));
+          x: f.x, n: f.n, label: f.label, rowLabel: k === 0 ? (runs.rowLabel || '') : '',
+          // The form prints the planned block fuel just left of the PIC BLOCK blank
+          // ("BLOCK FUEL 06.49 29647 PIC BLOCK: ......"). Kept for reference only.
+          // The whole-number test skips the block time, which carries a dot.
+          ref: /^PIC BLOCK$/i.test(f.label)
+             ? (f.pre.filter(t => /^\d{3,6}$/.test(t)).pop() || null) : null }));
       }
       const tk = tokenize(chars, cw);
       allLines.push({ page: p, base: last.base, text: tk.join(' ') });
@@ -1656,7 +1669,8 @@ async function parse(buf){
   for (const r of rawFields){
     const prev = fields[fields.length - 1];
     if (!r.label && prev){ prev.segs.push(r); prev.n += r.n; continue; }
-    fields.push({ i: fields.length, label: r.label, rowLabel: r.rowLabel, n: r.n, segs: [r] });
+    fields.push({ i: fields.length, label: r.label, rowLabel: r.rowLabel, n: r.n,
+                  ref: r.ref, segs: [r] });
   }
   growFields(fields, rawFields, page0);
 
@@ -2033,7 +2047,17 @@ function renderFields(){
       const cnt = document.createElement('div');
       cnt.className = 'cnt'; cnt.id = 'cnt' + f.i;
       cnt.textContent = inp.value.length + ' / ' + f.n;
-      box.append(lab, inp, cnt);
+      if (f.ref){
+        // Pinned inside the box rather than used as the placeholder: it is wanted
+        // most at the moment of typing, which is when a placeholder disappears.
+        const cell = document.createElement('div');
+        cell.className = 'withref';
+        const ref = document.createElement('span');
+        ref.className = 'ref';
+        ref.textContent = '(' + f.ref + ')';
+        cell.append(inp, ref);
+        box.append(lab, cell, cnt);
+      } else box.append(lab, inp, cnt);
     } else {
       const lab = document.createElement('label');
       lab.textContent = g.items[0].rowLabel || g.items.map(f => f.label).join(' / ');
