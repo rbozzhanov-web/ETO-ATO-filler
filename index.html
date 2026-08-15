@@ -167,6 +167,22 @@ tr.past td{opacity:.45}
 tr.now td{background:color-mix(in srgb,var(--dim) 12%,transparent)}
 tr.next td{background:color-mix(in srgb,var(--acc) 16%,transparent);font-weight:700;opacity:1}
 tr.next td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
+/* A direct cuts waypoints out of the flight but not out of the form, so the rows
+   stay in place — struck through, and after .past so they win on opacity. */
+tr.skipped td{opacity:.3}
+tr.skipped td:first-child{text-decoration:line-through}
+.tblbox.picking tbody tr[data-i]{cursor:pointer}
+.tblbox.picking tbody tr[data-i]:hover td{background:color-mix(in srgb,var(--acc) 22%,transparent)}
+.tblbox.picking input{pointer-events:none}
+.dctbadge{margin-left:8px;padding:1px 5px;border-radius:4px;background:var(--acc2);color:#fff;
+  font:700 9.5px/1.5 -apple-system,system-ui,sans-serif;letter-spacing:.5px;vertical-align:1px}
+.dctchip{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:20px;
+  background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);
+  font:700 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.5px;margin-left:4px}
+.dctchip b{cursor:pointer;font-size:13px;line-height:1}
+/* Experimental: a short flick settles on a card, a long drag scrolls past freely. */
+html{scroll-snap-type:y proximity;scroll-padding-top:10px}
+.card{scroll-snap-align:start}
 td input,.fld input,.altrow input{background:transparent;border:1px solid var(--line);color:var(--txt);
   border-radius:5px;padding:7px 4px;font:700 16px/1 ui-monospace,Menlo,monospace;
   width:78px;text-align:center}
@@ -325,10 +341,13 @@ td.diff{text-align:right;font-weight:700}
     <div class="step"><i>4</i> Actuals by waypoint</div>
     <div class="stats" id="stats"></div>
     <div class="toolbar">
+      <button class="ghost sm" id="dctBtn">Direct to…</button>
       <button class="ghost sm" id="clearAct">Clear actuals</button>
+      <span id="dctChips"></span>
       <span class="sep"></span>
       <span class="saved" id="saved"></span>
     </div>
+    <div class="msg" id="m7"></div>
     <div class="scrollwrap"><div class="tblbox"><table id="tbl"><thead><tr>
       <th>Waypoint</th><th style="text-align:right">ET</th><th style="text-align:right">Cumul.</th>
       <th>ETO</th><th>ATO actual</th><th style="text-align:right">REM plan</th>
@@ -421,12 +440,15 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 10</h3>
+        <h3>New in version 11</h3>
         <ul>
-          <li>The header carries the weights and cost index: <b>TOW, LW, ZFW, PLD, CI</b>.</li>
-          <li><b>Fuel checks</b> — the company's 30-minute rule, watched like the altimeter ones
-              and satisfied by the fuel you already record in the table.</li>
-          <li>A flight plan can be <b>pasted</b> instead of picked.</li>
+          <li><b>Direct to…</b> — when ATC shortcuts the route, tap the waypoint you are cleared
+              direct to. The ones cut out stay in the list, struck through, so the order still
+              matches the paper form; the highlight skips them. Undo with the ✕ on the chip.</li>
+          <li>The highlight now follows the <b>ATO</b> you enter, not just the plan, so it stays
+              right on a flight running early or late.</li>
+          <li>The page settles on the start of a card when you flick it; a long drag scrolls
+              past freely. Experimental — say the word and it goes.</li>
         </ul>
       </div>
 
@@ -474,12 +496,12 @@ td.diff{text-align:right;font-weight:700}
       <p>Rows watch the clock in UTC: amber when a check is close, red once it is overdue, with a
       short tone the first time. Saving with checks still missing asks for confirmation.</p>
 
-      <h3 class="new">Fuel checks</h3>
-      <p class="new">Company rule: a fuel check on overflying a waypoint, or at least every
+      <h3>Fuel checks</h3>
+      <p>Company rule: a fuel check on overflying a waypoint, or at least every
       30 minutes. The card lists a window per half hour with the waypoints that fall inside it,
       and watches the clock exactly as the altimeter rows do — amber as one comes due, red once
       it has passed unrecorded.</p>
-      <p class="new">There is nothing extra to type. A window turns green as soon as any
+      <p>There is nothing extra to type. A window turns green as soon as any
       waypoint inside it has its fuel entered in the table, so recording fuel where you already
       do satisfies the check. Saving with a window overdue asks for confirmation.</p>
 
@@ -494,6 +516,19 @@ td.diff{text-align:right;font-weight:700}
       <p>The highlight follows the plan rather than your typing, so it stays right even when the
       actuals are a few points behind.</p>
 
+      <h3 class="new">Direct to a waypoint</h3>
+      <p class="new">Cleared direct, and the route being flown no longer matches the form.
+      Press <b>Direct to…</b> and tap the waypoint you are going to. The waypoints cut out stay
+      where they are, struck through and faded — the order has to keep matching the paper form,
+      because that is where the ATOs are written — and the target is marked <b>DCT</b>. The
+      highlight then steps over the skipped ones.</p>
+      <p class="new">Nothing about this reaches the document, and no ETO is rewritten: it only
+      moves the highlight. The chip in the toolbar undoes it, and each direct remembers exactly
+      which waypoints it cut out, so undoing one leaves any other alone.</p>
+      <p class="new">The highlight also follows your <b>ATO</b> entries. The most recent one
+      sets how far the flight is running from the plan, and every later waypoint is judged
+      against that — shown next to the waypoint as, for example, <b>-12 on plan</b>.</p>
+
       <h3>Weather and NOTAMs</h3>
       <p>Everything on the card is read out of the loaded package itself — the METAR, TAF and
       NOTAM pages that came with the flight plan. Nothing is fetched from the network and no
@@ -506,8 +541,8 @@ td.diff{text-align:right;font-weight:700}
       <p>They are as old as the document. Re-brief from the current source before acting on
       anything here.</p>
 
-      <h3 class="new">Pasting a flight plan</h3>
-      <p class="new">Besides picking the file, the plan can be pasted: copy the PDF and either
+      <h3>Pasting a flight plan</h3>
+      <p>Besides picking the file, the plan can be pasted: copy the PDF and either
       press <b>Paste a PDF</b> or paste into the page. On a computer this always works. On the
       iPad it depends on what Safari lets a page read from the clipboard, and it may refuse —
       the app says so plainly and the box above still picks the file.</p>
@@ -574,7 +609,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 10 &nbsp;·&nbsp; published 15 Aug 2026 11:55 UTC</span></p>
+      <span class="build">Version 11 &nbsp;·&nbsp; published 15 Aug 2026 12:05 UTC</span></p>
 
     </div>
   </div>
@@ -1175,6 +1210,7 @@ async function loadBuffer(name, size, buf, resumed){
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
+  DCT.marks = []; syncDct();
   try {
     const r = await parse(RAW);
     PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor; FIELDS = r.fields; FPL = r.fpl;
@@ -1196,6 +1232,7 @@ async function loadBuffer(name, size, buf, resumed){
       // Checks already announced before the app was evicted must not beep again.
       alerted.clear(); for (const m of st.alerted || []) alerted.add(m);
       if (st.alarm !== undefined) $('#altAlert').checked = st.alarm;
+      DCT.marks = Array.isArray(st.dct) ? st.dct : []; syncDct();
     }
     renderFields();
     if (FIELDS.length) $('#c4').classList.remove('hide');
@@ -2003,6 +2040,108 @@ function refreshAlt(){
   if (fresh && $('#altAlert').checked) beep();
 }
 $('#altAlert').onchange = save;
+/* ---- Direct To ----------------------------------------------------------------
+   ATC shortcuts the route and the paper form no longer matches what is being
+   flown. Nothing here reaches the PDF and no ETO is rewritten: the point is only
+   that the highlight should stop pointing at waypoints the aircraft will not
+   cross. Each direct remembers the rows it cut out, so undoing one restores
+   exactly those and leaves any other direct alone. */
+let DCT = { marks: [] }, DCTSKIP = new Set(), dctPick = false;
+const syncDct = () => { DCTSKIP = new Set(DCT.marks.flatMap(m => m.skipped)); };
+const isSkipped = i => DCTSKIP.has(+i);
+
+const wrapMin = m => { while (m < -720) m += 1440; while (m >= 720) m -= 1440; return m; };
+
+// How far the flight is actually running from the plan, from the most recent
+// waypoint with an ATO entered. Applied to the comparison times only.
+function currentOffset(){
+  for (let n = RESULT.length - 1; n >= 0; n--){
+    const p = RESULT[n];
+    if (isSkipped(p.i)) continue;
+    const a = ACT[p.i];
+    if (!a || !a.ato) continue;
+    const t = parseTime(a.ato);
+    if (t !== null) return wrapMin(t - norm(p.t));
+  }
+  return 0;
+}
+
+function progressIdx(){
+  const off = currentOffset();
+  let ci = -1, ni = -1;
+  RESULT.forEach((p, n) => {
+    if (isSkipped(p.i)) return;
+    if (sinceDue(p.t + off) >= 0) ci = n;
+    else if (ni < 0) ni = n;
+  });
+  return { ci, ni, off };
+}
+
+function paintDct(i){
+  const tr = rowOf(i);
+  if (!tr) return;
+  tr.classList.toggle('skipped', isSkipped(i));
+  const cell = tr.cells[0], want = DCT.marks.some(m => m.to === +i);
+  const badge = cell.querySelector('.dctbadge');
+  if (want && !badge){
+    const b = document.createElement('span');
+    b.className = 'dctbadge'; b.textContent = 'DCT';
+    cell.appendChild(b);
+  } else if (!want && badge) badge.remove();
+}
+
+function renderDctChips(){
+  const box = $('#dctChips');
+  if (!box) return;
+  box.innerHTML = '';
+  DCT.marks.forEach((m, k) => {
+    const p = RESULT.find(x => x.i === m.to);
+    const chip = document.createElement('span');
+    chip.className = 'dctchip';
+    chip.innerHTML = `DIRECT → ${p ? p.wp : '?'} <b title="Undo">✕</b>`;
+    chip.querySelector('b').onclick = () => undoDirect(k);
+    box.appendChild(chip);
+  });
+}
+
+function setPick(on){
+  dctPick = on && RESULT.length > 0;
+  const box = document.querySelector('.tblbox');
+  if (box) box.classList.toggle('picking', dctPick);
+  $('#dctBtn').textContent = dctPick ? 'Cancel' : 'Direct to…';
+  dctPick ? msg('#m7', 'Tap the waypoint you have been cleared direct to.', 'warn') : hide('#m7');
+}
+
+function applyDirect(target){
+  const n = RESULT.findIndex(p => p.i === +target);
+  const { ci } = progressIdx();
+  if (n < 0) return;
+  if (n <= ci){ msg('#m7', 'That waypoint is not ahead of you.', 'err'); return; }
+  const skipped = [];
+  for (let k = ci + 1; k < n; k++) if (!isSkipped(RESULT[k].i)) skipped.push(RESULT[k].i);
+  DCT.marks.push({ to: RESULT[n].i, skipped });
+  syncDct();
+  setPick(false);
+  afterDct();
+}
+
+function undoDirect(k){
+  DCT.marks.splice(k, 1);
+  syncDct();
+  afterDct();
+}
+
+function afterDct(){
+  RESULT.forEach(p => paintDct(p.i));
+  renderDctChips();
+  lastNext = null;
+  refreshProgress();
+  renderFuel();                    // windows follow the waypoints a direct removed
+  save();
+}
+
+$('#dctBtn').onclick = () => setPick(!dctPick);
+
 /* ---- where the flight has got to ----
    Kept out of refreshAlt because that one returns early when the plan is shorter
    than an hour and has no checks — the table still needs its highlight. */
@@ -2024,25 +2163,23 @@ function centreRow(row){
 
 function refreshProgress(){
   if (!RESULT.length) return;
-  let ci = -1, ni = -1;
-  RESULT.forEach((p, n) => {
-    if (sinceDue(p.t) >= 0) ci = n;
-    else if (ni < 0) ni = n;
-  });
-  const cur = ci >= 0 ? RESULT[ci] : null, next = ni >= 0 ? RESULT[ni] : null;
+  const { ci, ni, off } = progressIdx();
+  const next = ni >= 0 ? RESULT[ni] : null;
   RESULT.forEach((p, n) => {
     const row = rowOf(p.i);
     if (!row) return;
-    row.classList.toggle('past', n < ci);
-    row.classList.toggle('now', n === ci);
-    row.classList.toggle('next', n === ni);
+    const skipped = isSkipped(p.i);
+    row.classList.toggle('past', !skipped && n < ci);
+    row.classList.toggle('now', !skipped && n === ci);
+    row.classList.toggle('next', !skipped && n === ni);
   });
   const st = $('#stNext');
   if (st){
-    const mins = next ? -sinceDue(next.t) : null;
+    const mins = next ? -sinceDue(next.t + off) : null;
     st.querySelector('b').textContent = next ? next.wp : '—';
     st.querySelector('span').textContent = next
-      ? `Next · ${fmt(next.t)} · in ${mins} min` : 'All waypoints passed';
+      ? `Next · ${fmt(next.t)} · in ${mins} min` + (off ? ` · ${off > 0 ? '+' : ''}${off} on plan` : '')
+      : 'All waypoints passed';
   }
   // Follow the flight, but never fight the hands: only on a change of target row,
   // not while a box in the table has focus, not just after a manual scroll.
@@ -2120,11 +2257,17 @@ function fuelChecks(){
   const main = RESULT.filter(p => p.sec === 1);
   if (!main.length) return [];
   const total = main[main.length - 1].cum, out = [];
-  for (let mark = 30; total - mark >= 30; mark += 30)
-    out.push({ mark, from: mark - 30, to: mark, due: T0 + mark });
+  for (let mark = 30; total - mark >= 30; mark += 30){
+    const c = { mark, from: mark - 30, to: mark, due: T0 + mark };
+    // A window with nothing left to overfly — a long oceanic leg, or everything in
+    // it cut out by a direct — has no way of ever being recorded, so it is not
+    // raised at all rather than sitting red for the rest of the flight.
+    if (fuelWps(c).length) out.push(c);
+  }
   return out;
 }
-const fuelWps = c => RESULT.filter(p => p.sec === 1 && p.cum > c.from && p.cum <= c.to);
+const fuelWps = c => RESULT.filter(p => p.sec === 1 && !isSkipped(p.i)
+                                     && p.cum > c.from && p.cum <= c.to);
 const fuelState = c => {
   if (fuelWps(c).some(p => (ACT[p.i] || {}).fuel)) return 'done';
   const d = sinceDue(c.due);
@@ -2202,8 +2345,15 @@ function render(t0, arr){
             placeholder="${p.rem ?? ''}" value="${a.fuel || ''}"></td>
        <td class="diff" data-d="${p.i}"></td><td class="num">${p.page + 1}</td>`;
     paint(p.i);
+    paintDct(p.i);
   }
-  bindInputs(); countFilled(); lastNext = null; refreshProgress();
+  bindInputs(); countFilled(); lastNext = null;
+  tb.onclick = e => {
+    if (!dctPick) return;
+    const tr = e.target.closest('tr[data-i]');
+    if (tr) applyDirect(tr.dataset.i);
+  };
+  renderDctChips(); refreshProgress();
   scrollHint(document.querySelector('.tblbox'));
 }
 
@@ -2238,7 +2388,7 @@ function bindInputs(){
       if (!ACT[i].ato && !ACT[i].fuel) delete ACT[i];
       inp.classList.toggle('bad', isAto && inp.value.length > 0 &&
                                   (inp.value.length !== 4 || parseTime(inp.value) === null));
-      paint(i); countFilled(); refreshFuel(); save();
+      paint(i); countFilled(); refreshFuel(); refreshProgress(); save();
     };
     inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
       const nx = inputs[idx + 1]; if (nx){ nx.focus(); nx.select(); } else inp.blur(); } };
@@ -2328,7 +2478,7 @@ function writeState(){
   try {
     localStorage.setItem(KEY, JSON.stringify({
       etd: $('#etd').value, alt: $('#alt').checked, act: ACT, txt: TXT, alt2: ALT,
-      alerted: [...alerted], alarm: $('#altAlert').checked, at: nowUtc() }));
+      alerted: [...alerted], alarm: $('#altAlert').checked, dct: DCT.marks, at: nowUtc() }));
     const d = new Date();
     $('#saved').textContent = 'saved ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
   } catch(e){ $('#saved').textContent = 'storage unavailable'; }
@@ -2516,6 +2666,7 @@ $('#reset').onclick = () => {
   dropSession();
   RAW = null; DOC = null; PLAN = null; RESULT = []; FIELDS = []; FPL = null; KEY = '';
   alerted.clear();
+  DCT.marks = []; syncDct(); setPick(false); renderDctChips();
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];

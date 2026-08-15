@@ -136,6 +136,25 @@ with the takeoff time, the actuals and the altimeter readings already in place �
 find the file again. Cross-checks that have already sounded do not sound a second time.
 **Reset** is what clears it and returns to an empty drop zone.
 
+## Direct to a waypoint
+
+When ATC shortcuts the route, press **Direct to…** and tap the waypoint you are cleared to. The
+waypoints cut out stay where they are, struck through and faded — the order has to keep matching
+the paper form, because that is where the ATOs are written — and the target is marked **DCT**.
+The highlight steps over the skipped ones.
+
+Nothing about this reaches the document and no ETO is rewritten; it only moves the highlight.
+The chip in the toolbar undoes it, and each direct remembers exactly which waypoints it cut out,
+so undoing one leaves any other alone.
+
+The highlight also follows the **ATO** figures you enter: the most recent one sets how far the
+flight is running from the plan, and every later waypoint is judged against that, shown as, for
+example, `-12 on plan`. A fuel window left with nothing to overfly after a direct is dropped
+rather than sitting red for the rest of the flight.
+
+The page settles on the start of a card when you flick it, while a long drag scrolls past
+freely. That part is experimental.
+
 ## Weather and NOTAMs
 
 A card at the bottom shows the METAR, TAF and NOTAMs carried by the loaded package. Pick an
