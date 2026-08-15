@@ -1,4 +1,4 @@
-# ETO / ATO Filler — installing on iPad
+# OFP Companion — installing on iPad
 
 The app is fully self-contained: the PDF is parsed and written on the device.
 No network access after installation, nothing is uploaded anywhere.
@@ -46,14 +46,14 @@ moves under your hands.
 Offline it never updates, which means the version you leave the ground with is the version you
 fly with.
 
-`ETO-Filler.html` in the archive root and `pwa/index.html` are the same file
+`OFP-Companion.html` in the archive root and `pwa/index.html` are the same file
 under two names, for the two scenarios.
 
 ---
 
 ## Option 2. A single file in the Files app
 
-No hosting at all. Put `ETO-Filler.html` in iCloud Drive or On My iPad and tap it.
+No hosting at all. Put `OFP-Companion.html` in iCloud Drive or On My iPad and tap it.
 
 Caveat: iPadOS shows local HTML in a preview view rather than full Safari.
 The calculation and the table work, but the share sheet, saving the file and
@@ -70,7 +70,7 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    number and the release time — `ALAICN01 · REQ 83104 · 13/08/2026 15:26Z` — so
    the document on screen can be checked against the one you were given.
    The app shows STD / ETD / STA / ETA read from the
-   document, and displays the ICAO flight plan. Where that plan is printed across
+   document — with the TRIP time beside them — and displays the ICAO flight plan. Where that plan is printed across
    a page break it is reassembled into one text with the page headers stripped out;
    Copy puts it on the clipboard as a single line.
 2. Fill in the document fields: ATIS, ATC CLRNC, ALTM1 / STBY / ALTM2, PIC BLOCK
@@ -80,8 +80,8 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    grows from 13 to 67 characters this way, ATC CLRNC to 149. The counter under
    each box shows how much room is left.
    PIC BLOCK carries the planned block fuel greyed in brackets at the right of the
-   box — `(29647)` — read off the same line of the form, where it is printed just
-   left of the blank. It stays visible while you type, so the figure you enter can
+   box — `PLANNED BLKF (29647)` — read off the same line of the form, where it is
+   printed just left of the blank. It stays visible while you type, so the figure you enter can
    be compared against the planned one, and it is never written into the document.
 3. Enter the takeoff (airborne) time in UTC, four digits: `0210`.
    The button next to it fills in the ETD from the plan — but that is off-block
@@ -92,18 +92,21 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    for a time read off the plan, next to the waypoint you are running to.
    The table follows the clock: passed
    points fade back, the last one passed is shaded and the one you are running to
-   is highlighted. The marking changes in place — the table never scrolls itself,
-   so what is on screen stays where you put it. The highlight follows the plan
-   rather than your typing, so it stays right when the actuals are a few points
-   behind.
+   is highlighted, and the table brings that row to its middle as the flight moves
+   on. Only the table scrolls — the page stays where you left it — and it holds
+   still while a box has focus and for twenty seconds after you scroll by hand.
+   The highlight follows the plan rather than your typing, so it stays right when
+   the actuals are a few points behind.
 5. Record the hourly altimeter cross-checks. The app works out which waypoint
    falls on each full hour after takeoff and lists one row per hour; enter
    ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly
    under that waypoint, so the time is read off the ETO/ATO right above it.
    Each row tracks its own due time against the device clock in UTC and turns
    red once the check is overdue, with a short tone when it first falls due
-   (switch it off with the checkbox). Saving the PDF with checks still missing
-   asks for confirmation first.
+   (switch it off with the checkbox — the choice is remembered, and tapping the
+   clock beside it no longer knocks it off). No check is raised inside the last
+   hour before arrival. Saving the PDF with checks still missing asks for
+   confirmation first.
 6. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
    or send it to ForeFlight.
 7. **Open charts** to page through the wind components and the significant
@@ -142,6 +145,9 @@ exactly as old as the document: re-brief from the current source before acting o
 
 What is not on the card: SIGMETs, runway lengths, and the company NOTAMs that belong to no
 aerodrome (ADMIN, RELEASE, EQUIP and the like).
+
+Any list that continues below the fold shows a fade and a chevron at its foot, which clear
+themselves once you reach the end.
 
 ## Wind components and weather charts
 
