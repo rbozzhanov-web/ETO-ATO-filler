@@ -179,8 +179,10 @@ exactly as old as the document: re-brief from the current source before acting o
 What is not on the card: SIGMETs, runway lengths, and the company NOTAMs that belong to no
 aerodrome (ADMIN, RELEASE, EQUIP and the like).
 
-Any list that continues below the fold shows a fade and a chevron at its foot, which clear
-themselves once you reach the end.
+A box that scrolls says so at both ends: a fade and a chevron below while there is more to come,
+and the same above while there is more behind. Each clears itself at its own end, and in the
+waypoint table the upper one sits under the sticky column headings so it marks the first hidden
+row rather than covering the titles.
 
 ## Wind components and weather charts
 

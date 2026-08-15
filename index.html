@@ -143,13 +143,21 @@ button.sm{padding:9px 15px;font-size:13.5px;min-height:38px}
 .saved{font-size:12px;color:var(--dim)}
 
 /* Fade and chevron at the foot of a box that has more below; both vanish at the end. */
+/* A box that scrolls says so at both ends: a fade and a chevron at the foot while
+   there is more below, and the same at the head while there is more above. Each
+   clears itself at its own end. In the waypoint table the top one sits under the
+   sticky header — --stickyh is its measured height — so it marks the first hidden
+   row instead of painting over the column titles. */
 .scrollwrap{position:relative}
-.scrollwrap::after{content:"⌄";position:absolute;left:1px;right:1px;bottom:1px;height:38px;
-  display:grid;place-items:end center;padding-bottom:3px;border-radius:0 0 8px 8px;
-  font:600 15px/1 -apple-system,system-ui,sans-serif;color:var(--dim);
-  background:linear-gradient(transparent,var(--panel) 78%);
-  pointer-events:none;opacity:0;transition:opacity .2s}
+.scrollwrap::after,.scrollwrap::before{position:absolute;left:1px;right:1px;height:38px;
+  display:grid;justify-items:center;font:600 15px/1 -apple-system,system-ui,sans-serif;
+  color:var(--dim);pointer-events:none;opacity:0;transition:opacity .2s;z-index:3}
+.scrollwrap::after{content:"⌄";bottom:1px;align-items:end;padding-bottom:3px;
+  border-radius:0 0 8px 8px;background:linear-gradient(transparent,var(--panel) 78%)}
+.scrollwrap::before{content:"⌃";top:var(--stickyh,1px);align-items:start;padding-top:3px;
+  background:linear-gradient(var(--panel) 78%,transparent)}
 .scrollwrap[data-more]::after{opacity:1}
+.scrollwrap[data-prev]::before{opacity:1}
 .tblbox{max-height:min(56vh,520px);overflow:auto;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px}
 table{border-collapse:collapse;width:100%;font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
@@ -181,7 +189,9 @@ tr.skipped td:first-child{text-decoration:line-through}
   font:700 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.5px;margin-left:4px}
 .dctchip b{cursor:pointer;font-size:13px;line-height:1}
 /* Experimental: a short flick settles on a card, a long drag scrolls past freely. */
-html{scroll-snap-type:y proximity;scroll-padding-top:10px}
+/* The app is full-bleed under a translucent status bar, so a snapped card must
+   rest below the safe area — otherwise its heading settles behind the clock. */
+html{scroll-snap-type:y proximity;scroll-padding-top:calc(env(safe-area-inset-top, 0px) + 12px)}
 .card{scroll-snap-align:start}
 td input,.fld input,.altrow input{background:transparent;border:1px solid var(--line);color:var(--txt);
   border-radius:5px;padding:7px 4px;font:700 16px/1 ui-monospace,Menlo,monospace;
@@ -225,7 +235,10 @@ td.diff{text-align:right;font-weight:700}
 .st.wait{color:var(--dim)} .st.soon{color:var(--warn)}
 .st.late{color:var(--err)} .st.done{color:var(--ok)} .st.part{color:var(--warn)}
 .clock{margin-left:auto;font:12px/1 ui-monospace,Menlo,monospace;color:var(--dim);align-self:center}
-@media(max-width:640px){.fld{grid-template-columns:1fr;gap:2px}.fld label{text-align:left;margin-top:8px}}
+/* .cnt carries grid-column:2, which would conjure an implicit second column and
+   keep the fields side by side however narrow the screen got. */
+@media(max-width:640px){.fld{grid-template-columns:1fr;gap:2px}.fld label{text-align:left;margin-top:8px}
+  .fld .cnt{grid-column:1}}
 
 .note{font-size:12.5px;color:var(--dim);margin-top:12px;line-height:1.8}
 .note code{background:var(--panel2);padding:1px 5px;border-radius:3px}
@@ -440,15 +453,14 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 11</h3>
+        <h3>New in version 12</h3>
         <ul>
-          <li><b>Direct to…</b> — when ATC shortcuts the route, tap the waypoint you are cleared
-              direct to. The ones cut out stay in the list, struck through, so the order still
-              matches the paper form; the highlight skips them. Undo with the ✕ on the chip.</li>
-          <li>The highlight now follows the <b>ATO</b> you enter, not just the plan, so it stays
-              right on a flight running early or late.</li>
-          <li>The page settles on the start of a card when you flick it; a long drag scrolls
-              past freely. Experimental — say the word and it goes.</li>
+          <li>A scrolling list now says so at <b>both ends</b> — a fade and a chevron above as
+              well as below, each clearing itself at its own end.</li>
+          <li>A card no longer settles with its heading behind the clock: the resting point of
+              the snap is measured from the safe area.</li>
+          <li>The document fields stack properly on a phone-width screen instead of being
+              squeezed into a narrow column.</li>
         </ul>
       </div>
 
@@ -516,16 +528,16 @@ td.diff{text-align:right;font-weight:700}
       <p>The highlight follows the plan rather than your typing, so it stays right even when the
       actuals are a few points behind.</p>
 
-      <h3 class="new">Direct to a waypoint</h3>
-      <p class="new">Cleared direct, and the route being flown no longer matches the form.
+      <h3>Direct to a waypoint</h3>
+      <p>Cleared direct, and the route being flown no longer matches the form.
       Press <b>Direct to…</b> and tap the waypoint you are going to. The waypoints cut out stay
       where they are, struck through and faded — the order has to keep matching the paper form,
       because that is where the ATOs are written — and the target is marked <b>DCT</b>. The
       highlight then steps over the skipped ones.</p>
-      <p class="new">Nothing about this reaches the document, and no ETO is rewritten: it only
+      <p>Nothing about this reaches the document, and no ETO is rewritten: it only
       moves the highlight. The chip in the toolbar undoes it, and each direct remembers exactly
       which waypoints it cut out, so undoing one leaves any other alone.</p>
-      <p class="new">The highlight also follows your <b>ATO</b> entries. The most recent one
+      <p>The highlight also follows your <b>ATO</b> entries. The most recent one
       sets how far the flight is running from the plan, and every later waypoint is judged
       against that — shown next to the waypoint as, for example, <b>-12 on plan</b>.</p>
 
@@ -609,7 +621,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 11 &nbsp;·&nbsp; published 15 Aug 2026 12:05 UTC</span></p>
+      <span class="build">Version 12 &nbsp;·&nbsp; published 15 Aug 2026 13:01 UTC</span></p>
 
     </div>
   </div>
@@ -1068,9 +1080,11 @@ const hide = el => { $(el).className = 'msg'; };
 function scrollHint(el){
   const wrap = el && el.parentElement;
   if (!wrap || !wrap.classList.contains('scrollwrap')) return;
+  const head = el.querySelector('thead');
   const upd = () => {
-    const more = el.scrollHeight - el.clientHeight - el.scrollTop > 4;
-    wrap.toggleAttribute('data-more', more);
+    wrap.toggleAttribute('data-more', el.scrollHeight - el.clientHeight - el.scrollTop > 4);
+    wrap.toggleAttribute('data-prev', el.scrollTop > 4);
+    if (head) wrap.style.setProperty('--stickyh', head.offsetHeight + 'px');
   };
   if (!el.dataset.hinted){
     el.dataset.hinted = '1';
