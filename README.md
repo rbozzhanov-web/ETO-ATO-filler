@@ -109,11 +109,14 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    clock beside it no longer knocks it off). No check is raised inside the last
    hour before arrival. Saving the PDF with checks still missing asks for
    confirmation first.
-6. Watch the **fuel checks**. Company rule is a fuel check on overflying a
-   waypoint, or at least every 30 minutes; the card lists a window per half hour
-   and turns green as soon as any waypoint inside it has its fuel entered in the
-   table, so there is nothing extra to type. Overdue windows go red and saving
-   asks for confirmation.
+6. Watch the **fuel check** figure above the table. Company rule is a fuel check
+   on overflying a waypoint, or at least every 30 minutes, and it is watched on
+   the waypoint card itself because the record it needs — the fuel column — is
+   already there. The figure shows when the next check is due, amber as it comes
+   up and red once it has passed unrecorded, with a warning above the table; the
+   fuel boxes of the window in question are ringed so it is plain where the
+   reading goes. Any one of them will do. Saving with a check overdue asks for
+   confirmation.
 7. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
    or send it to ForeFlight.
 8. **Open charts** to page through the wind components and the significant

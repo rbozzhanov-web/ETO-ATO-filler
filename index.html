@@ -137,6 +137,11 @@ button.sm{padding:9px 15px;font-size:13.5px;min-height:38px}
 .stat span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
 /* The wall clock is the one figure here that is not read off the plan. */
 .stat.live b{color:var(--gold);font-variant-numeric:tabular-nums}
+.stat.warn b{color:var(--warn)}
+.stat.bad b{color:var(--err)}
+/* The fuel box a due check has to be written into. */
+td.fu.due input{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent)}
+td.fu.late input{border-color:var(--err);background:color-mix(in srgb,var(--err) 12%,transparent)}
 
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .toolbar .sep{flex:1}
@@ -366,6 +371,7 @@ td.diff{text-align:right;font-weight:700}
       <span class="sep"></span>
       <span class="saved" id="saved"></span>
     </div>
+    <div class="msg" id="m6"></div>
     <div class="msg" id="m7"></div>
     <div class="scrollwrap"><div class="tblbox"><table id="tbl"><thead><tr>
       <th>Waypoint</th><th style="text-align:right">ET</th><th style="text-align:right">Cumul.</th>
@@ -389,14 +395,6 @@ td.diff{text-align:right;font-weight:700}
     <div class="alt" id="altrows"></div>
   </div>
 
-  <div class="card hide" id="c9">
-    <div class="step"><i>FUEL</i> Fuel checks</div>
-    <p class="disc">Company rule: a fuel check on overflying a waypoint, or at least every
-      30 minutes. A window counts as done once any waypoint inside it has its fuel recorded
-      in the table above — there is nothing extra to type here.</p>
-    <div class="msg" id="m6"></div>
-    <div class="alt" id="fuelrows"></div>
-  </div>
 
   <div class="card hide" id="c5">
     <div class="step"><i>6</i> Export</div>
@@ -459,15 +457,12 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 15</h3>
+        <h3>New in version 16</h3>
         <ul>
-          <li>Loading a plan no longer throws the page down past the header. The takeoff-time
-              box still takes the cursor; it just stopped dragging the view with it.</li>
-          <li>A scroll now <b>finishes onto the start of a card</b> when it comes to rest near
-              one. It runs only after your own scroll has stopped — never while a plan is being
-              read in — holds still while a box has focus or a sheet is open, and treats the top
-              of the page as a resting place of its own, so a short scroll there comes back to
-              the header. It settles clear of the status bar.</li>
+          <li>The fuel checks have moved <b>into the waypoint card</b>. They were derived from
+              its fuel column all along, so they are now shown on it: one figure among the
+              others, a warning when one is overdue, and a ring round the fuel boxes the
+              reading has to go into. The separate list of windows is gone.</li>
         </ul>
       </div>
 
@@ -515,14 +510,15 @@ td.diff{text-align:right;font-weight:700}
       <p>Rows watch the clock in UTC: amber when a check is close, red once it is overdue, with a
       short tone the first time. Saving with checks still missing asks for confirmation.</p>
 
-      <h3>Fuel checks</h3>
-      <p>Company rule: a fuel check on overflying a waypoint, or at least every
-      30 minutes. The card lists a window per half hour with the waypoints that fall inside it,
-      and watches the clock exactly as the altimeter rows do — amber as one comes due, red once
-      it has passed unrecorded.</p>
-      <p>There is nothing extra to type. A window turns green as soon as any
-      waypoint inside it has its fuel entered in the table, so recording fuel where you already
-      do satisfies the check. Saving with a window overdue asks for confirmation.</p>
+      <h3 class="new">Fuel checks</h3>
+      <p class="new">Company rule: a fuel check on overflying a waypoint, or at least every
+      30 minutes. This is watched on the waypoint card itself, because the record it needs — the
+      fuel column — is already there.</p>
+      <p class="new">One figure among the others carries it: the time the next check is due,
+      amber as it approaches and red once it has passed unrecorded, with a warning above the
+      table. The fuel boxes of the window in question are ringed, so it is plain which one the
+      reading goes into — any of them will do. Enter it and the ring, the warning and the
+      colour all clear. Saving with a check overdue asks for confirmation.</p>
 
       <h3>Following the flight</h3>
       <p>The waypoint table watches the clock in UTC. Points already behind you fade back, the
@@ -628,7 +624,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 15 &nbsp;·&nbsp; published 15 Aug 2026 13:41 UTC</span></p>
+      <span class="build">Version 16 &nbsp;·&nbsp; published 15 Aug 2026 15:29 UTC</span></p>
 
     </div>
   </div>
@@ -1269,7 +1265,7 @@ async function loadBuffer(name, size, buf, resumed){
   $('#fname').textContent = name + '  ·  ' + (size / 1048576).toFixed(1) + ' MB';
   hide('#m1'); hide('#m3');
   $('#c2').classList.remove('hide');
-  for (const c of ['#c3','#c4','#c5','#c6','#c7','#c8','#c9']) $(c).classList.add('hide');
+  for (const c of ['#c3','#c4','#c5','#c6','#c7','#c8']) $(c).classList.add('hide');
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
@@ -2022,7 +2018,6 @@ $('#calc').onclick = () => {
   renderFuel();
   $('#c3').classList.remove('hide');
   if (CHECKS.length) $('#c6').classList.remove('hide');
-  if (FUEL.length) $('#c9').classList.remove('hide');
   save();
 };
 
@@ -2341,40 +2336,46 @@ const fuelState = c => {
 
 function renderFuel(){
   FUEL = fuelChecks();
-  const box = $('#fuelrows'); box.innerHTML = '';
-  for (const c of FUEL){
-    const row = document.createElement('div');
-    row.className = 'altrow fuelrow'; row.id = 'fuelrow' + c.mark;
-    const wps = fuelWps(c);
-    const span = wps.length ? wps[0].wp + (wps.length > 1 ? ' … ' + wps[wps.length - 1].wp : '') : '—';
-    row.innerHTML = `<div class="tag">+${Math.floor(c.mark / 60)}:${String(c.mark % 60).padStart(2,'0')}`
-                  + ` &nbsp; <b>${fmt(c.due)}</b> &nbsp; ${span}`
-                  + `<br><span class="st wait" id="fuelst${c.mark}"></span></div>`;
-    box.appendChild(row);
-  }
   refreshFuel();
 }
 
+/* The windows are no longer listed: they are derived entirely from the fuel column
+   of the table above, so they are shown on it. One tile carries the state, the
+   banner carries an overdue one, and the fuel boxes of the window that is due are
+   ringed — which is where the figure has to go. */
 function refreshFuel(){
-  if (!FUEL.length){ hide('#m6'); return; }
-  let late = 0;
-  for (const c of FUEL){
-    const st = fuelState(c), row = document.getElementById('fuelrow' + c.mark),
-          tag = document.getElementById('fuelst' + c.mark);
-    if (st === 'late') late++;
-    if (row) row.classList.toggle('late', st === 'late');
-    if (tag){
-      const d = sinceDue(c.due);
-      tag.className = 'st ' + st;
-      tag.textContent = st === 'done' ? 'fuel recorded'
-        : st === 'late' ? `overdue by ${d} min — due at ${fmt(c.due)}`
-        : st === 'soon' ? `due at ${fmt(c.due)}, in ${-d} min`
-        : `due at ${fmt(c.due)}`;
-    }
+  document.querySelectorAll('#tbl td.fu.due').forEach(td => td.classList.remove('due', 'late'));
+  const tile = $('#stFuel');
+  if (!FUEL.length){
+    hide('#m6');
+    if (tile){ tile.querySelector('b').textContent = '—'; tile.querySelector('span').textContent = 'Fuel check'; }
+    return;
   }
-  late ? msg('#m6', late === 1
-          ? 'One fuel check is due and no fuel recorded for it.'
-          : `${late} fuel checks are due with no fuel recorded.`, 'err')
+  const late = FUEL.filter(c => fuelState(c) === 'late');
+  // The one to act on: the earliest overdue window, or failing that the next due.
+  const open = late[0] || FUEL.find(c => fuelState(c) !== 'done');
+
+  if (tile){
+    const st = open ? fuelState(open) : 'done';
+    const d = open ? sinceDue(open.due) : 0;
+    tile.className = 'stat ' + (st === 'late' ? 'bad' : st === 'soon' ? 'warn' : '');
+    tile.querySelector('b').textContent = open ? fmt(open.due) : 'done';
+    tile.querySelector('span').textContent =
+      !open ? 'All fuel checks recorded'
+      : st === 'late' ? `Fuel check · overdue by ${d} min`
+      : `Fuel check · in ${-d} min`;
+  }
+
+  if (open && fuelState(open) !== 'done')
+    for (const p of fuelWps(open)){
+      const row = rowOf(p.i);
+      const td = row && row.querySelector('td.fu');
+      if (td){ td.classList.add('due'); td.classList.toggle('late', fuelState(open) === 'late'); }
+    }
+
+  late.length ? msg('#m6', late.length === 1
+          ? `Fuel check due at ${fmt(late[0].due)} with no fuel recorded — enter it at one of the ringed boxes.`
+          : `${late.length} fuel checks are due with no fuel recorded.`, 'err')
        : hide('#m6');
 }
 
@@ -2387,7 +2388,8 @@ function render(t0, arr){
     <div class="stat"><b>${RESULT.length}</b><span>Waypoints</span></div>
     <div class="stat" id="stFilled"><b>0</b><span>Actuals entered</span></div>
     <div class="stat live"><b id="stUtc">--:--:--</b><span>UTC now</span></div>
-    <div class="stat" id="stNext"><b>—</b><span>Next waypoint</span></div>`;
+    <div class="stat" id="stNext"><b>—</b><span>Next waypoint</span></div>
+    <div class="stat" id="stFuel"><b>—</b><span>Fuel check</span></div>`;
   clockTick();
 
   const tb = $('#tbl tbody'); tb.innerHTML = '';
@@ -2406,7 +2408,7 @@ function render(t0, arr){
        <td><input class="ato" data-i="${p.i}" maxlength="4" ${NUM}
             placeholder="${fmt(p.t)}" value="${a.ato || ''}"></td>
        <td class="num">${p.rem ?? '—'}</td>
-       <td><input class="fuel" data-i="${p.i}" maxlength="5" ${NUM}
+       <td class="fu"><input class="fuel" data-i="${p.i}" maxlength="5" ${NUM}
             placeholder="${p.rem ?? ''}" value="${a.fuel || ''}"></td>
        <td class="diff" data-d="${p.i}"></td><td class="num">${p.page + 1}</td>`;
     paint(p.i);
@@ -2738,7 +2740,7 @@ $('#reset').onclick = () => {
   showIcao(null); showOfp(null); showFigs(null); showWx(null); showCharts(null); openCharts(false);
   $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
   $('#fname').textContent = ''; $('#saved').textContent = '';
-  for (const c of ['#c2','#c3','#c4','#c5','#c6','#c7','#c8','#c9']) $(c).classList.add('hide');
+  for (const c of ['#c2','#c3','#c4','#c5','#c6','#c7','#c8']) $(c).classList.add('hide');
   $('#fpl').className = 'hint hide';
   hide('#m1'); hide('#m2'); hide('#m3');
 };
