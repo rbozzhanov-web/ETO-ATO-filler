@@ -457,12 +457,13 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 16</h3>
+        <h3>New in version 17</h3>
         <ul>
           <li>The fuel checks have moved <b>into the waypoint card</b>. They were derived from
               its fuel column all along, so they are now shown on it: one figure among the
-              others, a warning when one is overdue, and a ring round the fuel boxes the
-              reading has to go into. The separate list of windows is gone.</li>
+              others, a warning when one is overdue, and a ring round the one fuel box the
+              reading goes into — the waypoint at the half-hour mark. The separate list of
+              windows is gone.</li>
         </ul>
       </div>
 
@@ -516,9 +517,10 @@ td.diff{text-align:right;font-weight:700}
       fuel column — is already there.</p>
       <p class="new">One figure among the others carries it: the time the next check is due,
       amber as it approaches and red once it has passed unrecorded, with a warning above the
-      table. The fuel boxes of the window in question are ringed, so it is plain which one the
-      reading goes into — any of them will do. Enter it and the ring, the warning and the
-      colour all clear. Saving with a check overdue asks for confirmation.</p>
+      table. The fuel box of the waypoint the check falls on — the last one before the
+      half-hour mark — is ringed, so it is plain where the reading goes. A figure entered at any
+      point inside that half hour still counts; only the ring is that precise. Enter it and the
+      ring, the warning and the colour all clear. Saving with a check overdue asks for confirmation.</p>
 
       <h3>Following the flight</h3>
       <p>The waypoint table watches the clock in UTC. Points already behind you fade back, the
@@ -624,7 +626,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 16 &nbsp;·&nbsp; published 15 Aug 2026 15:29 UTC</span></p>
+      <span class="build">Version 17 &nbsp;·&nbsp; published 15 Aug 2026 15:41 UTC</span></p>
 
     </div>
   </div>
@@ -2328,6 +2330,10 @@ function fuelChecks(){
 }
 const fuelWps = c => RESULT.filter(p => p.sec === 1 && !isSkipped(p.i)
                                      && p.cum > c.from && p.cum <= c.to);
+// The waypoint the check falls on: the last one before the half-hour mark, so the
+// reading is taken at the mark rather than anywhere inside the window. A figure
+// entered at any point in the window still satisfies it — only the ring narrows.
+const fuelPoint = c => { const w = fuelWps(c); return w.length ? w[w.length - 1] : null; };
 const fuelState = c => {
   if (fuelWps(c).some(p => (ACT[p.i] || {}).fuel)) return 'done';
   const d = sinceDue(c.due);
@@ -2366,15 +2372,14 @@ function refreshFuel(){
       : `Fuel check · in ${-d} min`;
   }
 
-  if (open && fuelState(open) !== 'done')
-    for (const p of fuelWps(open)){
-      const row = rowOf(p.i);
-      const td = row && row.querySelector('td.fu');
-      if (td){ td.classList.add('due'); td.classList.toggle('late', fuelState(open) === 'late'); }
-    }
+  if (open && fuelState(open) !== 'done'){
+    const p = fuelPoint(open), row = p && rowOf(p.i);
+    const td = row && row.querySelector('td.fu');
+    if (td){ td.classList.add('due'); td.classList.toggle('late', fuelState(open) === 'late'); }
+  }
 
   late.length ? msg('#m6', late.length === 1
-          ? `Fuel check due at ${fmt(late[0].due)} with no fuel recorded — enter it at one of the ringed boxes.`
+          ? `Fuel check due at ${fmt(late[0].due)} with no fuel recorded — the box is ringed in the table.`
           : `${late.length} fuel checks are due with no fuel recorded.`, 'err')
        : hide('#m6');
 }
