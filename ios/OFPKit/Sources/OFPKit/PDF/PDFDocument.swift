@@ -5,7 +5,6 @@ public enum PDFError: Error, CustomStringConvertible {
     case notClassicXref
     case noRoot
     case unsupportedFilter(String)
-    case notAStream
     case message(String)
 
     public var description: String {
@@ -14,7 +13,6 @@ public enum PDFError: Error, CustomStringConvertible {
         case .notClassicXref:         return "only a classic xref table is supported"
         case .noRoot:                 return "the document catalogue is missing"
         case .unsupportedFilter(let f): return "unsupported stream filter: \(f)"
-        case .notAStream:             return "expected a stream object"
         case .message(let m):         return m
         }
     }

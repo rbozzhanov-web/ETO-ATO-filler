@@ -40,12 +40,10 @@ public extension PDFObject {
     }
 
     var nameValue: String? { if case .name(let n) = self { return n }; return nil }
-    var boolValue: Bool? { if case .bool(let b) = self { return b }; return nil }
     var arrayValue: [PDFObject]? { if case .array(let a) = self { return a }; return nil }
     var stringBytes: [UInt8]? { if case .string(let b) = self { return b }; return nil }
     var refValue: Int? { if case .ref(let n) = self { return n }; return nil }
     var streamValue: PDFStream? { if case .stream(let s) = self { return s }; return nil }
-    var opValue: String? { if case .op(let o) = self { return o }; return nil }
 
     /// Streams answer with their own dictionary, so `/Subtype` and friends can be read off
     /// either shape without the caller unwrapping first.

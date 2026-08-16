@@ -25,7 +25,6 @@ final class AppModel: ObservableObject {
     @Published private(set) var plan: ParsedPlan?
     /// Handed to the chart decoder, which runs off the main actor.
     private(set) var document: PDFMiniDocument?
-    private var rawBytes: [UInt8] = []
 
     var isLoaded: Bool { plan != nil }
 
@@ -97,14 +96,9 @@ final class AppModel: ObservableObject {
         FlightComputer(rows: rows, takeoff: takeoff ?? 0, actuals: actuals, directs: directs)
     }
 
-    var progress: Progress { computer.progress(now: minute) }
+    var progress: FlightProgress { computer.progress(now: minute) }
 
     var altimeterChecks: [AltimeterCheck] { computer.altimeterChecks() }
-
-    var fuelChecks: [FuelCheck] {
-        let c = computer
-        return c.fuelChecks(offset: c.currentOffset())
-    }
 
     /// The window to act on: the earliest overdue one, or failing that the next due.
     var openFuelCheck: FuelCheck? {
@@ -164,7 +158,6 @@ final class AppModel: ObservableObject {
 
         case .success(let (doc, parsed)):
             document = doc
-            rawBytes = bytes
             plan = parsed
             documentName = name
             documentKey = key
@@ -191,7 +184,7 @@ final class AppModel: ObservableObject {
                 directs = state.directs
 
                 if !state.takeoffTime.isEmpty {
-                    calculate()
+                    calculate(rearmAlerts: false)
                     let when = state.savedAt.map { " saved " + Self.savedFormatter.string(from: $0) } ?? ""
                     loadBanner = Banner(kind: .ok, text: resumed
                         ? "Continued where you left off — \(name)\(when)."
@@ -247,7 +240,10 @@ final class AppModel: ObservableObject {
 
     // MARK: - Calculate
 
-    func calculate() {
+    /// `rearmAlerts` is false only when restoring: a check the crew has already heard must
+    /// not sound again just because the app was reopened. Pressing Calculate does re-arm
+    /// them, because a new takeoff time moves every due time with it.
+    func calculate(rearmAlerts: Bool = true) {
         guard let plan else { return }
         guard let t0 = TimeMath.parseTime(takeoffText) else {
             calcBanner = Banner(kind: .error, text: "Enter the time as HHMM, for example 0210")
@@ -263,8 +259,7 @@ final class AppModel: ObservableObject {
                      text: "Warning: at \(drifting) waypoints the ET sum did not match T/T.")
             : nil
 
-        // A recalculation re-arms the alerts, matching the original.
-        alerted = []
+        if rearmAlerts { alerted = [] }
         save()
     }
 
@@ -456,7 +451,6 @@ final class AppModel: ObservableObject {
         saveWorkItem?.cancel()
         saveWorkItem = nil
         document = nil
-        rawBytes = []
         plan = nil
         documentName = ""
         documentKey = nil

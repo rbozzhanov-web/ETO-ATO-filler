@@ -53,8 +53,7 @@ public enum OFPParser {
 
                 if pageIndex == 0 {
                     page0.append(FormLine(base: last.base, glyphs: glyphs, cw: cw,
-                                          maxX: last.x + cw, size: last.size,
-                                          hasDots: glyphs.contains { $0.ch == UInt8(ascii: ".") }))
+                                          maxX: last.x + cw, size: last.size))
 
                     let runs = FormGeometry.dotFields(glyphs, cw: cw)
                     for (k, run) in runs.runs.enumerated() {

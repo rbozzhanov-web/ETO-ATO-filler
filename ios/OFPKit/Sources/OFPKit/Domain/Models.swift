@@ -18,7 +18,6 @@ struct FormLine {
     let cw: Double
     let maxX: Double
     let size: Double
-    let hasDots: Bool
 }
 
 /// One waypoint of the printed plan, and the two boxes on the form that belong to it —

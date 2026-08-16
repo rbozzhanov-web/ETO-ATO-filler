@@ -29,7 +29,7 @@ public struct PlannedRow: Equatable {
 }
 
 /// Where the aeroplane is against the plan.
-public struct Progress: Equatable {
+public struct FlightProgress: Equatable {
     /// Row indices into `rows`, not waypoint numbers.
     public let current: Int?
     public let next: Int?
@@ -106,7 +106,7 @@ public struct FlightComputer {
         directs.remove(at: position)
     }
 
-    // MARK: - Progress
+    // MARK: - Where the flight has got to
 
     /// How far the flight is running from the plan, taken from the most recent waypoint
     /// with an ATO entered. Applied to the comparison times only — never to the document.
@@ -136,10 +136,10 @@ public struct FlightComputer {
         return (current, next)
     }
 
-    public func progress(now: Int) -> Progress {
+    public func progress(now: Int) -> FlightProgress {
         let offset = currentOffset()
         let (current, next) = scan({ !isSkipped($0.index) }, offset: offset, now: now)
-        return Progress(current: current, next: next, offset: offset)
+        return FlightProgress(current: current, next: next, offset: offset)
     }
 
     /// A direct takes waypoints out of the route, not out of the sky: the aeroplane still

@@ -129,3 +129,20 @@ Two bugs turned up in the writing, both on damaged input: a corrupt Huffman code
 symbol table backwards and trapped, and a truncated stream could decode to a silently short
 result rather than an error. In the cockpit those are a crash and a half-read plan. Both are
 fixed and both have tests.
+
+---
+
+## One behaviour that was corrected rather than copied
+
+The web version does not keep its record of which cross-checks have already sounded across a
+restart, although its own documentation says it does. `loadBuffer` restores the set from
+storage, and then the recalculation it triggers runs `renderAlt`, which begins by clearing
+it — so every check already overdue sounds again the moment the app is reopened. On a long
+sector that is several alerts at once, for readings the crew took hours ago.
+
+The native app keeps them. `calculate()` re-arms the alerts, because pressing Calculate means
+a new takeoff time and every due time moves with it, but the restore path calls
+`calculate(rearmAlerts: false)` and the acknowledged set survives. That is what the web
+version's README always described.
+
+Worth carrying back to `index.html` if the two are to stay in step.

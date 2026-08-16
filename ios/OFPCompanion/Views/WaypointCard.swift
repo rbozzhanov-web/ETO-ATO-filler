@@ -14,7 +14,6 @@ struct WaypointCard: View {
     @State private var lastCentred: Int?
 
     private let space = "waypoints"
-    private let rowHeight: CGFloat = 44
 
     var body: some View {
         Card(step: "4", title: "Actuals by waypoint") {
@@ -163,8 +162,8 @@ struct WaypointCard: View {
                                 WaypointRow(
                                     row: row,
                                     position: rowPosition(n, progress: progress, abeam: abeam),
-                                    ringed: ringed?.index == row.index
-                                        ? (ringed?.late == true ? .late : .due) : .none)
+                                    ring: ringed?.index == row.index
+                                        ? (ringed?.late == true ? .late : .due) : .off)
                                 .id(row.index)
                             }
                         }
@@ -197,7 +196,7 @@ struct WaypointCard: View {
         .simultaneousGesture(DragGesture().onChanged { _ in lastTouched = Date() })
     }
 
-    private func rowPosition(_ n: Int, progress: Progress,
+    private func rowPosition(_ n: Int, progress: FlightProgress,
                              abeam: (current: Int?, next: Int?)) -> WaypointRow.Position {
         let skipped = model.computer.isSkipped(model.rows[n].index)
         if skipped {
@@ -257,7 +256,7 @@ struct WaypointRow: View {
     @Environment(\.palette) private var palette
 
     enum Position { case past, now, next, ahead, skipped, abeamNow, abeamNext }
-    enum Ring { case none, due, late }
+    enum Ring { case off, due, late }
 
     enum Widths {
         static let name: CGFloat = 116

@@ -30,12 +30,6 @@ enum ChartRenderer {
         return rendered
     }
 
-    static func clearCache() {
-        lock.lock()
-        cache.removeAll()
-        lock.unlock()
-    }
-
     private static func decode(document: PDFMiniDocument, chart: ChartPage) -> UIImage? {
         let pages = document.pages()
         guard chart.page < pages.count,
