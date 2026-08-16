@@ -1,0 +1,109 @@
+name: iOS app
+
+# Builds OFP Companion on a macOS runner and publishes an installable build.
+#
+# The .ipa produced here is UNSIGNED. Apple will not let an unsigned app onto a device
+# directly — it has to be signed with somebody's certificate first, which is what AltStore,
+# Sideloadly and the like do on your own machine with your own Apple ID. See ios/README.md.
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain in use
+        run: |
+          xcodebuild -version
+          swift --version
+          ls /Applications | grep -i xcode || true
+
+      # The engine is plain Swift and its tests are the ones that mean anything, so they
+      # run first and on their own: a failure here is a real defect, not a build problem.
+      - name: Test OFPKit
+        working-directory: ios/OFPKit
+        run: swift test
+
+      # Compiles the SwiftUI layer against the real SDK. No signing involved, so it needs
+      # no secrets and runs on every push.
+      - name: Build for the simulator
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project OFPCompanion.xcodeproj \
+            -scheme OFPCompanion \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions || xcodebuild build \
+            -project OFPCompanion.xcodeproj \
+            -scheme OFPCompanion \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Archive for a device, unsigned
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project OFPCompanion.xcodeproj \
+            -scheme OFPCompanion \
+            -destination 'generic/platform=iOS' \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/OFPCompanion.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            DEVELOPMENT_TEAM=""
+
+      # An .ipa is a zip with the .app inside a Payload folder, and nothing else is
+      # required for a sideloader to re-sign it.
+      - name: Package the IPA
+        run: |
+          cd "$RUNNER_TEMP"
+          mkdir -p Payload
+          cp -R OFPCompanion.xcarchive/Products/Applications/*.app Payload/
+          zip -qry OFP-Companion.ipa Payload
+          ls -lh OFP-Companion.ipa
+
+      - name: Upload the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: OFP-Companion-ipa
+          path: ${{ runner.temp }}/OFP-Companion.ipa
+          if-no-files-found: error
+          retention-days: 90
+
+      # A tag makes it a release, so there is a stable address to send people to rather
+      # than an artifact that expires.
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            "$RUNNER_TEMP/OFP-Companion.ipa" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "OFP Companion ${GITHUB_REF_NAME}" \
+            --notes "Unsigned build. Install with AltStore, Sideloadly or TrollStore — see [ios/README.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/ios/README.md#installing-it)."
+
+permissions:
+  contents: write
