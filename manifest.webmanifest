@@ -1,7 +1,7 @@
 {
-  "name": "ETO / ATO Filler",
-  "short_name": "ETO Filler",
-  "description": "Fill ETO, ATO and actual fuel into an Operational Flight Plan",
+  "name": "OFP Companion",
+  "short_name": "OFP Companion",
+  "description": "Work the Operational Flight Plan in flight: times, fuel, weather, NOTAMs, charts and checks",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
