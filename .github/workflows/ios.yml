@@ -51,12 +51,18 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
-            | xcbeautify --renderer github-actions || xcodebuild build \
-            -project OFPCompanion.xcodeproj \
-            -scheme OFPCompanion \
-            -destination 'generic/platform=iOS Simulator' \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO
+            2>&1 | tee "$RUNNER_TEMP/build.log" | xcbeautify --renderer github-actions
+
+      # xcodebuild buries the diagnostics in thousands of lines of command lines, and the
+      # raw log is far too large to read through. This is the part anyone actually wants.
+      - name: Diagnostics
+        if: failure()
+        run: |
+          echo "## Compiler diagnostics" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          grep -hoE '[^ /]+\.swift:[0-9]+:[0-9]+: (error|warning): .*' \
+            "$RUNNER_TEMP"/*.log | sort -u | head -80 | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Archive for a device, unsigned
         working-directory: ios
@@ -72,7 +78,8 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGN_ENTITLEMENTS="" \
-            DEVELOPMENT_TEAM=""
+            DEVELOPMENT_TEAM="" \
+            2>&1 | tee "$RUNNER_TEMP/archive.log" | xcbeautify --renderer github-actions
 
       # An .ipa is a zip with the .app inside a Payload folder, and nothing else is
       # required for a sideloader to re-sign it.

@@ -34,7 +34,33 @@ rather than only on a Mac. The app target is a thin layer of screen on top of it
 
 ---
 
-## Building it
+## Installing it
+
+Every push builds the app on a macOS runner and attaches an `.ipa` to the run; a `v*` tag
+publishes it as a [release](https://github.com/rbozzhanov-web/ETO-ATO-filler/releases).
+
+**The build is unsigned, and that is not a shortcut — it is the only thing a public CI can
+honestly produce.** Signing needs a certificate tied to an Apple ID, and putting one in a
+public repository would hand it to anybody. So the last step happens on your machine, with
+your own free Apple ID, using one of these:
+
+| | What it needs | How long it lasts |
+|---|---|---|
+| **[Sideloadly](https://sideloadly.io)** | a Mac or a PC, a cable, a free Apple ID | 7 days, then plug in again |
+| **[AltStore](https://altstore.io)** | the same, plus AltServer left running | 7 days, refreshed over Wi-Fi automatically |
+| **[TrollStore](https://github.com/opa334/TrollStore)** | an iPad on a version it supports | permanent, no refreshing |
+| **Xcode** | a Mac, and the source below | 7 days free, a year with a paid account |
+
+A paid Apple Developer account ($99/year) raises the seven days to a year and lets the build
+be signed in CI instead — see the note at the end.
+
+Whichever route: download `OFP-Companion.ipa` from the release, hand it to the tool, and it
+installs like any other app. Nothing about the app itself changes — it never reaches the
+network either way.
+
+---
+
+## Building it yourself
 
 Requires **Xcode 16 or newer** (the project uses synchronized file groups, so new files are
 picked up without editing the project) and targets **iOS / iPadOS 16.4**, the same floor the

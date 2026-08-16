@@ -92,7 +92,7 @@ struct WeatherCard: View {
     }
 
     private func reports(_ items: [String]) -> some View {
-        Text(items.map(WeatherReader.spaced).joined(separator: "\n\n"))
+        Text(items.joined(separator: "\n\n"))
             .font(.mono(13))
             .foregroundStyle(palette.text)
             .textSelection(.enabled)
@@ -156,9 +156,8 @@ struct NotamList: View {
                 Text(item.id)
                     .font(.mono(12, weight: .bold))
                     .foregroundStyle(palette.accent)
-                if let from = item.from {
-                    Text("\(WeatherReader.stamp(from)) → \(WeatherReader.stamp(item.to ?? "?"))"
-                         + (item.estimated ? " EST" : ""))
+                if let validity = item.validityText {
+                    Text(validity)
                         .font(.system(size: 11.5))
                         .foregroundStyle(palette.dim)
                 }

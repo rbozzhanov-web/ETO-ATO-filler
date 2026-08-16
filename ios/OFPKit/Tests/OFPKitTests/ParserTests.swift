@@ -67,7 +67,7 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(identity.route, "ALAICN01")
         XCTAssertEqual(identity.request, "83104")
         XCTAssertEqual(identity.issued, "13/08/2026 15:26Z")
-        XCTAssertEqual(Identity.summary(identity), "ALAICN01  ·  REQ 83104  ·  13/08/2026 15:26Z")
+        XCTAssertEqual(identity.summary, "ALAICN01  ·  REQ 83104  ·  13/08/2026 15:26Z")
     }
 
     func testKeyFiguresIgnoreTheMaximaPrintedAbove() throws {
@@ -228,9 +228,18 @@ final class ParserTests: XCTestCase {
     // MARK: - Display helpers
 
     func testValidityStamp() {
-        XCTAssertEqual(WeatherReader.stamp("30JUN0500"), "30JUN 0500Z")
-        XCTAssertEqual(WeatherReader.stamp("PERM"), "PERM")
-        XCTAssertEqual(WeatherReader.stamp("WIE"), "WIE")
+        XCTAssertEqual(Notam.stamp("30JUN0500"), "30JUN 0500Z")
+        XCTAssertEqual(Notam.stamp("PERM"), "PERM")
+        XCTAssertEqual(Notam.stamp("WIE"), "WIE")
+    }
+
+    func testValidityLineAsShown() throws {
+        let almaty = try XCTUnwrap(plan.airports.first { $0.icao == "UAAA" })
+        let ils = try XCTUnwrap(almaty.notams.first { $0.id == "A3725/26" })
+        XCTAssertEqual(ils.validityText, "30JUN 0500Z → 30SEP 0500Z")
+
+        let taxiway = try XCTUnwrap(almaty.notams.first { $0.id == "A4947/26" })
+        XCTAssertEqual(taxiway.validityText, "01AUG 0000Z → 31AUG 2359Z EST")
     }
 
     func testRunTogetherKeywordIsSpaced() {
