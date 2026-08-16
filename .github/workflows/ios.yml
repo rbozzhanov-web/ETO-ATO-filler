@@ -14,6 +14,11 @@ on:
       - "ios/**"
       - ".github/workflows/ios.yml"
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Version to publish, e.g. v1.0.0. Leave empty to only build."
+        required: false
+        default: ""
 
 concurrency:
   group: ios-${{ github.ref }}
@@ -99,18 +104,21 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      # A tag makes it a release, so there is a stable address to send people to rather
-      # than an artifact that expires.
+      # An artifact expires; a release is a stable address to send people to. Either a v*
+      # tag or running this workflow by hand with a version in the box makes one — the tag
+      # is created from the commit being built, so it needs no separate push.
       - name: Publish the release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.release || github.ref_name }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
+          gh release create "$VERSION" \
             "$RUNNER_TEMP/OFP-Companion.ipa" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "OFP Companion ${GITHUB_REF_NAME}" \
-            --notes "Unsigned build. Install with AltStore, Sideloadly or TrollStore — see [ios/README.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/ios/README.md#installing-it)."
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "OFP Companion $VERSION" \
+            --notes-file .github/release-notes.md
 
 permissions:
   contents: write
