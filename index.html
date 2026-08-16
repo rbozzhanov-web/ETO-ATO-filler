@@ -198,6 +198,17 @@ tr.next td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
    stay in place — struck through, and after .past so they win on opacity. */
 tr.skipped td{opacity:.3}
 tr.skipped td:first-child{text-decoration:line-through}
+/* The aeroplane still goes past them, so they keep their place on the clock. Lifted
+   well clear of the .3 so they can actually be read — that was the complaint — but
+   without the live route's bold and with a dashed rule rather than its solid one,
+   so an abeam position can never be taken for one you are flying to. */
+tr.skipped.abeam-now td{opacity:.8;background:color-mix(in srgb,var(--dim) 16%,transparent)}
+tr.skipped.abeam-next td{opacity:.75;background:color-mix(in srgb,var(--acc) 12%,transparent)}
+tr.skipped.abeam-now td:first-child,
+tr.skipped.abeam-next td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--dim) 55%,transparent)}
+.abbadge{display:inline-block;margin-left:8px;padding:1px 5px;border-radius:4px;
+  background:color-mix(in srgb,var(--dim) 28%,transparent);color:var(--txt);text-decoration:none;
+  font:700 9.5px/1.5 -apple-system,system-ui,sans-serif;letter-spacing:.5px;vertical-align:1px}
 .tblbox.picking tbody tr[data-i]{cursor:pointer}
 .tblbox.picking tbody tr[data-i]:hover td{background:color-mix(in srgb,var(--acc) 22%,transparent)}
 .tblbox.picking input{pointer-events:none}
@@ -474,15 +485,20 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 19.1</h3>
+        <h3>New in version 20</h3>
         <ul>
-          <li>The two scroll arrows are now one shape, the upper one being the lower one turned
-              upside down, instead of two characters the device drew differently.</li>
-          <li>The strip at each end of a scrolling box is solid for its full depth, in that box's
-              own background colour, so no half-line of text shows through it or under the arrow.</li>
+          <li>The waypoints a <b>direct</b> cuts out are still flown past, so they keep their
+              highlight on the clock and the one you are level with is marked <b>ABEAM</b>. It is
+              shaded more faintly than the live route, so the two cannot be confused.</li>
+          <li>The table now really does bring the live waypoint to its middle. It was landing a
+              heading's height high, and it gave up entirely once a box had been typed in —
+              which, since Enter steps to the next box, meant from the first actual onwards.</li>
+          <li>Settling onto a card works for the whole flight. It, too, stopped at the first
+              actual entered: it was watching for a focused box rather than for the keyboard.</li>
+          <li>A direct no longer loses a fuel check. Windows are matched to waypoints by the time
+              they are actually reached, and a window a direct empties is written on the next
+              waypoint overflown instead of disappearing.</li>
         </ul>
-        <p>A release that only fixes things takes a fractional number — this one follows
-           version 19 without adding to it.</p>
       </div>
 
       <h3>Quick start</h3>
@@ -646,7 +662,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 19.1 &nbsp;·&nbsp; published 16 Aug 2026 04:20 UTC</span></p>
+      <span class="build">Version 20 &nbsp;·&nbsp; published 16 Aug 2026 05:40 UTC</span></p>
 
     </div>
   </div>
@@ -1120,8 +1136,12 @@ function settle(){
   userScrolled = false;
   // Not while the keyboard is up, not under an overlay, and never away from the
   // very top — resting with the header in view is a legitimate place to be.
-  const a = document.activeElement;
-  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+  // The keyboard, not merely focus: Enter steps from one field to the next, so
+  // from the first actual entered a box stays focused for the rest of the flight
+  // and testing focus switched settling off for good. visualViewport reports the
+  // keyboard directly; where it is absent there is no keyboard to report.
+  const vv = window.visualViewport;
+  if (vv && vv.height < innerHeight - 120) return;
   if (!$('#charts').classList.contains('hide') || !$('#guide').classList.contains('hide')) return;
   const gap = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
   if (scrollY <= gap) return;
@@ -2165,16 +2185,26 @@ function currentOffset(){
   return 0;
 }
 
-function progressIdx(){
-  const off = currentOffset();
+// The last point whose time has come and the first whose has not, over whichever
+// rows are asked for — the flown route, or the ones a direct has put abeam.
+function scanIdx(want, off){
   let ci = -1, ni = -1;
   RESULT.forEach((p, n) => {
-    if (isSkipped(p.i)) return;
+    if (!want(p)) return;
     if (sinceDue(p.t + off) >= 0) ci = n;
     else if (ni < 0) ni = n;
   });
+  return { ci, ni };
+}
+
+function progressIdx(){
+  const off = currentOffset();
+  const { ci, ni } = scanIdx(p => !isSkipped(p.i), off);
   return { ci, ni, off };
 }
+// A direct takes waypoints out of the route, not out of the sky: the aeroplane
+// still goes past them, so they keep their place on the clock as abeam positions.
+const abeamIdx = off => scanIdx(p => isSkipped(p.i), off);
 
 function paintDct(i){
   const tr = rowOf(i);
@@ -2244,25 +2274,43 @@ $('#dctBtn').onclick = () => setPick(!dctPick);
 /* ---- where the flight has got to ----
    Kept out of refreshAlt because that one returns early when the plan is shorter
    than an hour and has no checks — the table still needs its highlight. */
-let scrolledAt = 0, autoUntil = 0, lastNext = null;
+let scrolledAt = 0, typedAt = 0, autoTarget = null, autoT = null, lastNext = null;
 
 // Centring is done on the box's own scrollTop rather than with scrollIntoView,
 // which walks every scrollable ancestor and used to drag the whole page with it.
+// The sticky column headings cover the top of the box, so the row is centred in
+// what they leave visible: a half-heading was being added where it had to be
+// taken off, which put every centred row 34px high.
 function centreRow(row){
   const box = document.querySelector('.tblbox');
   if (!box || !row) return;
   const head = box.querySelector('thead');
-  const top = row.offsetTop - (box.clientHeight - row.offsetHeight) / 2
-            + (head ? head.offsetHeight / 2 : 0);
-  const want = Math.max(0, Math.min(top, box.scrollHeight - box.clientHeight));
+  const headH = head ? head.offsetHeight : 0;
+  const rel = row.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+  const top = rel - headH - (box.clientHeight - headH - row.offsetHeight) / 2;
+  const want = Math.round(Math.max(0, Math.min(top, box.scrollHeight - box.clientHeight)));
   if (Math.abs(want - box.scrollTop) < 2) return;
-  autoUntil = Date.now() + 1500;            // do not read our own scroll back as the crew's
+  // Marked by target rather than by a stopwatch: a smooth scroll takes as long as
+  // it takes, and its tail used to be read back as the crew's own scroll.
+  autoTarget = want;
+  clearTimeout(autoT);
+  autoT = setTimeout(() => { autoTarget = null; }, 3000);
   box.scrollTo({ top: want, behavior: 'smooth' });
+}
+
+function markAbeam(row, want){
+  const cell = row.cells[0], badge = cell.querySelector('.abbadge');
+  if (want && !badge){
+    const s = document.createElement('span');
+    s.className = 'abbadge'; s.textContent = 'ABEAM';
+    cell.appendChild(s);
+  } else if (!want && badge) badge.remove();
 }
 
 function refreshProgress(){
   if (!RESULT.length) return;
   const { ci, ni, off } = progressIdx();
+  const ab = abeamIdx(off);
   const next = ni >= 0 ? RESULT[ni] : null;
   RESULT.forEach((p, n) => {
     const row = rowOf(p.i);
@@ -2271,6 +2319,12 @@ function refreshProgress(){
     row.classList.toggle('past', !skipped && n < ci);
     row.classList.toggle('now', !skipped && n === ci);
     row.classList.toggle('next', !skipped && n === ni);
+    // The cut-out ones keep their own highlight so the table still says where the
+    // aeroplane is against them; quieter than the live route, and labelled, so the
+    // two can never be read for each other.
+    row.classList.toggle('abeam-now', skipped && n === ab.ci);
+    row.classList.toggle('abeam-next', skipped && n === ab.ni);
+    markAbeam(row, skipped && n === ab.ci);
   });
   const st = $('#stNext');
   if (st){
@@ -2281,18 +2335,26 @@ function refreshProgress(){
       : 'All waypoints passed';
   }
   // Follow the flight, but never fight the hands: only on a change of target row,
-  // not while a box in the table has focus, not just after a manual scroll.
+  // and not within twenty seconds of the crew scrolling the box or typing in it.
+  // Focus itself is no test — Enter steps to the next field, so a box stays focused
+  // for the rest of the flight and the table would never follow again.
   const box = document.querySelector('.tblbox');
-  if (next && next.i !== lastNext && Date.now() - scrolledAt > 20000
-      && box && !box.contains(document.activeElement)){
+  if (next && next.i !== lastNext
+      && Date.now() - scrolledAt > 20000 && Date.now() - typedAt > 20000){
     lastNext = next.i;
     centreRow(rowOf(next.i));
   }
 }
-document.querySelector('.tblbox').addEventListener('scroll', () => {
-  if (Date.now() < autoUntil) return;
-  scrolledAt = Date.now();
-}, { passive: true });
+{
+  const box = document.querySelector('.tblbox');
+  box.addEventListener('scroll', () => {
+    if (autoTarget !== null && Math.abs(box.scrollTop - autoTarget) > 2) return;   // still ours
+    autoTarget = null;
+    scrolledAt = Date.now();
+  }, { passive: true });
+  for (const ev of ['keydown', 'input'])
+    box.addEventListener(ev, () => { typedAt = Date.now(); }, { passive: true });
+}
 
 const tick = () => { refreshProgress(); refreshAlt(); refreshFuel(); };
 setInterval(tick, 15000);
@@ -2352,41 +2414,55 @@ function renderAlt(){
    "A fuel check must be done when overflying the waypoint or at least every 30
    minutes." The record already exists: the fuel column of the waypoint table. So
    these rows only watch the clock and read that column — nothing to type twice. */
-function fuelChecks(){
-  const main = RESULT.filter(p => p.sec === 1);
+// Minutes from takeoff at which a waypoint is actually reached: the plan's own
+// figure, moved by however far the flight is running from it. A direct is the
+// case that matters — it brings every later waypoint forward, and windows matched
+// on the planned figure then point at waypoints the aeroplane never flew.
+const flown = () => RESULT.filter(p => p.sec === 1 && !isSkipped(p.i));
+
+function fuelChecks(off){
+  const main = flown();
   if (!main.length) return [];
-  const total = main[main.length - 1].cum, out = [];
+  const total = main[main.length - 1].cum + off, out = [];
   for (let mark = 30; total - mark >= 30; mark += 30){
     const c = { mark, from: mark - 30, to: mark, due: T0 + mark };
-    // A window with nothing left to overfly — a long oceanic leg, or everything in
-    // it cut out by a direct — has no way of ever being recorded, so it is not
-    // raised at all rather than sitting red for the rest of the flight.
-    if (fuelWps(c).length) out.push(c);
+    // Only past the end of the flight is a window dropped. The half-hour rule runs
+    // on the clock, so a direct that empties a window does not excuse its check —
+    // fuelBox hands it the next waypoint actually overflown instead.
+    if (fuelBox(c, off).length) out.push(c);
   }
   return out;
 }
-const fuelWps = c => RESULT.filter(p => p.sec === 1 && !isSkipped(p.i)
-                                     && p.cum > c.from && p.cum <= c.to);
+// Where this check can be written: the waypoints inside the window, or — when a
+// direct has cut them all out — the first one actually overflown after it.
+function fuelBox(c, off){
+  const at = p => p.cum + off;
+  const inw = flown().filter(p => at(p) > c.from && at(p) <= c.to);
+  if (inw.length) return inw;
+  const nxt = flown().find(p => at(p) > c.to);
+  return nxt ? [nxt] : [];
+}
 // The waypoint the check falls on: the last one before the half-hour mark, so the
 // reading is taken at the mark rather than anywhere inside the window. A figure
 // entered at any point in the window still satisfies it — only the ring narrows.
-const fuelPoint = c => { const w = fuelWps(c); return w.length ? w[w.length - 1] : null; };
-const fuelState = c => {
-  if (fuelWps(c).some(p => (ACT[p.i] || {}).fuel)) return 'done';
+const fuelPoint = (c, off) => { const w = fuelBox(c, off); return w.length ? w[w.length - 1] : null; };
+const fuelState = (c, off) => {
+  if (fuelBox(c, off).some(p => (ACT[p.i] || {}).fuel)) return 'done';
   const d = sinceDue(c.due);
   return d >= 0 ? 'late' : d >= -10 ? 'soon' : 'wait';
 };
 
-function renderFuel(){
-  FUEL = fuelChecks();
-  refreshFuel();
-}
+const renderFuel = () => refreshFuel();   // the windows are rebuilt on every refresh
 
 /* The windows are no longer listed: they are derived entirely from the fuel column
    of the table above, so they are shown on it. One tile carries the state, the
    banner carries an overdue one, and the fuel boxes of the window that is due are
    ringed — which is where the figure has to go. */
 function refreshFuel(){
+  // Rebuilt here rather than only on render: which waypoints a window covers moves
+  // with the offset, and the offset changes every time an ATO is entered.
+  const off = RESULT.length ? currentOffset() : 0;
+  FUEL = fuelChecks(off);
   document.querySelectorAll('#tbl td.fu.due').forEach(td => td.classList.remove('due', 'late'));
   const tile = $('#stFuel');
   if (!FUEL.length){
@@ -2394,12 +2470,12 @@ function refreshFuel(){
     if (tile){ tile.querySelector('b').textContent = '—'; tile.querySelector('span').textContent = 'Fuel check'; }
     return;
   }
-  const late = FUEL.filter(c => fuelState(c) === 'late');
+  const late = FUEL.filter(c => fuelState(c, off) === 'late');
   // The one to act on: the earliest overdue window, or failing that the next due.
-  const open = late[0] || FUEL.find(c => fuelState(c) !== 'done');
+  const open = late[0] || FUEL.find(c => fuelState(c, off) !== 'done');
 
   if (tile){
-    const st = open ? fuelState(open) : 'done';
+    const st = open ? fuelState(open, off) : 'done';
     const d = open ? sinceDue(open.due) : 0;
     tile.className = 'stat ' + (st === 'late' ? 'bad' : st === 'soon' ? 'warn' : '');
     tile.querySelector('b').textContent = open ? fmt(open.due) : 'done';
@@ -2409,10 +2485,10 @@ function refreshFuel(){
       : `Fuel check · in ${-d} min`;
   }
 
-  if (open && fuelState(open) !== 'done'){
-    const p = fuelPoint(open), row = p && rowOf(p.i);
+  if (open && fuelState(open, off) !== 'done'){
+    const p = fuelPoint(open, off), row = p && rowOf(p.i);
     const td = row && row.querySelector('td.fu');
-    if (td){ td.classList.add('due'); td.classList.toggle('late', fuelState(open) === 'late'); }
+    if (td){ td.classList.add('due'); td.classList.toggle('late', fuelState(open, off) === 'late'); }
   }
 
   late.length ? msg('#m6', late.length === 1
@@ -2730,7 +2806,7 @@ const outName = () => NAME.replace(/\.pdf$/i, '') + '_ETO.pdf';
 
 $('#dl').onclick = async () => {
   const missing = CHECKS.filter(c => ['late','part','soon','wait'].includes(chkState(c)));
-  const noFuel = FUEL.filter(c => fuelState(c) === 'late');
+  const noFuel = FUEL.filter(c => fuelState(c, currentOffset()) === 'late');
   const warn = [];
   if (missing.length) warn.push(
     `${missing.length} altimeter cross-check${missing.length > 1 ? 's are' : ' is'} not recorded `

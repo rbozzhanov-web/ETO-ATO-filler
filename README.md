@@ -100,7 +100,9 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    points fade back, the last one passed is shaded and the one you are running to
    is highlighted, and the table brings that row to its middle as the flight moves
    on. Only the table scrolls — the page stays where you left it — and it holds
-   still while a box has focus and for twenty seconds after you scroll by hand.
+   still for twenty seconds after you scroll it or type in it. Focus is not what
+   stops it: Enter steps from one box to the next, so a box stays focused for the
+   rest of the flight.
    The highlight follows the plan rather than your typing, so it stays right when
    the actuals are a few points behind.
 5. Record the hourly altimeter cross-checks. The app works out which waypoint
@@ -121,6 +123,11 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    fuel boxes of the window in question are ringed so it is plain where the
    reading goes. Any one of them will do. Saving with a check overdue asks for
    confirmation.
+   The windows follow the flight rather than the paper: a waypoint counts towards the
+   window it is actually reached in, moved by however far the flight is running from
+   plan. A direct that cuts out everything in a half-hour does not cancel that check —
+   the clock is what the rule runs on — so it is written on the next waypoint overflown
+   instead. Only past the end of the flight is a window dropped.
 7. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
    or send it to ForeFlight.
 8. **Open charts** to page through the wind components and the significant
@@ -129,9 +136,9 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 When a scroll comes to rest near the start of a card, it is carried the rest of the way onto it.
 This runs from the scroll gesture, not from CSS snapping: it fires only once your own scroll has
 stopped, so it can never move the page while a plan is being read in and cards are appearing. It
-holds still while a box has focus or a sheet is open, and the top of the page counts as a resting
-place of its own, so a short scroll near the header comes back to it rather than being pulled
-past.
+holds still while the on-screen keyboard is up or a sheet is open, and the top of the page counts
+as a resting place of its own, so a short scroll near the header comes back to it rather than
+being pulled past.
 
 The button in the header switches between light and dark themes; the choice is remembered.
 
@@ -160,7 +167,12 @@ find the file again. Cross-checks that have already sounded do not sound a secon
 When ATC shortcuts the route, press **Direct to…** and tap the waypoint you are cleared to. The
 waypoints cut out stay where they are, struck through and faded — the order has to keep matching
 the paper form, because that is where the ATOs are written — and the target is marked **DCT**.
-The highlight steps over the skipped ones.
+The live highlight steps over the skipped ones.
+
+They are not gone from the sky, though: the aeroplane still goes past them, so they keep their own
+place on the clock. The one you are level with is shaded and marked **ABEAM**, the one after it is
+shaded more faintly still, and both are quieter than the live route so the two can never be read
+for each other. Undoing the direct takes the marks away with it.
 
 Nothing about this reaches the document and no ETO is rewritten; it only moves the highlight.
 The chip in the toolbar undoes it, and each direct remembers exactly which waypoints it cut out,
