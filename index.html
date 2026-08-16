@@ -142,8 +142,12 @@ button.sm{padding:9px 15px;font-size:13.5px;min-height:38px}
 .stat span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
 /* The wall clock is the one figure here that is not read off the plan. */
 .stat.live b{color:var(--gold);font-variant-numeric:tabular-nums}
-/* It sits at the far end of the takeoff row, clear of the boxes but on the same line. */
-#stClock{margin-left:auto;padding-bottom:2px}
+/* Next to Calculate rather than adrift at the far end of the row, and built like the
+   HHMM group beside it — label above, figure below — so the row reads as one line of
+   labels over one line of values instead of a stack straddling the button. */
+#stClock b{display:flex;align-items:center;min-height:54px;   /* the HHMM box's height */
+  font:700 20px/1 ui-monospace,Menlo,monospace;color:var(--gold);
+  font-variant-numeric:tabular-nums}
 .stat.warn b{color:var(--warn)}
 .stat.bad b{color:var(--err)}
 /* The fuel box a due check has to be written into. */
@@ -398,7 +402,7 @@ td.diff{text-align:right;font-weight:700}
            the figures above the table, which do not exist until Calculate has run —
            so the one figure needed in order to type the takeoff time was the one
            missing while it was being typed. -->
-      <div class="stat live" id="stClock"><b id="stUtc">--:--:--</b><span>UTC now</span></div>
+      <div id="stClock"><label>UTC now</label><b id="stUtc">--:--:--</b></div>
     </div>
     <div class="hint hide" id="fpl"></div>
     <div class="msg" id="m2"></div>

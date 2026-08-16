@@ -91,9 +91,10 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    be compared against the planned one, and it is never written into the document.
 3. Enter the takeoff (airborne) time in UTC, four digits: `0210`.
    The button next to it fills in the ETD from the plan — but that is off-block
-   time and takeoff is normally later, so check it. The **UTC now** clock is at the
-   end of that same row, ticking from the moment the plan loads, so the time you
-   need in order to fill the box is beside the box.
+   time and takeoff is normally later, so check it. The **UTC now** clock sits beside
+   Calculate on the same row, laid out like the box itself — label above, figure
+   below — and ticks from the moment the plan loads, so the time you need in order
+   to fill the box is next to the box.
    The card then opens underneath
    into the waypoint table: entering the time and reading what it produces is one
    job, so it is one card.
