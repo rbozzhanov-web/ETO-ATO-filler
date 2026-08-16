@@ -145,7 +145,7 @@ public struct Notam: Equatable {
     public let text: String
 }
 
-public enum AirportGroup: String, Equatable {
+public enum AirportGroup: String, Equatable, CaseIterable {
     case flight, fir, other
 
     public var title: String {
@@ -168,7 +168,7 @@ public struct Airport: Equatable {
     public var notams: [Notam] = []
     public var company: [Notam] = []
 
-    var isEmpty: Bool {
+    public var isEmpty: Bool {
         metar.isEmpty && taf.isEmpty && notams.isEmpty && company.isEmpty
     }
 

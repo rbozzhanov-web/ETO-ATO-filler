@@ -44,7 +44,7 @@ public struct DocumentKey: Codable, Equatable {
 /// Every failure here is deliberately non-fatal: losing the resume is an inconvenience,
 /// and a full disk or a protected-data-unavailable moment must never stop the app from
 /// working the flight in front of it.
-public final class SessionStore {
+public final class SessionStore: @unchecked Sendable {
 
     private let directory: URL
     private let fileManager = FileManager.default

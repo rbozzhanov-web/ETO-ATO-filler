@@ -1,7 +1,7 @@
 import Foundation
 
 /// An RGB colour for the print palette, 0…1 per channel.
-public struct PDFColor: Equatable {
+public struct PDFColor: Equatable, Sendable {
     public let r: Double, g: Double, b: Double
     public init(r: Double, g: Double, b: Double) { self.r = r; self.g = g; self.b = b }
 

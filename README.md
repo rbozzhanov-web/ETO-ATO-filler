@@ -5,6 +5,12 @@ No network access after installation, nothing is uploaded anywhere.
 
 Requires iPadOS 16.4 or newer (`DecompressionStream` is needed to inflate PDF streams).
 
+> **There is also a native app.** `ios/` holds a Swift rewrite of everything below — the same
+> document, the same arithmetic, the same print colours, built as a real iPadOS/iOS app
+> rather than a page in Safari. It installs from Xcode instead of from a web address, and it
+> can have a plan opened straight into it from Files or Mail. See [`ios/README.md`](ios/README.md).
+> This web version is not going anywhere; the two read the same plans and write the same overlay.
+
 ---
 
 ## Option 1. Home screen icon (recommended)

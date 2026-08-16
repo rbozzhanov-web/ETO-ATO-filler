@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Only the keys Xcode cannot generate from build settings live here; the rest come
+	     from INFOPLIST_KEY_* and are merged in at build time. -->
+
+	<!-- The plan can be handed to the app from Files, Mail or another app. -->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>PDF flight plan</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.adobe.pdf</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- Open a plan where it sits rather than on a copy, and leave saved documents
+	     reachable in Files. -->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+
+	<!-- The app never talks to the network. Declared so the point is on the record and an
+	     accidental request fails loudly rather than quietly succeeding. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+	</dict>
+</dict>
+</plist>

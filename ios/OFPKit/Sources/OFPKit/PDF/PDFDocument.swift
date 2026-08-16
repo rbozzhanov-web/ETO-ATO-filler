@@ -32,17 +32,23 @@ public struct PDFPage {
 /// the file, and no more. Built for Air Astana flight plans — unencrypted, a classic xref
 /// table, uncompressed objects — and it says so plainly rather than guessing when it meets
 /// something else.
-public final class PDFMiniDocument {
+///
+/// Every stored property is written once, during `init`, and never again — including the
+/// page list, which is walked eagerly rather than cached on first use precisely so that
+/// there is no mutable state. That is what makes it safe to hand to a background task,
+/// which is where chart images are decoded.
+public final class PDFMiniDocument: @unchecked Sendable {
 
     public let bytes: [UInt8]
     public private(set) var xref: [Int: Int] = [:]
     public private(set) var trailer: [String: PDFObject] = [:]
 
-    private var pageCache: [PDFPage]?
+    private var pageList: [PDFPage] = []
 
     public init(bytes: [UInt8]) throws {
         self.bytes = bytes
         try readXref()
+        pageList = Self.walkPages(self)
     }
 
     // MARK: - Cross-reference table
@@ -214,11 +220,11 @@ public final class PDFMiniDocument {
 
     // MARK: - Page tree
 
-    public func pages() -> [PDFPage] {
-        if let pageCache { return pageCache }
+    public func pages() -> [PDFPage] { pageList }
+
+    private static func walkPages(_ document: PDFMiniDocument) -> [PDFPage] {
         var out = [PDFPage]()
-        guard let root = resolve(trailer["Root"])?.dictValue else {
-            pageCache = []
+        guard let root = document.resolve(document.trailer["Root"])?.dictValue else {
             return []
         }
 
@@ -229,7 +235,7 @@ public final class PDFMiniDocument {
                 if visited.contains(r) { return }
                 visited.insert(r)
             }
-            guard let node = resolve(nodeRef)?.dictValue else { return }
+            guard let node = document.resolve(nodeRef)?.dictValue else { return }
             let resources = node["Resources"] ?? inheritedResources
             let box = node["MediaBox"] ?? inheritedBox
 
@@ -237,12 +243,13 @@ public final class PDFMiniDocument {
                 out.append(PDFPage(
                     ref: nodeRef.refValue ?? -1,
                     dict: node,
-                    resources: resolve(resources)?.dictValue,
-                    mediaBox: resolve(box)?.arrayValue?.compactMap { resolve($0)?.numberValue }
+                    resources: document.resolve(resources)?.dictValue,
+                    mediaBox: document.resolve(box)?.arrayValue?
+                        .compactMap { document.resolve($0)?.numberValue }
                 ))
                 return
             }
-            for kid in resolve(node["Kids"])?.arrayValue ?? [] {
+            for kid in document.resolve(node["Kids"])?.arrayValue ?? [] {
                 walk(kid, inheritedResources: resources, inheritedBox: box)
             }
         }
@@ -250,7 +257,6 @@ public final class PDFMiniDocument {
         if let pagesRef = root["Pages"] {
             walk(pagesRef, inheritedResources: nil, inheritedBox: nil)
         }
-        pageCache = out
         return out
     }
 }
