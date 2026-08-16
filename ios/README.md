@@ -27,7 +27,7 @@ ios/
       Domain/                  the OFP parsers — waypoints, fields, weather, charts
       Logic/                   time, progress, checks, the overlay
       State/                   what is saved between launches
-    Tests/OFPKitTests/         94 tests, and the script that builds their fixtures
+    Tests/OFPKitTests/         95 tests, and the scripts that build their fixtures
 ```
 
 The split is the point. **OFPKit has no dependency on UIKit, SwiftUI or Core Graphics**, so
