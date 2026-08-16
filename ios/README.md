@@ -1,5 +1,7 @@
 # OFP Companion — the native iPadOS / iOS app
 
+[![iOS app](https://github.com/rbozzhanov-web/ETO-ATO-filler/actions/workflows/ios.yml/badge.svg)](https://github.com/rbozzhanov-web/ETO-ATO-filler/actions/workflows/ios.yml)
+
 A Swift rewrite of the web app in the repository root. Same document, same arithmetic, same
 print colours; a real app instead of a page in Safari.
 
@@ -89,16 +91,17 @@ Inside Xcode the same tests run under **Product → Test** once the package is o
 
 ## State of the work
 
-**OFPKit is built and tested.** 94 tests cover inflate against zlib at every level, the PDF
-engine end to end, all the OFP parsers, the flight arithmetic and the overlay — including a
-test that the saved file is byte-identical to the original for its whole original length.
-They were run on Linux, where this port was written.
+**It builds, and the tests pass.** Every push runs the whole thing on a macOS runner: 95
+OFPKit tests, then the app compiled against the real SDK, then an archive. The badge above
+is that pipeline.
 
-**The SwiftUI layer has not been compiled.** There was no Mac and no iOS SDK available, so
-every file was checked for syntax with `swiftc -parse` and reviewed by hand, but not
-type-checked against UIKit or SwiftUI. Expect the first Xcode build to want a few small
-corrections — a modifier signature, an inference hint. The logic underneath it is the part
-that was verified.
+The 95 tests cover inflate against zlib at every level, the PDF engine end to end, all the
+OFP parsers, the flight arithmetic and the overlay — including a test that the saved file is
+byte-identical to the original for its whole original length.
+
+**What has not happened is anyone using it.** It has never been run on a real iPad against a
+real flight plan. Compiling proves the types line up, not that a column is read off the right
+place or that a card is legible in daylight. That part is still ahead.
 
 The tests run against a synthetic flight plan built by
 `OFPKit/Tests/OFPKitTests/Fixtures/make_ofp.py`, which reproduces the structure the parser
@@ -106,6 +109,10 @@ keys on: Courier text at fixed coordinates, the four-dot ETO column with its ATO
 blanks, a flight plan split across a page break, weather pages, and both chart encodings.
 Real packages are operational documents and are not in the repository, so **the first thing
 worth doing is loading a real plan and checking the waypoint count against the paper.**
+
+The port went in having never met a compiler — there was no Mac on the machine it was
+written on. The macOS runner found exactly one error in the SwiftUI layer, which is in the
+history as the commit after the workflow.
 
 ---
 
