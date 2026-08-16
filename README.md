@@ -91,8 +91,10 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    be compared against the planned one, and it is never written into the document.
 3. Enter the takeoff (airborne) time in UTC, four digits: `0210`.
    The button next to it fills in the ETD from the plan — but that is off-block
-   time and takeoff is normally later, so check it.
-4. Enter actual ATO and remaining fuel per waypoint. Enter jumps to the next
+   time and takeoff is normally later, so check it. The card then opens underneath
+   into the waypoint table: entering the time and reading what it produces is one
+   job, so it is one page.
+   Enter actual ATO and remaining fuel per waypoint. Enter jumps to the next
    field. Everything is saved automatically. The figures above the table carry
    the UTC clock, ticking every second and shown in gold so it is not mistaken
    for a time read off the plan, next to the waypoint you are running to.
@@ -105,17 +107,7 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    rest of the flight.
    The highlight follows the plan rather than your typing, so it stays right when
    the actuals are a few points behind.
-5. Record the hourly altimeter cross-checks. The app works out which waypoint
-   falls on each full hour after takeoff and lists one row per hour; enter
-   ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly
-   under that waypoint, so the time is read off the ETO/ATO right above it.
-   Each row tracks its own due time against the device clock in UTC and turns
-   red once the check is overdue, with a short tone when it first falls due
-   (switch it off with the checkbox — the choice is remembered, and tapping the
-   clock beside it no longer knocks it off). No check is raised inside the last
-   hour before arrival. Saving the PDF with checks still missing asks for
-   confirmation first.
-6. Watch the **fuel check** figure above the table. Company rule is a fuel check
+   Watch the **fuel check** figure above the table. Company rule is a fuel check
    on overflying a waypoint, or at least every 30 minutes, and it is watched on
    the waypoint card itself because the record it needs — the fuel column — is
    already there. The figure shows when the next check is due, amber as it comes
@@ -128,17 +120,40 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    plan. A direct that cuts out everything in a half-hour does not cancel that check —
    the clock is what the rule runs on — so it is written on the next waypoint overflown
    instead. Only past the end of the flight is a window dropped.
-7. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
+4. Record the hourly altimeter cross-checks. The app works out which waypoint
+   falls on each full hour after takeoff and lists one row per hour; enter
+   ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly
+   under that waypoint, so the time is read off the ETO/ATO right above it.
+   Each row tracks its own due time against the device clock in UTC and turns
+   red once the check is overdue, with a short tone when it first falls due
+   (switch it off with the checkbox — the choice is remembered, and tapping the
+   clock beside it no longer knocks it off). No check is raised inside the last
+   hour before arrival. Saving the PDF with checks still missing asks for
+   confirmation first.
+5. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
    or send it to ForeFlight.
-8. **Open charts** to page through the wind components and the significant
+6. **Open charts** to page through the wind components and the significant
    weather sheets on their own.
 
-When a scroll comes to rest near the start of a card, it is carried the rest of the way onto it.
-This runs from the scroll gesture, not from CSS snapping: it fires only once your own scroll has
-stopped, so it can never move the page while a plan is being read in and cards are appearing. It
-holds still while the on-screen keyboard is up or a sheet is open, and the top of the page counts
-as a resting place of its own, so a short scroll near the header comes back to it rather than
-being pulled past.
+## Turning the page
+
+The page does not scroll freely. One flick turns to the next card and it lands in the same place
+every time, so there is nothing in between to be left at. Swipe up or down, use the arrow keys or
+PageUp / PageDown, or tap the **‹ 3 / 7 ›** control at the bottom right. Home and End go to the
+first and last page.
+
+There are seven pages: load the plan, document fields, takeoff time and the actuals, altimeter
+cross-checks, export, weather and NOTAMs, charts. A card taller than the screen is stepped through
+a screenful at a time before the next one is reached, so nothing is out of reach.
+
+The boxes inside a card — the waypoint table, the NOTAM list, the charts — keep scrolling on their
+own. A flick over one of them belongs to that box; the page turns once the box has nothing left to
+give in that direction.
+
+Nothing moves the view but a turn you asked for, so cards appearing as a plan is read in cannot
+shift what you are looking at. Two earlier attempts at this — CSS scroll snapping, then a pull
+onto the nearest card — both had to guess where you meant to stop, and both moved the page by
+themselves.
 
 The button in the header switches between light and dark themes; the choice is remembered.
 
