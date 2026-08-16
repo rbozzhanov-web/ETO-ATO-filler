@@ -53,12 +53,29 @@ your own free Apple ID, using one of these:
 | **[TrollStore](https://github.com/opa334/TrollStore)** | an iPad on a version it supports | permanent, no refreshing |
 | **Xcode** | a Mac, and the source below | 7 days free, a year with a paid account |
 
-A paid Apple Developer account ($99/year) raises the seven days to a year and lets the build
-be signed in CI instead — see the note at the end.
-
 Whichever route: download `OFP-Companion.ipa` from the release, hand it to the tool, and it
 installs like any other app. Nothing about the app itself changes — it never reaches the
 network either way.
+
+### Why there is no one-tap install
+
+Because Apple does not allow one. Installing without a desktop tool in the way — tapping a
+link and having the app appear — needs the `.ipa` signed with a **distribution** certificate,
+and those are issued only inside the paid Apple Developer Program ($99/year). A free Apple ID
+gets a development certificate: seven days, over a cable, re-signed locally. No amount of CI
+changes that; the same wall stands in Xcode on your own Mac.
+
+With a paid account two routes open up, and both can be automated here:
+
+- **Ad-hoc over the air.** A signed build plus a `manifest.plist` served over HTTPS — GitHub
+  Pages already hosts the web version and would do. Tap the link in Safari on the iPad and it
+  installs. Each device's UDID has to be registered first, up to 100 a year, and the build
+  lasts a year with no review.
+- **TestFlight.** An invitation link; the tester taps Install. No UDIDs, up to 10,000 testers,
+  updates arrive on their own. Builds last 90 days and external testers need a light review.
+
+Neither is written yet — there is no account to write them against. Both are a day's work
+once there is one.
 
 ---
 
