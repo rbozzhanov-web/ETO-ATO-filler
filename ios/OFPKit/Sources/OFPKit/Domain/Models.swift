@@ -94,6 +94,14 @@ public struct OFPIdentity: Equatable {
     public var route: String?
     public var request: String?
     public var issued: String?
+
+    /// The strip under the title: `ALAICN01 · REQ 83104 · 13/08/2026 15:26Z`, so the
+    /// document on screen can be checked against the one the crew was handed.
+    public var summary: String {
+        [route, request.map { "REQ \($0)" }, issued]
+            .compactMap { $0 }
+            .joined(separator: "  ·  ")
+    }
 }
 
 public struct KeyFigures: Equatable {
@@ -142,6 +150,21 @@ public struct Notam: Equatable {
     public let estimated: Bool
     public let subject: String?
     public let text: String
+
+    /// `30JUN 0500Z → 30SEP 0500Z`, with EST appended where the end is only estimated.
+    /// Nil when the item carries no validity at all.
+    public var validityText: String? {
+        guard let from else { return nil }
+        return "\(Notam.stamp(from)) → \(Notam.stamp(to ?? "?"))" + (estimated ? " EST" : "")
+    }
+
+    /// Validity is `DDMMMHHMM`, sometimes with a spanning year, or a word such as PERM /
+    /// WIE / UFN. Only the first shape is reformatted; the rest pass through untouched.
+    static func stamp(_ s: String) -> String {
+        guard let m = Pattern("^(\\d{2}[A-Z]{3})(\\d{4})(?:\\s+(\\d{4}))?$").first(s),
+              let day = m[1], let time = m[2] else { return s }
+        return "\(day) \(time)Z" + (m[3].map { " \($0)" } ?? "")
+    }
 }
 
 public enum AirportGroup: String, Equatable, CaseIterable {

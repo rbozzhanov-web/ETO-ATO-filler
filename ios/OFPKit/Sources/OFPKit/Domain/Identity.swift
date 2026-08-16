@@ -60,15 +60,6 @@ enum Identity {
         return empty ? nil : result
     }
 
-    /// The line shown to the crew: `ALAICN01 · REQ 83104 · 13/08/2026 15:26Z`.
-    public static func summary(_ identity: OFPIdentity) -> String {
-        var parts: [String] = []
-        if let route = identity.route { parts.append(route) }
-        if let request = identity.request { parts.append("REQ \(request)") }
-        if let issued = identity.issued { parts.append(issued) }
-        return parts.joined(separator: "  ·  ")
-    }
-
     private static let costIndex = Pattern("\\bCI(\\d{2,3})\\b")
 
     /// The weights the crew checks at a glance. Each label is anchored to a word boundary,

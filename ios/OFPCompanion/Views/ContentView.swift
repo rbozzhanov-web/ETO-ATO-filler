@@ -86,7 +86,7 @@ struct HeaderView: View {
                 .font(.system(size: 13)).foregroundStyle(palette.dim)
 
             if let identity = model.plan?.identity {
-                Text(Identity.summary(identity))
+                Text(identity.summary)
                     .font(.mono(12.5, weight: .bold))
                     .kerning(0.4)
                     .foregroundStyle(palette.accent)

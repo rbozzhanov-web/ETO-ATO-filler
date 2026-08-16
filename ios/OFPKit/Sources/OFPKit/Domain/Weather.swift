@@ -103,8 +103,9 @@ enum WeatherReader {
                     byCode[code] = airport
                 }
             case .metar, .taf:
-                let text = NSRegularExpression.stringByReplacing(
+                var text = NSRegularExpression.stringByReplacing(
                     pattern: "\\s*=$", in: body, with: "")
+                text = spaced(text)
                 var airport = at(item.code)
                 if item.kind == .metar { airport.metar.append(text) } else { airport.taf.append(text) }
                 byCode[item.code] = airport
@@ -217,17 +218,10 @@ enum WeatherReader {
             }
     }
 
-    /// NOTAM validity is `DDMMMHHMM`, sometimes with a spanning year, or a word such as
-    /// PERM / WIE / UFN. Only the first shape is reformatted; the rest pass through.
-    public static func stamp(_ s: String) -> String {
-        guard let m = Pattern("^(\\d{2}[A-Z]{3})(\\d{4})(?:\\s+(\\d{4}))?$").first(s),
-              let day = m[1], let time = m[2] else { return s }
-        return "\(day) \(time)Z" + (m[3].map { " \($0)" } ?? "")
-    }
-
     /// The back-of-package bulletin runs the keyword into the code — "SPECIZWYN" — which is
-    /// unreadable at a glance.
-    public static func spaced(_ s: String) -> String {
+    /// unreadable at a glance. Fixed as the report is read, so what is stored is what is
+    /// shown and what is copied.
+    static func spaced(_ s: String) -> String {
         NSRegularExpression.stringByReplacing(
             pattern: "^(METAR|SPECI|TAF)([A-Z]{4}\\s)", in: s, with: "$1 $2")
     }
