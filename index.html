@@ -147,25 +147,36 @@ td.fu.late input{border-color:var(--err);background:color-mix(in srgb,var(--err)
 .toolbar .sep{flex:1}
 .saved{font-size:12px;color:var(--dim)}
 
-/* Fade and chevron at the foot of a box that has more below; both vanish at the end. */
-/* A box that scrolls says so at both ends: a fade and a chevron at the foot while
+/* A box that scrolls says so at both ends: a strip and an arrow at the foot while
    there is more below, and the same at the head while there is more above. Each
    clears itself at its own end. In the waypoint table the top one sits under the
    sticky header — --stickyh is its measured height — so it marks the first hidden
-   row instead of painting over the column titles. */
-.scrollwrap{position:relative}
-.scrollwrap::after,.scrollwrap::before{position:absolute;left:1px;right:1px;height:38px;
-  display:grid;justify-items:center;font:600 15px/1 -apple-system,system-ui,sans-serif;
-  color:var(--dim);pointer-events:none;opacity:0;transition:opacity .2s;z-index:3}
-.scrollwrap::after{content:"⌄";bottom:1px;align-items:end;padding-bottom:3px;
-  border-radius:0 0 8px 8px;background:linear-gradient(transparent,var(--panel) 78%)}
-/* The mirror of the foot's stop, not just its direction: solid for the same ~8px
-   against its own edge, then fading. At 78% it was the other way round and laid
-   thirty opaque pixels straight over the first line. */
-.scrollwrap::before{content:"⌃";top:var(--stickyh,1px);align-items:start;padding-top:3px;
-  background:linear-gradient(var(--panel) 22%,transparent)}
+   row instead of painting over the column titles.
+   The strip is solid for its first 22px — past the arrow and past a whole line of
+   text — so no half-clipped line shows under the arrow, and only then fades into
+   the content. --fade is the colour actually painted behind that particular box;
+   at 8px of solid it was a wash the text read straight through. */
+.scrollwrap{position:relative;--fade:var(--panel)}
+.fplbox .scrollwrap{--fade:var(--panel2)}
+.sheet .scrollwrap{--fade:#fff;--chev:#5d6b7a}   /* the chart box is white in both themes */
+.scrollwrap::after,.scrollwrap::before{content:"";position:absolute;left:1px;right:1px;
+  height:38px;pointer-events:none;opacity:0;transition:opacity .2s;z-index:3}
+.scrollwrap::after{bottom:1px;border-radius:0 0 8px 8px;
+  background:linear-gradient(transparent 0,var(--fade) 16px 38px)}
+.scrollwrap::before{top:var(--stickyh,1px);
+  background:linear-gradient(var(--fade) 0 22px,transparent 38px)}
 .scrollwrap[data-more]::after{opacity:1}
 .scrollwrap[data-prev]::before{opacity:1}
+/* One shape used at both ends: the head arrow is the foot arrow turned through
+   180°, so the two cannot differ the way two Unicode arrowheads did — those were
+   separate glyphs and each took whatever the platform's fallback font gave it. */
+.chev{position:absolute;left:50%;width:10px;height:10px;pointer-events:none;opacity:0;
+  transition:opacity .2s;z-index:4;
+  border-left:2px solid var(--chev,var(--dim));border-bottom:2px solid var(--chev,var(--dim))}
+.chev.dn{bottom:7px;transform:translateX(-50%) rotate(-45deg)}
+.chev.up{top:calc(var(--stickyh,1px) + 7px);transform:translateX(-50%) rotate(135deg)}
+.scrollwrap[data-more] .chev.dn{opacity:1}
+.scrollwrap[data-prev] .chev.up{opacity:1}
 .tblbox{max-height:min(56vh,520px);overflow:auto;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px}
 table{border-collapse:collapse;width:100%;font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
@@ -463,13 +474,15 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 19</h3>
+        <h3>New in version 19.1</h3>
         <ul>
-          <li>The fade at the top of a scrolling list no longer blanks its first line — it now
-              mirrors the one at the foot instead of being its opposite.</li>
-          <li>In portrait the theme switch stays beside <b>User guide</b> at the top right,
-              rather than dropping to the next row on its own.</li>
+          <li>The two scroll arrows are now one shape, the upper one being the lower one turned
+              upside down, instead of two characters the device drew differently.</li>
+          <li>The strip at each end of a scrolling box is solid for its full depth, in that box's
+              own background colour, so no half-line of text shows through it or under the arrow.</li>
         </ul>
+        <p>A release that only fixes things takes a fractional number — this one follows
+           version 19 without adding to it.</p>
       </div>
 
       <h3>Quick start</h3>
@@ -633,7 +646,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 19 &nbsp;·&nbsp; published 16 Aug 2026 01:52 UTC</span></p>
+      <span class="build">Version 19.1 &nbsp;·&nbsp; published 16 Aug 2026 04:20 UTC</span></p>
 
     </div>
   </div>
@@ -1142,6 +1155,12 @@ function scrollHint(el){
   };
   if (!el.dataset.hinted){
     el.dataset.hinted = '1';
+    // The arrows are elements rather than pseudo-content: a pseudo-element cannot be
+    // rotated apart from the strip it also carries, and both of the wrap's are spent
+    // on the two strips.
+    if (!wrap.querySelector('.chev'))
+      wrap.insertAdjacentHTML('beforeend',
+        '<i class="chev up" aria-hidden="true"></i><i class="chev dn" aria-hidden="true"></i>');
     el.addEventListener('scroll', upd, { passive: true });
     if (typeof ResizeObserver !== 'undefined') new ResizeObserver(upd).observe(el);
   }

@@ -33,6 +33,10 @@ pwa/icon-512.png
 
 To update: upload the new `index.html` and bump the `V` constant in `sw.js`.
 
+Versions are whole numbers while there is something new in them. A release that only fixes
+things takes a fractional number instead — 19.1 after 19, 19.1.1 after that — so the number
+says at a glance whether anything has changed in how the app is used.
+
 The app then updates itself — there is no need to remove and re-add the icon.
 
 The page is fetched from the network whenever there is one, so a new version is picked up on
@@ -191,10 +195,15 @@ exactly as old as the document: re-brief from the current source before acting o
 What is not on the card: SIGMETs, runway lengths, and the company NOTAMs that belong to no
 aerodrome (ADMIN, RELEASE, EQUIP and the like).
 
-A box that scrolls says so at both ends: a fade and a chevron below while there is more to come,
+A box that scrolls says so at both ends: a strip and an arrow below while there is more to come,
 and the same above while there is more behind. Each clears itself at its own end, and in the
 waypoint table the upper one sits under the sticky column headings so it marks the first hidden
 row rather than covering the titles.
+
+The strip is solid in the box's own background colour for its full depth before it fades into
+the content, so no half-clipped line of text shows in it or under the arrow. The two arrows are
+one shape: the upper one is the lower one turned through 180°, rather than two characters left
+to whatever the device's fallback font makes of each.
 
 ## Wind components and weather charts
 
