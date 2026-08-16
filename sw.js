@@ -1,5 +1,5 @@
 /* OFP Companion — offline cache. The whole app lives in index.html. */
-const V = 'eto-filler-v21';
+const V = 'eto-filler-v22';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const NET_MS = 2500;            // give the network this long before falling back to the cache
 
