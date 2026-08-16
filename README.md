@@ -22,11 +22,16 @@ Everything required is in the `pwa/` folder:
 
 ```
 pwa/index.html
+pwa/journey-log.html
 pwa/sw.js
 pwa/manifest.webmanifest
 pwa/icon-192.png
 pwa/icon-512.png
 ```
+
+There are two pages: `index.html` is the OFP companion described below, and
+`journey-log.html` is the Journey Log form. Each links to the other from its
+header, and both are cached, so either can be opened offline.
 
 1. Upload the **contents** of `pwa/` to any https host.
    GitHub Pages is free for public repositories: create a repo, put the files in
@@ -97,8 +102,10 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    be compared against the planned one, and it is never written into the document.
 3. Enter the takeoff (airborne) time in UTC, four digits: `0210`.
    The button next to it fills in the ETD from the plan — but that is off-block
-   time and takeoff is normally later, so check it.
-4. Enter actual ATO and remaining fuel per waypoint. Enter jumps to the next
+   time and takeoff is normally later, so check it. The card then opens underneath
+   into the waypoint table: entering the time and reading what it produces is one
+   job, so it is one page.
+   Enter actual ATO and remaining fuel per waypoint. Enter jumps to the next
    field. Everything is saved automatically. The figures above the table carry
    the UTC clock, ticking every second and shown in gold so it is not mistaken
    for a time read off the plan, next to the waypoint you are running to.
@@ -111,17 +118,7 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    rest of the flight.
    The highlight follows the plan rather than your typing, so it stays right when
    the actuals are a few points behind.
-5. Record the hourly altimeter cross-checks. The app works out which waypoint
-   falls on each full hour after takeoff and lists one row per hour; enter
-   ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly
-   under that waypoint, so the time is read off the ETO/ATO right above it.
-   Each row tracks its own due time against the device clock in UTC and turns
-   red once the check is overdue, with a short tone when it first falls due
-   (switch it off with the checkbox — the choice is remembered, and tapping the
-   clock beside it no longer knocks it off). No check is raised inside the last
-   hour before arrival. Saving the PDF with checks still missing asks for
-   confirmation first.
-6. Watch the **fuel check** figure above the table. Company rule is a fuel check
+   Watch the **fuel check** figure above the table. Company rule is a fuel check
    on overflying a waypoint, or at least every 30 minutes, and it is watched on
    the waypoint card itself because the record it needs — the fuel column — is
    already there. The figure shows when the next check is due, amber as it comes
@@ -134,17 +131,40 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    plan. A direct that cuts out everything in a half-hour does not cancel that check —
    the clock is what the rule runs on — so it is written on the next waypoint overflown
    instead. Only past the end of the flight is a window dropped.
-7. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
+4. Record the hourly altimeter cross-checks. The app works out which waypoint
+   falls on each full hour after takeoff and lists one row per hour; enter
+   ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly
+   under that waypoint, so the time is read off the ETO/ATO right above it.
+   Each row tracks its own due time against the device clock in UTC and turns
+   red once the check is overdue, with a short tone when it first falls due
+   (switch it off with the checkbox — the choice is remembered, and tapping the
+   clock beside it no longer knocks it off). No check is raised inside the last
+   hour before arrival. Saving the PDF with checks still missing asks for
+   confirmation first.
+5. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
    or send it to ForeFlight.
-8. **Open charts** to page through the wind components and the significant
+6. **Open charts** to page through the wind components and the significant
    weather sheets on their own.
 
-When a scroll comes to rest near the start of a card, it is carried the rest of the way onto it.
-This runs from the scroll gesture, not from CSS snapping: it fires only once your own scroll has
-stopped, so it can never move the page while a plan is being read in and cards are appearing. It
-holds still while the on-screen keyboard is up or a sheet is open, and the top of the page counts
-as a resting place of its own, so a short scroll near the header comes back to it rather than
-being pulled past.
+## Turning the page
+
+The page does not scroll freely. One flick turns to the next card and it lands in the same place
+every time, so there is nothing in between to be left at. Swipe up or down, use the arrow keys or
+PageUp / PageDown, or tap the **‹ 3 / 7 ›** control at the bottom right. Home and End go to the
+first and last page.
+
+There are seven pages: load the plan, document fields, takeoff time and the actuals, altimeter
+cross-checks, export, weather and NOTAMs, charts. A card taller than the screen is stepped through
+a screenful at a time before the next one is reached, so nothing is out of reach.
+
+The boxes inside a card — the waypoint table, the NOTAM list, the charts — keep scrolling on their
+own. A flick over one of them belongs to that box; the page turns once the box has nothing left to
+give in that direction.
+
+Nothing moves the view but a turn you asked for, so cards appearing as a plan is read in cannot
+shift what you are looking at. Two earlier attempts at this — CSS scroll snapping, then a pull
+onto the nearest card — both had to guess where you meant to stop, and both moved the page by
+themselves.
 
 The button in the header switches between light and dark themes; the choice is remembered.
 
@@ -257,9 +277,65 @@ Everything written is printed in bold Courier-Bold so it stands out from the for
 
 ---
 
+# Journey Log — Задание на полет
+
+`journey-log.html` is the second page. It is the paper Journey Log itself, drawn
+on screen: the same two landscape sheets, the same blue banding, the same column
+widths and 16.56pt rows, all measured off the issued document and laid out in
+points. Nothing is a rendering of the PDF — the form is redrawn, so every blank
+in it is a box you can type into.
+
+The boxes are tinted, which is the only thing on the page the paper does not
+have: the cells you fill in show pale blue, the cells the document was printed
+with do not. What you write goes down in blue so it reads apart from the form's
+own black.
+
+Both sheets are there, one under the other, with their own leg counts — four
+rows on the first, three on the second — because that is how the document was
+issued.
+
+## Filling it in
+
+Everything is editable, the printed content included, so the same form serves
+the next flight: the journey log number, the date and the captain across the
+top, the flight identity down the left of the leg table, and the crew roster.
+Those read as print until you put the cursor in them.
+
+- **Times take four digits.** `0340` becomes `03:40` when you leave the box.
+- **Blk and Flt work themselves out** — Blk from ATD and ATA, Flt from TKOF and
+  TDWN, past midnight included. They stay in the lighter weight while they are
+  worked out. Write your own figure in and the box is yours from then on; clear
+  it again and it goes back to following the times.
+- **Enter steps to the next box**, Shift+Enter back, in reading order across the
+  page. Tab does the same.
+- Fill-in boxes take capitals, as the form is written.
+- Everything is saved on the device as you type. **Reset** clears it and returns
+  the document as issued.
+
+Where a name or a heading is wider than its column — the device's font is rarely
+the Calibri the document was set in — it is set down a little until it fits, so a
+column never loses its last character.
+
+## Getting it onto paper
+
+**Print / PDF** puts the sheets out at their true size: A4 landscape, 297 × 210mm,
+one sheet per page, with the toolbar and the box tints left off. The browser's
+"Save as PDF" therefore gives back the same document with the entries in it.
+
+## Zoom
+
+The page is fitted to the window on opening. **−** and **+** step through fixed
+sizes and **Fit** returns to the window; the choice is remembered. The button in
+the header switches the surround between light and dark — the sheet itself stays
+white, because it is paper.
+
+---
+
 ## What is inside
 
-No external libraries — no pdf.js, no pdf-lib, no CDN. `index.html` carries its own
+No external libraries — no pdf.js, no pdf-lib, no CDN. `journey-log.html` is one
+file of plain HTML, CSS and script that draws the form and remembers what is
+typed into it; it reads no PDF at all. `index.html` carries its own
 minimal PDF engine: it reads text with coordinates out of FlateDecode streams and
 appends an overlay through an incremental update, so the original bytes of the
 document stay untouched and new content is simply added at the end of the file.
