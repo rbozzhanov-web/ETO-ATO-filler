@@ -1,0 +1,5 @@
+ios/OFPKit/.build/
+ios/**/xcuserdata/
+ios/**/*.xcworkspace/xcuserdata/
+.DS_Store
+__pycache__/
