@@ -131,12 +131,17 @@ past.
 
 The button in the header switches between light and dark themes; the choice is remembered.
 
-## Pasting a flight plan
+## Getting the plan in
 
-Besides picking the file, the plan can be pasted: copy the PDF and either press **Paste a PDF**
-or paste into the page. On a computer this always works. On the iPad it depends on what Safari
-exposes to a page through the Clipboard API and it may refuse — the app says so plainly, and
-the box above still picks the file.
+Tap the box and pick the file. On the iPad the PDF can also be **dragged out of Files** onto the
+page: put Files alongside in Split View or Slide Over, press and hold the plan, and drop it on
+the box.
+
+On a computer it can be pasted as well, with **Paste a PDF** or straight into the page. That
+button is not shown on the iPad. Safari's clipboard hands a page `text/plain`, `text/html`,
+`text/uri-list`, `image/png` and its own `web `-prefixed types — never `application/pdf` — and
+the paste event carries no files on iOS, so there is no route to a pasted PDF there however the
+page asks.
 
 ## If iPadOS closes the app
 

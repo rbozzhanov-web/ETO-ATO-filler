@@ -457,13 +457,12 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 17</h3>
+        <h3>New in version 18</h3>
         <ul>
-          <li>The fuel checks have moved <b>into the waypoint card</b>. They were derived from
-              its fuel column all along, so they are now shown on it: one figure among the
-              others, a warning when one is overdue, and a ring round the one fuel box the
-              reading goes into — the waypoint at the half-hour mark. The separate list of
-              windows is gone.</li>
+          <li><b>Paste a PDF</b> is gone from the iPad. Safari never hands a PDF to a web page,
+              so the button could only ever answer “no PDF on the clipboard” to someone who had
+              just copied one. It stays on a computer, where it works. On the iPad, pick the
+              file — or <b>drag it in from Files</b>, which has always worked.</li>
         </ul>
       </div>
 
@@ -511,11 +510,11 @@ td.diff{text-align:right;font-weight:700}
       <p>Rows watch the clock in UTC: amber when a check is close, red once it is overdue, with a
       short tone the first time. Saving with checks still missing asks for confirmation.</p>
 
-      <h3 class="new">Fuel checks</h3>
-      <p class="new">Company rule: a fuel check on overflying a waypoint, or at least every
+      <h3>Fuel checks</h3>
+      <p>Company rule: a fuel check on overflying a waypoint, or at least every
       30 minutes. This is watched on the waypoint card itself, because the record it needs — the
       fuel column — is already there.</p>
-      <p class="new">One figure among the others carries it: the time the next check is due,
+      <p>One figure among the others carries it: the time the next check is due,
       amber as it approaches and red once it has passed unrecorded, with a warning above the
       table. The fuel box of the waypoint the check falls on — the last one before the
       half-hour mark — is ringed, so it is plain where the reading goes. A figure entered at any
@@ -558,11 +557,13 @@ td.diff{text-align:right;font-weight:700}
       <p>They are as old as the document. Re-brief from the current source before acting on
       anything here.</p>
 
-      <h3>Pasting a flight plan</h3>
-      <p>Besides picking the file, the plan can be pasted: copy the PDF and either
-      press <b>Paste a PDF</b> or paste into the page. On a computer this always works. On the
-      iPad it depends on what Safari lets a page read from the clipboard, and it may refuse —
-      the app says so plainly and the box above still picks the file.</p>
+      <h3 class="new">Getting the plan in</h3>
+      <p class="new">Tap the box and pick the file. On the iPad you can also <b>drag the PDF
+      out of Files</b> onto the page — put Files alongside in Split View or Slide Over, press
+      and hold the plan, and drop it on the box.</p>
+      <p class="new">On a computer the plan can be pasted as well, with <b>Paste a PDF</b> or
+      straight into the page. That button is not shown on the iPad: Safari does not hand a PDF
+      to a web page at all, so it could never do anything there.</p>
 
       <h3>Updates</h3>
       <p>The app updates itself; the icon never needs removing and adding again. Open it once
@@ -626,7 +627,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 17 &nbsp;·&nbsp; published 15 Aug 2026 15:41 UTC</span></p>
+      <span class="build">Version 18 &nbsp;·&nbsp; published 16 Aug 2026 00:18 UTC</span></p>
 
     </div>
   </div>
@@ -1222,9 +1223,16 @@ drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over');
 $('#file').onchange = e => { if (e.target.files[0]) load(e.target.files[0]); };
 
 /* ---- pasting a PDF ----
-   Two routes, because they are available in different places: the paste event
-   carries the file on a desktop, while the button asks the Clipboard API, which
-   is all iPadOS offers — and only for the types Safari chooses to expose. */
+   A desktop convenience only. Safari's clipboard hands a page text/plain,
+   text/html, text/uri-list, image/png and its own "web " types — never
+   application/pdf — and the paste event carries no files on iOS either, so there
+   is no route to a pasted PDF on an iPad however the page asks. The button is
+   hidden there rather than left to answer "no PDF on the clipboard" to someone
+   who has just copied one. Dragging the file in from Files still works, and so
+   does the picker. */
+const APPLE_TOUCH = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (/Mac/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+if (APPLE_TOUCH) $('#paste').classList.add('hide');
 const pdfOf = list => [...(list || [])].find(f => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name));
 document.addEventListener('paste', e => {
   const f = pdfOf(e.clipboardData && e.clipboardData.files);
@@ -1238,13 +1246,17 @@ $('#paste').onclick = async () => {
     return;
   }
   try {
-    for (const item of await navigator.clipboard.read()){
+    const items = await navigator.clipboard.read();
+    for (const item of items){
       const type = item.types.find(t => /pdf$/i.test(t));
       if (!type) continue;
       const blob = await item.getType(type);
       return loadBuffer('pasted.pdf', blob.size, await blob.arrayBuffer(), false);
     }
-    msg('#m1', 'No PDF on the clipboard — copy the flight plan first, then paste.', 'warn');
+    // Name what was actually offered, so a report of this carries evidence.
+    const had = [...new Set(items.flatMap(i => i.types))].join(', ');
+    msg('#m1', 'No PDF on the clipboard' + (had ? ' — it offered: ' + had : '')
+             + '. Use the box above to pick the file.', 'warn');
   } catch (err){
     msg('#m1', 'The clipboard could not be read here (' + err.message
              + '). Use the box above to pick the file.', 'warn');
