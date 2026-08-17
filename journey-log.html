@@ -37,14 +37,22 @@ body{
 /* Added to the Home Screen the page runs under a translucent status bar, so the
    toolbar carries the inset itself and its own padding on top of it. */
 #bar{
+  --statusbar:env(safe-area-inset-top, 0px);
   position:sticky; top:0; z-index:50;
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  padding:calc(8px + env(safe-area-inset-top, 0px))
+  padding:calc(8px + var(--statusbar))
           calc(10px + env(safe-area-inset-right, 0px))
           8px
           calc(10px + env(safe-area-inset-left, 0px));
   background:var(--chrome-2); border-bottom:1px solid var(--chrome-line);
 }
+/* An iPad has no notch, so it reports no inset at all — and still draws the
+   status bar over the page. Once launched from the Home Screen the bar is
+   therefore given a floor to clear rather than an inset to trust. */
+@media (display-mode:standalone){
+  #bar{--statusbar:max(24px, env(safe-area-inset-top, 0px))}
+}
+html.standalone #bar{--statusbar:max(24px, env(safe-area-inset-top, 0px))}
 #bar h1{font-size:14px; font-weight:600; margin:0 6px 0 0; white-space:nowrap}
 #bar h1 span{color:var(--chrome-dim); font-weight:400}
 .grp{display:flex; align-items:center; gap:4px}
@@ -173,6 +181,11 @@ body.loaded #empty{display:none}
 body:not(.loaded) #stage,body:not(.loaded) #hint,
 body:not(.loaded) #zoomgrp,body:not(.loaded) #print,body:not(.loaded) #reset{display:none}
 </style>
+<script>
+/* Older iOS answers navigator.standalone but not the display-mode query, so
+   both are asked. Runs before the toolbar is laid out, so nothing jumps. */
+if (navigator.standalone) document.documentElement.classList.add('standalone');
+</script>
 
 <div id="bar">
   <h1>Journey Log <span>· Задание на полет</span></h1>
