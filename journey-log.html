@@ -57,7 +57,9 @@ body{
   padding-top:var(--statusbar);
   background:var(--panel); border-bottom:1px solid var(--gold);
 }
-.hd{
+/* Named apart from the sheet's own .hd, which marks the document's header
+   lines — one stylesheet serves both the chrome and the paper. */
+.barhd{
   max-width:1120px; margin:0 auto;
   display:flex; align-items:center; gap:18px; min-height:68.5px;
   padding:0 max(18px, env(safe-area-inset-right, 0px))
@@ -74,9 +76,11 @@ body{
 #bar h1{font-size:20px; letter-spacing:.3px; margin:0 4px 0 0; white-space:nowrap}
 #bar h1 span{color:var(--dim); font-size:13px; letter-spacing:0; font-weight:400}
 
+/* Verbatim from the companion, family and line-height included — that is, left
+   unset, so the buttons take the same face and sit their labels the same way. */
 button{
   background:var(--acc2); color:#fff; border:0; border-radius:8px; padding:13px 22px;
-  font:600 15px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-size:15px; font-weight:600;
   cursor:pointer; transition:.15s; touch-action:manipulation; min-height:44px; white-space:nowrap;
 }
 button:active:not(:disabled){transform:scale(.98)}
@@ -223,7 +227,7 @@ body:not(.loaded) #stage,
 body:not(.loaded) #print,body:not(.loaded) #reset,body:not(.loaded) #remove{display:none}
 </style>
 <div id="bar">
-  <div class="hd">
+  <div class="barhd">
     <h1>Journey Log</h1>
     <div class="hdctl">
       <button id="print" class="ghost">Print / PDF</button>
