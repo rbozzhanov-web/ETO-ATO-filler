@@ -41,7 +41,21 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 
 .hd{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
   padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--gold)}
-.hdctl{display:flex;align-items:center;gap:12px;margin-left:auto}
+/* From a tablet up the controls hold the first line: the title block gives way
+   and wraps its own text instead of pushing them down a row, so the Journey Log
+   button stays on its spot whether or not a plan is loaded. A phone is too
+   narrow for that and keeps the old wrapping. */
+@media(min-width:768px){
+  .hd{flex-wrap:nowrap}
+  .hd>div:not(.hdctl){min-width:0}
+}
+/* Pinned to the top of the row instead of centred in it: the block to its left
+   grows by two lines once a plan is loaded, and these controls must not ride
+   down with it — the Journey Log button has to stay on the spot the other page
+   keeps its own crossing button. 6.3px is where centring puts them while the
+   header is still one line. */
+.hdctl{display:flex;align-items:center;gap:12px;margin-left:auto;
+  align-self:flex-start;margin-top:6.3px;flex:0 0 auto}
 .brand{background:#fff;border-radius:8px;padding:9px 14px;display:flex;flex:0 0 auto;
   box-shadow:0 0 0 1px rgba(0,0,0,.07)}
 .logo{height:23px;width:auto;display:block}
@@ -56,6 +70,14 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 @media(hover:hover){.themesw button:hover{color:var(--txt)}
   .themesw button[aria-pressed=true]:hover{color:var(--acc)}}
 #guideBtn,#jlogBtn{height:40px;min-height:40px;padding:0 16px;font-size:13.5px;background:var(--panel)}
+/* Held to the width of its opposite number on the Journey Log page, so the two
+   buttons cover the same spot and one tap moves between the documents. */
+#jlogBtn{width:150px;padding:0 8px;overflow:hidden;text-overflow:ellipsis}
+/* Below the tablet breakpoint the three controls want 371px and a 390px phone
+   offers 354, so the crossing button gives up its fixed width rather than push
+   the group off the edge. Covering the same spot as the Journey Log's own button
+   is an iPad concern; a phone has no room to hold it either way. */
+@media(max-width:767px){ #jlogBtn{width:auto;max-width:150px} }
 @media(max-width:560px){.hd{gap:12px}.logo{height:19px}}
 
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
@@ -505,19 +527,15 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 23</h3>
+        <h3>New in version 24</h3>
         <ul>
-          <li>The page just scrolls now. Page turning is gone, and so is the pull onto the
-              nearest card that preceded it — where you stop is where it stays.</li>
-          <li>Takeoff time and the actuals stay one card: enter the time and the table opens
-              underneath it.</li>
-          <li>The <b>UTC now</b> clock sits beside the takeoff box, so it is there while the
-              airborne time is being typed rather than only after <b>Calculate</b>.</li>
-          <li>A fuel check falls due when you actually pass the waypoint it sits on, so the
-              time follows the ATOs as you enter them instead of standing on a half-hour grid
-              drawn at takeoff.</li>
-          <li>The <b>Journey Log</b> button in the header opens the second form. Both pages are
-              cached, so either opens offline.</li>
+          <li>A fuel check falls due when you actually pass the waypoint it sits on — that
+              waypoint's own ATO once you have entered one, the plan's time carried by however
+              far the flight is running from it until then. The figure follows the actuals as
+              they go in, instead of standing on a half-hour grid drawn at takeoff.</li>
+          <li>The page is left exactly where you stop it. A resting scroll is no longer pulled
+              onto the nearest card — that was the last of three attempts to help the scrolling
+              along, and it went the way of the other two.</li>
         </ul>
       </div>
 
@@ -682,7 +700,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 23 &nbsp;·&nbsp; published 16 Aug 2026 09:20 UTC</span></p>
+      <span class="build">Version 24 &nbsp;·&nbsp; published 16 Aug 2026 11:05 UTC</span></p>
 
     </div>
   </div>
@@ -1214,6 +1232,15 @@ const showGuide = on => {
 };
 $('#guideBtn').onclick = () => showGuide(true);
 $('#jlogBtn').onclick = () => { location.href = './journey-log.html'; };
+
+// Coming back from the Journey Log, which asks for #top: Safari would otherwise
+// restore wherever this page was last scrolled to, and the header — and the
+// button that crosses back — would not be where it was left.
+if (location.hash === '#top'){
+  history.replaceState(null, '', location.pathname + location.search);
+  scrollTo(0, 0);
+  addEventListener('load', () => scrollTo(0, 0), { once: true });
+}
 $('#guideClose').onclick = () => showGuide(false);
 guide.onclick = e => { if (e.target === guide) showGuide(false); };
 document.addEventListener('keydown', e => {

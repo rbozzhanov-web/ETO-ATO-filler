@@ -4,57 +4,121 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Journey Log">
 <title>Journey Log — Задание на полет</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <style>
+/* The chrome is the OFP companion's, to the value — one set of colours, one set
+   of buttons across the two pages. The sheet keeps its own, because it is paper
+   and does not answer to a theme. */
 :root{
-  --chrome:#22262c; --chrome-2:#2c313a; --chrome-line:#3b414b; --chrome-ink:#e7eaee;
-  --chrome-dim:#9aa3af; --accent:#3498db;
+  --bg:#0f1419; --panel:#171d24; --panel2:#1e262f; --line:#2c3742; --line2:#232c35;
+  --txt:#e6edf3; --dim:#8b98a5; --acc:#4d9fff; --acc2:#1f6feb;
+  --ok:#3fb950; --warn:#d29922; --err:#f85149;
+  --gold:#9b804d; --hdr:#131a21; --fld:#4a5560; --dangerbtn:#c93a3a;
+
   --paper:#ffffff; --ink:#000000; --band:#3498db; --band-2:#dcdcdc;
+  --accent:#3498db;                        /* the sheet's own blue — paper does not follow a theme */
   --written:#0b4f9e;                       /* what you write, so it reads apart from the form */
   --fill:rgba(52,152,219,.09);             /* the boxes you type into */
   --fill-hover:rgba(52,152,219,.18);
   --fill-focus:rgba(52,152,219,.26);
 }
-html[data-theme="light"]{
-  --chrome:#e9ecf1; --chrome-2:#ffffff; --chrome-line:#c9cfd8; --chrome-ink:#1b1f25;
-  --chrome-dim:#5c6672;
+html[data-theme=light]{
+  --bg:#f2f5f8; --panel:#ffffff; --panel2:#f1f4f7; --line:#d6dde4; --line2:#e6ebf0;
+  --txt:#16202b; --dim:#5d6b7a; --acc:#0b62d6; --acc2:#0b62d6;
+  --ok:#1a7f37; --warn:#9a6700; --err:#cf222e;
+  --gold:#8a6f3e; --hdr:#eef2f6; --fld:#9aa7b4; --dangerbtn:#cf222e;
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
+/* A viewer, not a scrolling page: the toolbar holds its place and the sheets
+   pan under it, which is what lets a zoomed sheet be reached at all. */
 body{
-  background:var(--chrome); color:var(--chrome-ink);
-  font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  overscroll-behavior-y:none;
+  margin:0; background:var(--bg); color:var(--txt);
+  -webkit-tap-highlight-color:transparent;
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  transition:background .15s,color .15s;
+  height:100vh; height:100dvh; display:flex; flex-direction:column;
 }
 
 /* ---------- toolbar ---------- */
+/* Added to the Home Screen the page runs under a translucent status bar, so the
+   toolbar carries the inset itself and its own padding on top of it. */
+/* The header is the companion's, to the pixel: same container, same row height,
+   same trailing gap where its theme switch sits. The button back to it then
+   lands under the one that opens this page, and the two toggle on one spot. */
 #bar{
-  position:sticky; top:0; z-index:50;
-  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  padding:8px calc(10px + env(safe-area-inset-right)) 8px calc(10px + env(safe-area-inset-left));
-  background:var(--chrome-2); border-bottom:1px solid var(--chrome-line);
+  --statusbar:max(20px, env(safe-area-inset-top, 0px));
+  flex:0 0 auto; z-index:50;
+  padding-top:var(--statusbar);
+  /* The companion's header sits straight on the page colour, under a gold rule
+     — so does this one, or the two would not read as the same surface. */
+  background:var(--bg); border-bottom:1px solid var(--gold);
 }
-#bar h1{font-size:14px; font-weight:600; margin:0 6px 0 0; white-space:nowrap}
-#bar h1 span{color:var(--chrome-dim); font-weight:400}
-.grp{display:flex; align-items:center; gap:4px}
-.spacer{flex:1}
+/* Named apart from the sheet's own .hd, which marks the document's header
+   lines — one stylesheet serves both the chrome and the paper. */
+.barhd{
+  max-width:1120px; margin:0 auto;
+  display:flex; align-items:center; gap:18px; min-height:68.5px;
+  padding:0 max(18px, env(safe-area-inset-right, 0px))
+          16px max(18px, env(safe-area-inset-left, 0px));
+}
+/* Pinned as on the companion, so both groups measure from the top of the row
+   and neither can drift with whatever sits beside it. */
+.hdctl{display:flex; align-items:center; gap:12px; margin-left:auto;
+  align-self:flex-start; margin-top:6.3px; flex:0 0 auto}
+.swgap{flex:0 0 auto; width:93px; height:40px}   /* the theme switch, on the other page */
+#bar button{height:40px; min-height:40px; padding:0 16px; font-size:13.5px}
+#bar button.ghost{background:var(--panel)}
+/* Held to one rectangle with its opposite number on the companion. The width
+   is generous for the label, but the device picks the font, so the label is
+   also kept from ever spilling past the border whatever that font turns out
+   to be. */
+#ofp{width:150px; padding:0 8px; overflow:hidden; text-overflow:ellipsis}
+/* An iPad reports no inset at all and still draws the status bar over the page,
+   so the 20px floor stands in for it — the same floor the companion uses, which
+   is what keeps the two headers on the same line. */
+#bar h1{font-size:20px; letter-spacing:.3px; margin:0 4px 0 0; white-space:nowrap}
+#bar h1 span{color:var(--dim); font-size:13px; letter-spacing:0; font-weight:400}
+
+/* Verbatim from the companion, family and line-height included — that is, left
+   unset, so the buttons take the same face and sit their labels the same way. */
 button{
-  font:inherit; font-size:13px; color:var(--chrome-ink);
-  background:transparent; border:1px solid var(--chrome-line); border-radius:7px;
-  padding:5px 10px; cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent;
+  background:var(--acc2); color:#fff; border:0; border-radius:8px; padding:13px 22px;
+  font-size:15px; font-weight:600;
+  cursor:pointer; transition:.15s; touch-action:manipulation; min-height:44px; white-space:nowrap;
 }
-button:hover{border-color:var(--accent)}
-button:active{background:var(--chrome-line)}
-button.on{border-color:var(--accent); color:var(--accent)}
-button.wide{min-width:64px}
-#zoomval{min-width:52px; text-align:center; color:var(--chrome-dim); font-variant-numeric:tabular-nums; font-size:13px}
-#saved{color:var(--chrome-dim); font-size:12px; min-width:112px; text-align:right}
+button:active:not(:disabled){transform:scale(.98)}
+button:disabled{opacity:.4}
+button.ghost{background:transparent; border:1px solid var(--line); color:var(--dim)}
+button.danger{background:var(--dangerbtn); color:#fff}
+button.on{border-color:var(--acc); color:var(--acc);
+  background:color-mix(in srgb, var(--acc) 16%, transparent)}
+@media(hover:hover){
+  button:hover:not(:disabled){filter:brightness(1.12)}
+  button.ghost:hover:not(:disabled){background:var(--panel2); color:var(--txt)}
+  #drop:hover{border-color:var(--acc)}
+}
+
 
 /* ---------- the sheet ---------- */
-#stage{padding:16px 0 40px; display:flex; flex-direction:column; align-items:center; gap:18px}
-.wrap{position:relative}
+/* The sheets pan inside here, both ways. A zoomed sheet that outgrows the
+   window is reached by scrolling it, and the toolbar does not travel with it. */
+#stage{
+  flex:1 1 auto; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  display:flex; flex-direction:column; align-items:flex-start; gap:18px;
+  padding:16px calc(12px + env(safe-area-inset-right, 0px))
+          calc(24px + env(safe-area-inset-bottom, 0px))
+          calc(12px + env(safe-area-inset-left, 0px));
+}
+/* Auto margins centre a sheet that fits and go to nothing on one that does not,
+   so nothing is ever pushed off the left where no scrolling can reach it. */
+.wrap{position:relative; flex:0 0 auto; margin-inline:auto}
 .sheet{
   position:absolute; left:0; top:0; transform-origin:0 0;
   width:841.89pt; height:595.28pt;
@@ -88,15 +152,27 @@ input.f{
 }
 input.f::placeholder{color:#9bb7d1}
 input.f:focus{outline:0}
-/* pre-printed content: reads as print until you touch it */
-input.pre:hover{background:rgba(0,0,0,.05)}
-input.pre:focus{background:rgba(0,0,0,.06); box-shadow:inset 0 0 0 .75pt var(--accent)}
+/* What the document was printed with is shown, not offered: it reads as print,
+   takes no tap and raises no keyboard. */
+input.pre{pointer-events:none; user-select:none; -webkit-user-select:none}
 /* what you fill in: a box, and blue ink */
 input.fill{background:var(--fill); color:var(--written); font-weight:700}
 input.fill:hover{background:var(--fill-hover)}
 input.fill:focus{background:var(--fill-focus); box-shadow:inset 0 0 0 .75pt var(--accent)}
-input.fill.auto{color:#3a7bbf; font-weight:400}   /* worked out from the times either side */
+/* Blk and Flt are worked out from the times either side, but they are entries
+   like any other and are set like them. */
 input.l{text-align:left; padding-left:2pt}
+
+/* Carries the captain's figure down the column — the crew almost always share it. */
+button.dup{
+  position:absolute; padding:0; margin:0; width:9pt; height:9pt; min-height:0;
+  border:0; border-radius:50%; cursor:pointer;
+  background:rgba(52,152,219,.28); color:var(--written);
+  font-size:6pt; font-weight:700; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+}
+@media(hover:hover){button.dup:hover{background:#3498db; color:#fff; filter:none}}
+button.dup:active:not(:disabled){transform:none; background:#3498db; color:#fff}
 
 /* the underlined items in the page head */
 .ed{
@@ -105,17 +181,16 @@ input.l{text-align:left; padding-left:2pt}
 }
 .ed:hover{background:var(--fill-hover)}
 .ed:focus{background:var(--fill-focus); box-shadow:inset 0 0 0 .75pt var(--accent)}
-.ed.pre{background:transparent; color:var(--ink)}
-.ed.pre:hover{background:rgba(0,0,0,.05)}
-.ed.pre:focus{background:rgba(0,0,0,.06); box-shadow:inset 0 0 0 .75pt var(--accent)}
+.ed.pre{background:transparent; color:var(--ink);
+  pointer-events:none; user-select:none; -webkit-user-select:none}
 
 /* ---------- print: the sheet at its true size, nothing else on the paper ---------- */
 @page{size:A4 landscape; margin:0}
 @media print{
-  body{background:#fff}
-  #bar,#hint{display:none !important}
-  #stage{padding:0; gap:0; display:block}
-  .wrap{width:auto !important; height:auto !important}
+  body{background:#fff; height:auto; display:block}
+  #bar,#empty{display:none !important}
+  #stage{padding:0; gap:0; display:block; overflow:visible; min-height:0}
+  .wrap{width:auto !important; height:auto !important; margin:0 !important}
   .sheet{
     position:relative; transform:none !important;
     box-shadow:none; break-after:page; page-break-after:always;
@@ -123,43 +198,324 @@ input.l{text-align:left; padding-left:2pt}
   .sheet:last-child{break-after:auto; page-break-after:auto}
   input.f,.ed{background:transparent !important; box-shadow:none !important}
   input.fill,.ed:not(.pre){color:var(--written)}
-  input.fill.auto{color:var(--written); font-weight:700}
+  button.dup{display:none !important}
 }
-#hint{
-  color:var(--chrome-dim); font-size:12px; text-align:center;
-  padding:0 16px 8px; max-width:820px; margin:0 auto;
-}
-</style>
+.disc b{color:var(--txt); font-family:ui-monospace,Menlo,monospace; font-weight:600}
+.disc{align-items:flex-start; line-height:1.5}
+.disc::before{margin-top:7px}
 
+/* ---------- before a document is loaded ---------- */
+#empty{
+  flex:1 1 auto; min-height:0; overflow:auto;
+  padding:22px max(18px, env(safe-area-inset-right, 0px))
+          calc(40px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:18px; max-width:640px; margin:0 auto}
+.step{display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600;
+  letter-spacing:.8px; text-transform:uppercase; color:var(--dim); margin-bottom:14px}
+.step i{display:grid; place-items:center; min-width:20px; height:20px; padding:0 6px;
+  border-radius:10px; background:var(--acc2); color:#fff; font-style:normal;
+  font-size:11px; font-weight:700; line-height:1; letter-spacing:0; flex:0 0 auto}
+#drop{border:2px dashed var(--line); border-radius:8px; padding:32px 20px; text-align:center;
+  cursor:pointer; transition:.15s; background:var(--panel2)}
+#drop.over{border-color:var(--acc)}
+#drop b{color:var(--acc)}
+#drop .fn{margin-top:8px; font-size:13px; color:var(--dim); word-break:break-all}
+.disc{display:flex; align-items:center; gap:8px; margin:12px 0 0; font-size:12.5px; color:var(--dim)}
+.disc::before{content:""; flex:0 0 auto; width:6px; height:6px; border-radius:50%; background:var(--gold)}
+.msg{margin-top:12px; font-size:13.5px; padding:11px 13px; border-radius:7px; display:none}
+.msg.show{display:block}
+.msg.ok{background:color-mix(in srgb, var(--ok) 14%, transparent); color:var(--ok);
+  border:1px solid color-mix(in srgb, var(--ok) 34%, transparent)}
+.msg.err{background:color-mix(in srgb, var(--err) 14%, transparent); color:var(--err);
+  border:1px solid color-mix(in srgb, var(--err) 34%, transparent)}
+
+body.loaded #empty{display:none}
+body:not(.loaded) #stage,
+body:not(.loaded) #print,body:not(.loaded) #reset,body:not(.loaded) #remove{display:none}
+</style>
 <div id="bar">
-  <h1>Journey Log <span>· Задание на полет</span></h1>
-  <div class="grp">
-    <button id="zoomOut" title="Zoom out">−</button>
-    <span id="zoomval">100%</span>
-    <button id="zoomIn" title="Zoom in">+</button>
-    <button id="zoomFit" class="wide">Fit</button>
+  <div class="barhd">
+    <h1>Journey Log</h1>
+    <div class="hdctl">
+      <button id="print" class="ghost">Print / PDF</button>
+      <button id="reset" class="ghost">Clear entries</button>
+      <button id="remove" class="danger">Remove log</button>
+      <!-- Last but for the gap: it comes to rest exactly where the OFP
+           companion keeps the button that opens this page. -->
+      <button id="ofp" class="ghost" title="Back to the OFP companion">OFP Companion</button>
+      <i class="swgap" aria-hidden="true"></i>
+    </div>
   </div>
-  <div class="spacer"></div>
-  <div class="grp">
-    <button id="ofp" title="Back to the OFP companion">OFP Companion</button>
-    <button id="theme" class="wide" title="Light / dark surround">Light</button>
-    <button id="print">Print / PDF</button>
-    <button id="reset">Reset</button>
+</div>
+
+<input type="file" id="file" accept="application/pdf,.pdf" hidden>
+
+<div id="empty">
+  <div class="card">
+    <div class="step"><i>1</i> Load the Journey Log PDF</div>
+    <div id="drop">
+      Tap to choose a PDF
+      <div class="fn" id="fname"></div>
+    </div>
+    <p class="disc"><span>Only Air Astana Journey Logs are supported.</span></p>
+    <p class="disc"><span>The form is drawn from the document you load — its legs, its crew,
+      its number of rows. Nothing leaves the device.</span></p>
+    <p class="disc"><span>The return key steps to the next box. Times take four digits —
+      <b>0340</b> becomes <b>03:40</b>. Blk and Flt are worked out from the times either
+      side until you write in them yourself.</span></p>
+    <div class="msg" id="msg"></div>
   </div>
-  <div id="saved"></div>
 </div>
 
 <div id="stage"></div>
-<div id="hint">
-  Everything is saved on this device as you type. Enter steps to the next box,
-  Shift+Enter back. Times take four digits — <b>0340</b> becomes <b>03:40</b>.
-  Blk and Flt are worked out from the times either side until you write in them yourself.
-</div>
 
 <script>
 'use strict';
-const VERSION = '1';
+const VERSION = '2';
 const KEY = 'journeylog.v1';
+
+/* ==================================================================== reader
+   Enough of a PDF to find the text and where it sits. Taken as it stands from
+   the OFP companion, which has read Air Astana's PDFs for a while now: a
+   classic cross-reference table, FlateDecode streams, and an object lexer.  */
+/* ---------- bytes <-> latin1 string (1:1, index == byte offset) ---------- */
+function toStr(u8){
+  let s = '', C = 0x8000;
+  for (let i = 0; i < u8.length; i += C)
+    s += String.fromCharCode.apply(null, u8.subarray(i, i + C));
+  return s;
+}
+
+/* ---------- object parsing ---------- */
+const WS = ' \t\r\n\f\0', DELIM = '()<>[]{}/%';
+const isWS = c => WS.indexOf(c) >= 0;
+const isDelim = c => DELIM.indexOf(c) >= 0;
+
+class Lexer {
+  constructor(s, i = 0){ this.s = s; this.i = i; }
+  skip(){
+    const s = this.s;
+    for (;;){
+      while (this.i < s.length && isWS(s[this.i])) this.i++;
+      if (s[this.i] === '%'){ while (this.i < s.length && s[this.i] !== '\n' && s[this.i] !== '\r') this.i++; }
+      else return;
+    }
+  }
+  // reads one object; "N G R" references collapse into {ref:N}
+  obj(){
+    this.skip();
+    const s = this.s, c = s[this.i];
+    if (c === undefined) return null;
+    if (c === '<' && s[this.i + 1] === '<') return this.dict();
+    if (c === '<') return this.hexStr();
+    if (c === '(') return this.str();
+    if (c === '[') return this.arr();
+    if (c === '/') return this.name();
+    if (c === ']' || c === '>'){ this.i++; return undefined; }
+    return this.token();
+  }
+  name(){
+    const s = this.s; this.i++; let r = '';
+    while (this.i < s.length && !isWS(s[this.i]) && !isDelim(s[this.i])){
+      let ch = s[this.i++];
+      if (ch === '#'){ ch = String.fromCharCode(parseInt(s.substr(this.i, 2), 16)); this.i += 2; }
+      r += ch;
+    }
+    return { name: r };
+  }
+  dict(){
+    this.i += 2; const d = {};
+    for (;;){
+      this.skip();
+      if (this.s[this.i] === undefined) break;
+      if (this.s[this.i] === '>' && this.s[this.i + 1] === '>'){ this.i += 2; break; }
+      if (this.s[this.i] !== '/'){ this.i++; continue; }
+      const k = this.name().name;
+      d[k] = this.obj();
+    }
+    return d;
+  }
+  arr(){
+    this.i++; const a = [];
+    for (;;){
+      this.skip();
+      if (this.s[this.i] === undefined) break;
+      if (this.s[this.i] === ']'){ this.i++; break; }
+      const v = this.obj();
+      if (v === undefined) break;
+      a.push(v);
+    }
+    return a;
+  }
+  str(){
+    const s = this.s; this.i++; let depth = 1, r = '';
+    while (this.i < s.length){
+      let ch = s[this.i++];
+      if (ch === '\\'){
+        const n = s[this.i++];
+        if (n === 'n') r += '\n'; else if (n === 'r') r += '\r';
+        else if (n === 't') r += '\t'; else if (n === 'b') r += '\b';
+        else if (n === 'f') r += '\f';
+        else if (n >= '0' && n <= '7'){
+          let o = n;
+          for (let k = 0; k < 2 && s[this.i] >= '0' && s[this.i] <= '7'; k++) o += s[this.i++];
+          r += String.fromCharCode(parseInt(o, 8));
+        }
+        else if (n === '\n') { /* line continuation */ }
+        else if (n === '\r'){ if (s[this.i] === '\n') this.i++; }
+        else r += n;
+      }
+      else if (ch === '('){ depth++; r += ch; }
+      else if (ch === ')'){ if (--depth === 0) break; r += ch; }
+      else r += ch;
+    }
+    return { text: r };
+  }
+  hexStr(){
+    const s = this.s; this.i++; let h = '';
+    while (this.i < s.length && s[this.i] !== '>') h += s[this.i++];
+    this.i++;
+    h = h.replace(/[^0-9a-fA-F]/g, '');
+    if (h.length & 1) h += '0';
+    let r = '';
+    for (let k = 0; k < h.length; k += 2) r += String.fromCharCode(parseInt(h.substr(k, 2), 16));
+    return { text: r };
+  }
+  token(){
+    const s = this.s; let t = '';
+    while (this.i < s.length && !isWS(s[this.i]) && !isDelim(s[this.i])) t += s[this.i++];
+    if (/^[-+.\d]/.test(t)){
+      const save = this.i, m = /^\d+$/.test(t);
+      if (m){                                   // may be an "N G R" reference
+        this.skip();
+        const j = this.i; let g = '';
+        while (this.i < s.length && /\d/.test(s[this.i])) g += s[this.i++];
+        if (g){
+          this.skip();
+          if (s[this.i] === 'R' && (isWS(s[this.i + 1]) || isDelim(s[this.i + 1]) || s[this.i + 1] === undefined)){
+            this.i++; return { ref: parseInt(t, 10) };
+          }
+        }
+        this.i = save;
+      }
+      return parseFloat(t);
+    }
+    if (t === 'true') return true;
+    if (t === 'false') return false;
+    if (t === 'null') return null;
+    return { op: t || s[this.i++] };
+  }
+}
+
+/* ---------- document ---------- */
+class Doc {
+  constructor(u8){
+    this.bytes = u8;
+    this.s = toStr(u8);
+    this.xref = new Map();
+    this.trailer = {};
+    this.readXref();
+  }
+  readXref(){
+    const m = /startxref\s+(\d+)\s*%%EOF\s*$/.exec(this.s.slice(-2048))
+           || /startxref\s+(\d+)/g.exec(this.s.slice(this.s.lastIndexOf('startxref')));
+    if (!m) throw new Error('startxref not found');
+    let off = parseInt(m[1], 10);
+    const seen = new Set();
+    while (off !== undefined && !seen.has(off)){
+      seen.add(off);
+      const lx = new Lexer(this.s, off);
+      lx.skip();
+      if (this.s.substr(lx.i, 4) !== 'xref')
+        throw new Error('only a classic xref table is supported');
+      lx.i += 4;
+      for (;;){
+        lx.skip();
+        if (this.s.substr(lx.i, 7) === 'trailer'){ lx.i += 7; break; }
+        const start = lx.obj(), count = lx.obj();
+        if (typeof start !== 'number' || typeof count !== 'number') break;
+        lx.skip();
+        for (let k = 0; k < count; k++){
+          const e = this.s.substr(lx.i, 20);
+          const em = /^(\d{10})\s(\d{5})\s([nf])/.exec(e);
+          if (em){
+            const num = start + k;
+            if (em[3] === 'n' && !this.xref.has(num)) this.xref.set(num, parseInt(em[1], 10));
+            lx.i += (e[18] === '\r' || e[18] === '\n' || e[18] === ' ') ? 20 : 19;
+          } else { lx.i += 20; }
+        }
+      }
+      const tr = new Lexer(this.s, lx.i).obj();
+      for (const k in tr) if (!(k in this.trailer)) this.trailer[k] = tr[k];
+      off = typeof tr.Prev === 'number' ? tr.Prev : undefined;
+    }
+  }
+  get(o){                                        // dereference
+    if (o && typeof o === 'object' && 'ref' in o){
+      const off = this.xref.get(o.ref);
+      if (off === undefined) return null;
+      const lx = new Lexer(this.s, off);
+      lx.obj(); lx.obj();                        // "N G"
+      lx.skip();
+      if (this.s.substr(lx.i, 3) === 'obj') lx.i += 3;
+      const v = lx.obj();
+      lx.skip();
+      if (this.s.substr(lx.i, 6) === 'stream'){
+        let p = lx.i + 6;
+        if (this.s[p] === '\r') p++;
+        if (this.s[p] === '\n') p++;
+        const len = this.get(v.Length);
+        return { dict: v, start: p, length: typeof len === 'number' ? len : 0 };
+      }
+      return v;
+    }
+    return o;
+  }
+  async stream(obj){                             // decoded stream data
+    const raw = this.bytes.subarray(obj.start, obj.start + obj.length);
+    const f = this.get(obj.dict.Filter);
+    const names = (Array.isArray(f) ? f : f ? [f] : []).map(x => x && x.name);
+    if (!names.length) return raw;
+    if (names.length > 1 || (names[0] !== 'FlateDecode' && names[0] !== 'Fl'))
+      throw new Error('unsupported stream filter: ' + names.join(','));
+    const ds = new DecompressionStream('deflate');
+    const ab = await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer();
+    return new Uint8Array(ab);
+  }
+  async content(page){                           // /Contents: a ref or an array of refs
+    const c = this.get(page.dict.Contents);
+    const list = Array.isArray(c) ? c.map(r => this.get(r)) : [c];
+    let s = '';
+    for (const o of list){
+      if (!o || !o.dict) continue;
+      s += toStr(await this.stream(o)) + '\n';
+    }
+    return s;
+  }
+  pages(){
+    const root = this.get(this.trailer.Root);
+    const out = [];
+    const walk = (nodeRef, inherited) => {
+      const n = this.get(nodeRef);
+      if (!n) return;
+      const inh = {
+        Resources: n.Resources !== undefined ? n.Resources : inherited.Resources,
+        MediaBox:  n.MediaBox  !== undefined ? n.MediaBox  : inherited.MediaBox
+      };
+      if (n.Type && n.Type.name === 'Page'){
+        out.push({ ref: nodeRef.ref, dict: n,
+                   Resources: this.get(inh.Resources), MediaBox: this.get(inh.MediaBox) });
+        return;
+      }
+      const kids = this.get(n.Kids) || [];
+      for (const k of kids) walk(k, inh);
+    };
+    walk(root.Pages, {});
+    return out;
+  }
+}
 
 /* ------------------------------------------------------------------ geometry
    Straight off the document, in points. The page is A4 landscape and every
@@ -187,7 +543,9 @@ const PL_KEY = ['adl','chl','inf','cargo','mail','bag','zfw'];
 const CREW_X = [17.28,28.61,68.29,85.30,198.67,238.35,278.03,317.71,357.39,640.82,660.66];
 const CREW_HDR = ['','Staff No','POS','Name','DUTY','Duty time','Night duty','Alwd. time','REMARKS',''];
 const CREW_KEY = [null,'staff','pos','name','duty','dutytime','night','alwd','remarks','leg'];
-const CREW_PRE = new Set(['staff','pos','name','leg']);
+const CREW_PRE  = new Set(['staff','pos','name','leg']);
+const CREW_TIME = new Set(['dutytime','night','alwd']);   // written as HH:MM, like the rest
+const DUP_KEYS = ['duty','dutytime','night','alwd'];   // the same for the whole crew, usually
 
 const LEG_TOP = 42.81;            // top of the leg table
 const GAP_FUEL = 5.25;            // leg table bottom to the Fuel / PayLoad title band
@@ -195,49 +553,216 @@ const GAP_CREW = 6.00;            // fuel table bottom to the crew table
 const IMM_RULES = [28.27,39.52,50.77];   // from the crew table bottom
 const REM_BOX = {top:11.24, bot:78.89, x0:491.58, x1:817.42};
 
-/* ------------------------------------------------------------------- content
-   The document as issued. Everything here can be edited, so the same form
-   serves the next flight.                                                    */
-const CREW = [
-  ['9871','CP','BOZZHANOV RAMIL'],   ['13355','FO','DUISENBAYEVA LAILO'],
-  ['2776','IS','ASSATULINA ZARINA'], ['7147','PU','SABYRBEKOVA SALTANAT'],
-  ['8960','FJ','SUNNATOVA ROZA'],    ['13952','FJ','YERZHANOVA ARUZHAN'],
-  ['2770','FY','KUDINOVA IRINA'],    ['7645','FY','AKHMETOVA ASSIYA'],
-  ['12666','FY','MUBARAK DANARA'],   ['17101','FY','UMAROVA AYAULYM'],
-];
-const crewRows = mark => CREW.map(([staff,pos,name]) =>
-  ({staff,pos,name,duty:'',dutytime:'',night:'',alwd:'',remarks:'',leg:mark}));
-const blanks = n => Array.from({length:n},()=>({}));
+/* ================================================================= the form
+   The document is read rather than assumed. Every row of every table carries
+   a printed row number in its narrow left column, so the tables announce their
+   own length; the three header labels below say where each one starts.       */
 
-function defaultDoc(){
+/* One text item per BT block: the position comes from Tm, and each cell on the
+   form is its own block, so no glyph widths are needed to place anything. */
+function blockItems(content, fonts){
+  const lx = new Lexer(content, 0);
+  const st = [];
+  const out = [];
+  let font = null, cur = null;
+  const flush = ()=>{ if(cur && cur.t.trim()) out.push(cur); cur = null; };
+  for(;;){
+    const o = lx.obj();
+    if(o === null) break;
+    if(o === undefined) continue;
+    if(typeof o === 'object' && 'op' in o){
+      const op = o.op;
+      if(op === 'BT'){ flush(); font = null; }
+      else if(op === 'ET') flush();
+      else if(op === 'Tf'){
+        const n = st[st.length - 2];
+        font = (n && n.name) ? fonts[n.name] : null;
+      }
+      else if(op === 'Tm'){
+        const v = st.slice(-6);
+        if(v.length === 6){
+          flush();
+          cur = { x:v[4], y:v[5], size:Math.abs(v[0]) || Math.abs(v[1]), t:'' };
+        }
+      }
+      else if(op === 'Tj' || op === "'" || op === '"'){
+        const s = st[st.length - 1];
+        if(cur && s && s.text !== undefined) cur.t += decode(s.text, font);
+      }
+      else if(op === 'TJ'){
+        const a = st[st.length - 1];
+        if(cur && Array.isArray(a)) for(const el of a)
+          if(el && el.text !== undefined) cur.t += decode(el.text, font);
+      }
+      st.length = 0;
+    } else st.push(o);
+  }
+  flush();
+  return out;
+}
+
+/* Identity-H puts two bytes to the glyph; the ToUnicode map says what each one
+   stands for. A simple font is its bytes. */
+function decode(raw, font){
+  if(!font || !font.two){
+    let s = '';
+    for(let i = 0; i < raw.length; i++) s += raw[i];
+    return s;
+  }
+  let s = '';
+  for(let i = 0; i + 1 < raw.length; i += 2){
+    const code = (raw.charCodeAt(i) << 8) | raw.charCodeAt(i + 1);
+    const u = font.map.get(code);
+    s += u === undefined ? ' ' : u;
+  }
+  return s;
+}
+
+const hexToChars = h => {
+  let s = '';
+  for(let i = 0; i + 3 < h.length; i += 4) s += String.fromCharCode(parseInt(h.substr(i, 4), 16));
+  return s;
+};
+function parseCMap(txt){
+  const map = new Map();
+  txt.replace(/beginbfchar([\s\S]*?)endbfchar/g, (m, blk)=>{
+    blk.replace(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g, (m2, a, b)=>{
+      map.set(parseInt(a, 16), hexToChars(b)); return '';
+    });
+    return '';
+  });
+  txt.replace(/beginbfrange([\s\S]*?)endbfrange/g, (m, blk)=>{
+    // <lo><hi><dst>  and  <lo><hi>[<d1><d2>...]
+    blk.replace(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*(<([0-9A-Fa-f]+)>|\[([\s\S]*?)\])/g,
+      (m2, a, b, whole, single, list)=>{
+        const lo = parseInt(a, 16), hi = parseInt(b, 16);
+        if(single !== undefined){
+          const base = parseInt(single.slice(-4), 16), pre = hexToChars(single).slice(0, -1);
+          for(let c = lo; c <= hi && c - lo < 65536; c++) map.set(c, pre + String.fromCharCode(base + c - lo));
+        } else {
+          let k = 0;
+          list.replace(/<([0-9A-Fa-f]+)>/g, (m3, d)=>{ map.set(lo + k++, hexToChars(d)); return ''; });
+        }
+        return '';
+      });
+    return '';
+  });
+  return map;
+}
+
+async function pageFonts(pdf, page){
+  const res = pdf.get(page.Resources) || {};
+  const fd = pdf.get(res.Font) || {};
+  const fonts = {};
+  for(const name of Object.keys(fd)){
+    const f = pdf.get(fd[name]);
+    if(!f) continue;
+    const two = f.Subtype && f.Subtype.name === 'Type0';
+    let map = new Map();
+    const tu = pdf.get(f.ToUnicode);
+    if(tu && tu.dict){
+      try{ map = parseCMap(toStr(await pdf.stream(tu))); }catch(e){}
+    }
+    fonts[name] = { two, map };
+  }
+  return fonts;
+}
+
+/* Which column an item's left edge falls in. */
+function colOf(xs, x){
+  for(let i = 0; i < xs.length - 1; i++) if(x >= xs[i] - 1 && x < xs[i + 1] - 1) return i;
+  return -1;
+}
+
+const LEG_COL  = [null,'date','flight','acreg','dep','arr','std','sta','atd','ata','tkof',
+                  'tdwn','blk','ntblk','flt','to','ld','ma','flalt','detail'];
+const FUEL_COL = [null,'init','uplfw','calcramp','actramp','stdn','burn','uplfv','fueldisc','slip1','slip2'];
+const PL_COL   = ['adl','chl','inf','cargo','mail','bag','zfw'];
+const CREW_COL = [null,'staff','pos','name','duty','dutytime','night','alwd','remarks','leg'];
+
+function readPage(items, pageH){
+  for(const it of items) it.ty = pageH - it.y;          // baseline, measured from the top
+  items.sort((a,b)=> a.ty - b.ty || a.x - b.x);
+  const at = t => items.find(i => i.t.trim() === t);
+
+  const legHdr = at('Date'), fuelHdr = at('Init'), crewHdr = at('Staff No');
+  if(!legHdr || !fuelHdr || !crewHdr) throw new Error('not a Journey Log — its table headings are missing');
+
+  // Every row prints its number in the narrow left column, blank rows included.
+  const nums = items.filter(i => i.x >= 17 && i.x <= 28 && /^\d+$/.test(i.t.trim()));
+  const bandOf = (lo, hi) => {
+    const ys = [];
+    for(const i of nums){
+      if(i.ty <= lo + 2 || i.ty >= hi - 2) continue;
+      if(!ys.some(y => Math.abs(y - i.ty) < 3)) ys.push(i.ty);
+    }
+    return ys.sort((a,b)=> a - b);
+  };
+  const legY  = bandOf(legHdr.ty,  fuelHdr.ty);
+  const fuelY = bandOf(fuelHdr.ty, crewHdr.ty);
+  const crewY = bandOf(crewHdr.ty, Infinity);
+  if(!legY.length || !fuelY.length || !crewY.length) throw new Error('no rows found in the form');
+
+  const fill = (ys, specs) => {
+    const rows = ys.map(()=> ({}));
+    for(const it of items){
+      if(it.x < 17) continue;
+      let r = -1;
+      for(let k = 0; k < ys.length; k++) if(Math.abs(it.ty - ys[k]) < 3){ r = k; break; }
+      if(r < 0) continue;
+      for(const [xs, keys] of specs){
+        const c = colOf(xs, it.x);
+        if(c >= 0 && keys[c]){ rows[r][keys[c]] = it.t.trim(); break; }
+      }
+    }
+    return rows;
+  };
+
+  const legs = fill(legY, [[LEG_X, LEG_COL]]);
+  const both = fill(fuelY, [[FUEL_X, FUEL_COL], [PL_X, PL_COL]]);
+  const crew = fill(crewY, [[CREW_X, CREW_COL]]);
+  const pick = (row, keys) => {
+    const o = {};
+    for(const k of keys) if(k && row[k] !== undefined) o[k] = row[k];
+    return o;
+  };
+
+  const head = items.filter(i => i.ty < legHdr.ty - 6);
+  const near = x => (head.find(i => Math.abs(i.x - x) < 4) || {}).t || '';
+  const title = near(325.49);
+  const cap = near(233.99);
+  const capM = /Captain\/\w+:\s*([\s\S]*?)\s*\/\/FD/.exec(cap);
+
   return {
-    version: VERSION,
-    manual: {},
-    pages: [
-      {
-        operator:'AIR ASTANA', stamp:'16 08.26, 05:23 UTC', docno:'08-16 - F915  - 1',
-        captain:'BOZZHANOV RAMIL', cat:'', lt:'',
-        legs:[
-          {date:'16 Aug 2026', flight:'915A', acreg:'EI-KEC', dep:'ALA', arr:'ALA', std:'03:40', sta:'09:40'},
-          {date:'16 Aug 2026', flight:'915',  acreg:'EI-KEC', dep:'ALA', arr:'AYT', std:'03:40', sta:'09:40'},
-          {}, {},
-        ],
-        fuel:blanks(4), payload:blanks(4), crew:crewRows('XX'),
-        immigration:['','',''], remarks:['','',''], signature:'',
-      },
-      {
-        operator:'AIR ASTANA', stamp:'16 08.26, 05:23 UTC', docno:'08-16 - F915  - 2',
-        captain:'BOZZHANOV RAMIL', cat:'', lt:'',
-        legs:[
-          {date:'17 Aug 2026', flight:'916', acreg:'EI-KEC', dep:'AYT', arr:'ALA', std:'10:40', sta:'15:50'},
-          {}, {},
-        ],
-        fuel:blanks(3), payload:blanks(3), crew:crewRows('X'),
-        immigration:['','',''], remarks:['','',''], signature:'',
-      },
-    ],
+    operator: near(53.88).trim(),
+    stamp:    near(156.64).trim(),
+    docno:    title.replace(/^Journey Log No\.\/\S+(\s+\S+)*?\s{2,}/, '').trim() || title.trim(),
+    captain:  capM ? capM[1].trim() : '',
+    cat:'', lt:'',
+    legs,
+    fuel:    both.map(r => pick(r, FUEL_COL)),
+    payload: both.map(r => pick(r, PL_COL)),
+    crew,
+    immigration:['','',''], remarks:['','',''],
   };
 }
+
+async function parseJourneyLog(bytes){
+  const pdf = new Doc(bytes);
+  const pages = pdf.pages();
+  if(!pages.length) throw new Error('the PDF has no pages');
+  const out = [];
+  for(const p of pages){
+    const mb = (pdf.get(p.MediaBox) || [0,0,PAGE_W,PAGE_H]).map(v => pdf.get(v));
+    const h = Math.abs(mb[3] - mb[1]) || PAGE_H;
+    const fonts = await pageFonts(pdf, p);
+    out.push(readPage(blockItems(await pdf.content(p), fonts), h));
+  }
+  return out;
+}
+
+function emptyDoc(){ return { version: VERSION, manual: {}, pages: [], source: null }; }
+const clone = o => JSON.parse(JSON.stringify(o));
 
 /* --------------------------------------------------------------------- state */
 let doc = load();
@@ -253,7 +778,7 @@ function load(){
       if(d && d.version === VERSION && Array.isArray(d.pages)){ d.manual = d.manual || {}; return d; }
     }
   }catch(e){}
-  return defaultDoc();
+  return emptyDoc();
 }
 let saveTimer = null;
 function save(){
@@ -261,12 +786,9 @@ function save(){
   saveTimer = setTimeout(()=>{
     try{
       localStorage.setItem(KEY, JSON.stringify(doc));
-      const t = new Date();
-      note('Saved ' + String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0'));
-    }catch(e){ note('Not saved — storage full'); }
+    }catch(e){ say('There is no room left on the device to save this.', 'err'); }
   }, 250);
 }
-function note(s){ document.getElementById('saved').textContent = s; }
 
 function get(path){
   return path.split('.').reduce((o,k)=> o == null ? o : o[k], doc);
@@ -321,7 +843,10 @@ function field(parent, x0, x1, y, h, opt){
   if(!opt.pre) inp.dataset.upper = '1';
   if(opt.maxlength) inp.maxLength = opt.maxlength;
   parent.appendChild(inp);
-  inputs.push(inp);
+  /* Printed cells are locked, and stay out of the run of boxes the return key
+     steps through — there is nothing to write in them. */
+  if(opt.pre){ inp.readOnly = true; inp.tabIndex = -1; }
+  else inputs.push(inp);
   return inp;
 }
 
@@ -330,19 +855,28 @@ function field(parent, x0, x1, y, h, opt){
 function editable(parent, cls, path, value){
   const s = document.createElement('span');
   s.className = 'ed ' + cls;
-  s.contentEditable = 'true';
   s.spellcheck = false;
   s.textContent = value || '';
   s.dataset.path = path;
+  if(cls === 'pre'){ s.contentEditable = 'false'; return parent.appendChild(s), s; }
+  s.contentEditable = 'true';
   s.addEventListener('input', ()=>{ set(path, s.textContent); save(); });
   parent.appendChild(s);
   return s;
 }
 
 /* ------------------------------------------------------------------ the page */
+/* A cell reads as print only if the document arrived with something in it.
+   Anything the document left blank is a box, so a leg or a crew member can be
+   written in by hand on a row the form was issued empty. */
+function printed(sourceRow, key){
+  return !!(sourceRow && sourceRow[key]);
+}
+
 function buildPage(p, pi){
   const sheet = document.createElement('div');
   sheet.className = 'sheet';
+  const src = doc.source ? doc.source[pi] : p;   // what the PDF held, before any typing
 
   const nLeg  = p.legs.length;
   const legB  = LEG_TOP + ROW*(1 + nLeg);
@@ -394,7 +928,7 @@ function buildPage(p, pi){
       if(!k) return;
       const path = `pages.${pi}.legs.${r}.${k}`;
       const inp = field(sheet, LEG_X[c], LEG_X[c+1], y, ROW, {
-        path, value: leg[k], pre: LEG_PRE.has(k),
+        path, value: leg[k], pre: LEG_PRE.has(k) && printed(src && src.legs[r], k),
         time: LEG_TIME.has(k), numeric: LEG_TIME.has(k),
       });
       if(k === 'blk' || k === 'flt') derived.set(path, inp);
@@ -443,10 +977,26 @@ function buildPage(p, pi){
     CREW_KEY.forEach((k,c)=>{
       if(!k) return;
       field(sheet, CREW_X[c], CREW_X[c+1], y, ROW, {
-        path:`pages.${pi}.crew.${r}.${k}`, value:m[k], pre:CREW_PRE.has(k),
-        left: k === 'remarks', numeric: k === 'dutytime' || k === 'night' || k === 'alwd',
+        path:`pages.${pi}.crew.${r}.${k}`, value:m[k],
+        pre: CREW_PRE.has(k) && printed(src && src.crew[r], k),
+        left: k === 'remarks', time: CREW_TIME.has(k), numeric: CREW_TIME.has(k),
       });
     });
+  });
+
+  /* The duty figures are the same for the whole crew far more often than not,
+     so the captain's row carries a button that puts its figure on every row. */
+  const cpRow = Math.max(0, p.crew.findIndex(m => (m.pos || '').trim().toUpperCase() === 'CP'));
+  if(p.crew.length > 1) DUP_KEYS.forEach(k=>{
+    const c = CREW_KEY.indexOf(k);
+    const y = crewT + ROW*(1 + cpRow);
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'dup'; b.textContent = '↓';
+    b.tabIndex = -1;
+    b.title = 'Put this on every crew member';
+    b.style.left = pt(CREW_X[c+1] - 10.5); b.style.top = pt(y + (ROW - 9)/2);
+    b.dataset.page = pi; b.dataset.key = k; b.dataset.from = cpRow;
+    sheet.appendChild(b);
   });
 
   /* ---- footnote, immigration, remarks ---- */
@@ -492,18 +1042,9 @@ function buildPage(p, pi){
     sheet.appendChild(inp); inputs.push(inp);
     if(i === 0) clears.push({label:remLbl, at:493.83, input:inp, right:816, min:556});
   });
-  const sigLbl = label(sheet, 'txt b', 493.83, crewB + 59.63, 0, 7.5, "Captain's Signature");
-  const sigLbl2 = label(sheet, 'txt b', 493.83, crewB + 68.78, 0, 7.5, 'Подпись KBC:');
-  sigLbl.style.width = sigLbl2.style.width = 'auto';
-  const sig = document.createElement('input');
-  sig.type = 'text'; sig.className = 'f fill l';
-  sig.style.left = '588pt'; sig.style.top = pt(crewB + 58.5);
-  sig.style.width = '226pt'; sig.style.height = '18pt';
-  sig.value = p.signature || '';
-  sig.dataset.path = `pages.${pi}.signature`;
-  sig.dataset.upper = '1';
-  sheet.appendChild(sig); inputs.push(sig);
-  clears.push({label:sigLbl, also:sigLbl2, at:493.83, input:sig, right:814, min:588});
+  // The signature is put on the paper by hand, so there is nothing to type here.
+  label(sheet, 'txt b', 493.83, crewB + 59.63, 0, 7.5, "Captain's Signature").style.width = 'auto';
+  label(sheet, 'txt b', 493.83, crewB + 68.78, 0, 7.5, 'Подпись KBC:').style.width = 'auto';
 
   return sheet;
 }
@@ -540,9 +1081,12 @@ function fitAll(root){
 
 /* ------------------------------------------------------------------- render */
 const stage = document.getElementById('stage');
+
 function render(){
   stage.textContent = '';
   inputs.length = 0; derived.clear(); clears.length = 0;
+  document.body.classList.toggle('loaded', doc.pages.length > 0);
+  if(!doc.pages.length) return;
   doc.pages.forEach((p,i)=>{
     const wrap = document.createElement('div');
     wrap.className = 'wrap';
@@ -585,11 +1129,10 @@ function refreshDerived(){
     [['blk','atd','ata'], ['flt','tkof','tdwn']].forEach(([k,a,b])=>{
       const path = `pages.${pi}.legs.${r}.${k}`;
       const inp = derived.get(path);
-      if(!inp || doc.manual[path]) { if(inp) inp.classList.remove('auto'); return; }
+      if(!inp || doc.manual[path]) return;
       const v = span(leg[a], leg[b]);
       leg[k] = v;
       if(inp.value !== v){ inp.value = v; fitOne(inp); }
-      inp.classList.toggle('auto', !!v);
     });
   }));
 }
@@ -606,7 +1149,6 @@ stage.addEventListener('input', e=>{
   set(path, t.value);
   if(derived.has(path)){
     if(t.value) doc.manual[path] = 1; else delete doc.manual[path];
-    t.classList.remove('auto');
   }
   fitOne(t);
   refreshDerived();
@@ -626,6 +1168,22 @@ stage.addEventListener('change', e=>{
   }
 });
 
+/* Carry the captain's duty figure down its column. */
+stage.addEventListener('click', e=>{
+  const b = e.target.closest('button.dup');
+  if(!b) return;
+  const pi = +b.dataset.page, key = b.dataset.key, from = +b.dataset.from;
+  const crew = doc.pages[pi].crew;
+  const v = crew[from][key] || '';
+  crew.forEach((m,r)=>{
+    if(r === from) return;
+    m[key] = v;
+    const inp = stage.querySelector(`input[data-path="pages.${pi}.crew.${r}.${key}"]`);
+    if(inp){ inp.value = v; fitOne(inp); }
+  });
+  save();
+});
+
 stage.addEventListener('keydown', e=>{
   if(e.key !== 'Enter') return;
   const t = e.target;
@@ -637,57 +1195,116 @@ stage.addEventListener('keydown', e=>{
   if(next){ next.focus(); next.select(); }
 });
 
-/* ---------------------------------------------------------------------- zoom */
-const STEPS = [0.5,0.65,0.8,1,1.25,1.5,2,2.5];
-let zoom = null;                                   // null = fit to the window
+/* ---------------------------------------------------------------------- zoom
+   Pinch the sheets, the way any document is handled. The page itself is held
+   at one scale — were the browser to zoom it, a tapped box would jump under
+   the finger and the toolbar would sail off — so the gesture is caught here
+   and turned into the sheet's own scale.                                     */
+const ZOOM_MIN = 0.3, ZOOM_MAX = 4;
+let zoom = null;                                   // null = fitted to the window
 try{ const z = localStorage.getItem(KEY + '.zoom'); if(z && z !== 'fit') zoom = +z; }catch(e){}
 
 function sheetPx(){ return PAGE_W * 4/3; }         // 1pt = 4/3 css px
+/* clientWidth counts the padding, and on a notched screen that padding is the
+   safe area — so take it back off before fitting a sheet into what is left. */
+function availWidth(){
+  const cs = getComputedStyle(stage);
+  return Math.max(320, stage.clientWidth
+    - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+}
+const fitK = ()=> availWidth() / sheetPx();
+const scale = ()=> zoom == null ? fitK() : zoom;
+const clampK = k => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, k));
+
 function applyZoom(){
-  const avail = Math.max(320, stage.clientWidth - 24);
-  const k = zoom == null ? avail / sheetPx() : zoom;
+  const k = scale();
   document.querySelectorAll('.sheet').forEach(s=> s.style.transform = 'scale(' + k + ')');
   document.querySelectorAll('.wrap').forEach(w=>{
     w.style.width  = (sheetPx() * k) + 'px';
     w.style.height = (PAGE_H * 4/3 * k) + 'px';
   });
-  document.getElementById('zoomval').textContent = Math.round(k*100) + '%';
-  document.getElementById('zoomFit').classList.toggle('on', zoom == null);
 }
-function setZoom(z){
+let zoomSaveTimer = null;
+function setZoom(z, anchor){
+  const before = scale();
   zoom = z;
-  try{ localStorage.setItem(KEY + '.zoom', z == null ? 'fit' : String(z)); }catch(e){}
   applyZoom();
+  if(anchor){
+    // hold the point under the fingers still while the scale changes around it
+    const k = scale() / before;
+    stage.scrollLeft = (stage.scrollLeft + anchor.x) * k - anchor.x;
+    stage.scrollTop  = (stage.scrollTop  + anchor.y) * k - anchor.y;
+  }
+  clearTimeout(zoomSaveTimer);
+  zoomSaveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(KEY + '.zoom', zoom == null ? 'fit' : String(zoom)); }catch(e){}
+  }, 250);
 }
-function step(dir){
-  const cur = zoom == null ? (stage.clientWidth - 24) / sheetPx() : zoom;
-  const list = dir > 0 ? STEPS : STEPS.slice().reverse();
-  const next = list.find(v => dir > 0 ? v > cur + 0.001 : v < cur - 0.001);
-  setZoom(next || (dir > 0 ? STEPS[STEPS.length-1] : STEPS[0]));
-}
-document.getElementById('zoomIn').onclick  = ()=> step(1);
-document.getElementById('zoomOut').onclick = ()=> step(-1);
-document.getElementById('zoomFit').onclick = ()=> setZoom(null);
 addEventListener('resize', ()=>{ if(zoom == null) applyZoom(); });
 
-/* --------------------------------------------------------------------- chrome */
-const themeBtn = document.getElementById('theme');
-function paintTheme(){
-  themeBtn.textContent = document.documentElement.dataset.theme === 'light' ? 'Dark' : 'Light';
-}
-try{
-  const th = localStorage.getItem(KEY + '.theme');
-  if(th) document.documentElement.dataset.theme = th;
-}catch(e){}
-paintTheme();
-themeBtn.onclick = ()=>{
-  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-  document.documentElement.dataset.theme = next;
-  try{ localStorage.setItem(KEY + '.theme', next); }catch(e){}
-  paintTheme();
+/* ---- the gesture ---- */
+const gap = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+const anchorOf = t => {
+  const r = stage.getBoundingClientRect();
+  return { x:(t[0].clientX + t[1].clientX)/2 - r.left,
+           y:(t[0].clientY + t[1].clientY)/2 - r.top };
 };
+let pinch = null;
+stage.addEventListener('touchstart', e=>{
+  if(e.touches.length !== 2){ pinch = null; return; }
+  const t = [e.touches[0], e.touches[1]];
+  pinch = { d:gap(t) || 1, k:scale() };
+}, {passive:true});
+stage.addEventListener('touchmove', e=>{
+  if(!pinch || e.touches.length !== 2) return;
+  e.preventDefault();                      // ours to handle, not the scroller's
+  const t = [e.touches[0], e.touches[1]];
+  setZoom(clampK(pinch.k * gap(t) / pinch.d), anchorOf(t));
+}, {passive:false});
+['touchend','touchcancel'].forEach(ev =>
+  stage.addEventListener(ev, ()=>{ pinch = null; }, {passive:true}));
 
-document.getElementById('ofp').onclick = ()=>{ location.href = './index.html'; };
+/* A trackpad pinch arrives as a wheel with ctrl held; so does ⌘+scroll. */
+stage.addEventListener('wheel', e=>{
+  if(!e.ctrlKey) return;
+  e.preventDefault();
+  const r = stage.getBoundingClientRect();
+  setZoom(clampK(scale() * (1 - e.deltaY / 300)),
+          { x:e.clientX - r.left, y:e.clientY - r.top });
+}, {passive:false});
+
+/* Two taps on the paper put it back to the width of the window — the way back
+   from a pinch, without a button standing in the header for it. */
+let lastTap = 0;
+stage.addEventListener('touchend', e=>{
+  if(e.touches.length || e.changedTouches.length !== 1) return;
+  if(e.target.closest('input,button')) return;
+  const now = Date.now();
+  if(now - lastTap < 320){ setZoom(null); lastTap = 0; } else lastTap = now;
+}, {passive:true});
+stage.addEventListener('dblclick', e=>{
+  if(e.target.closest('input,button')) return;
+  setZoom(null);
+});
+
+/* --------------------------------------------------------------------- chrome */
+/* The surround follows whatever the OFP companion is set to — one switch for
+   both pages, and it lives over there. */
+function applyTheme(){
+  let t = null;
+  try{ t = localStorage.getItem('etofill:theme'); }catch(e){}
+  if(!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+  const m = document.querySelector('meta[name=theme-color]');
+  if(m) m.content = t === 'light' ? '#ffffff' : '#1c1f24';
+}
+applyTheme();
+addEventListener('storage', e=>{ if(e.key === 'etofill:theme') applyTheme(); });
+
+/* The companion's header travels with its page, so it is only under this button
+   while that page is at the top. Crossing back asks for the top, or the return
+   would land wherever the page was last left and the button would be elsewhere. */
+document.getElementById('ofp').onclick = ()=>{ location.href = './index.html#top'; };
 
 document.getElementById('print').onclick = ()=>{
   if(document.activeElement) document.activeElement.blur();
@@ -695,15 +1312,72 @@ document.getElementById('print').onclick = ()=>{
 };
 
 document.getElementById('reset').onclick = ()=>{
+  if(!doc.source) return;
   if(!confirm('Clear everything entered and return to the document as issued?')) return;
-  doc = defaultDoc();
-  try{ localStorage.removeItem(KEY); }catch(e){}
+  doc.pages = clone(doc.source);
+  doc.manual = {};
   render();
-  note('Reset');
+  save();
 };
 
+/* ---------------------------------------------------------- loading the PDF */
+const msg = document.getElementById('msg');
+const fileInput = document.getElementById('file');
+const dropZone = document.getElementById('drop');
+function say(text, kind){
+  msg.textContent = text || '';
+  msg.className = 'msg' + (text ? ' show ' + (kind || '') : '');
+}
+
+async function loadPdf(file){
+  if(!file) return;
+  document.getElementById('fname').textContent = file.name || '';
+  say('Reading ' + (file.name || 'the PDF') + '…');
+  if(typeof DecompressionStream === 'undefined'){
+    say('Browser too old: no DecompressionStream. Safari 16.4+ / iPadOS 16.4+ required.', 'err');
+    return;
+  }
+  try{
+    const pages = await parseJourneyLog(new Uint8Array(await file.arrayBuffer()));
+    doc = emptyDoc();
+    doc.source = pages;
+    doc.pages = clone(pages);
+    render();
+    save();
+    say('', '');
+    scrollTo(0, 0);
+  }catch(err){
+    say('Could not read it: ' + (err && err.message ? err.message : err), 'err');
+  }
+}
+
+/* Taking the log away is the way back to the load screen, so it is the one
+   button that stands in for "load another". */
+document.getElementById('remove').onclick = ()=>{
+  if(!confirm('Remove the Journey Log?\n\nThe loaded document and everything entered on it will be discarded.')) return;
+  doc = emptyDoc();
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  document.getElementById('fname').textContent = '';
+  render();
+  say('', '');
+};
+
+dropZone.onclick = ()=> fileInput.click();
+fileInput.onchange = ()=>{ loadPdf(fileInput.files[0]); fileInput.value = ''; };
+
+['dragenter','dragover'].forEach(t => addEventListener(t, e=>{
+  e.preventDefault(); dropZone.classList.add('over');
+}));
+['dragleave','drop'].forEach(t => addEventListener(t, e=>{
+  e.preventDefault(); if(t === 'dragleave' && e.relatedTarget) return;
+  dropZone.classList.remove('over');
+}));
+addEventListener('drop', e=>{
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f) loadPdf(f);
+});
+
 render();
-note('Ready');
 
 if('serviceWorker' in navigator){
   addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js').catch(()=>{}));

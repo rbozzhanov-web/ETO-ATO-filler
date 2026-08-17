@@ -272,37 +272,70 @@ Everything written is printed in bold Courier-Bold so it stands out from the for
 # Journey Log — Задание на полет
 
 `journey-log.html` is the second page. It is the paper Journey Log itself, drawn
-on screen: the same two landscape sheets, the same blue banding, the same column
-widths and 16.56pt rows, all measured off the issued document and laid out in
-points. Nothing is a rendering of the PDF — the form is redrawn, so every blank
-in it is a box you can type into.
+on screen: the same landscape sheets, the same blue banding, the same column
+widths and 16.56pt rows, all measured off the document and laid out in points.
+Nothing is a rendering of the PDF — the form is redrawn, so every blank in it is
+a box you can type into.
 
 The boxes are tinted, which is the only thing on the page the paper does not
 have: the cells you fill in show pale blue, the cells the document was printed
 with do not. What you write goes down in blue so it reads apart from the form's
 own black.
 
-Both sheets are there, one under the other, with their own leg counts — four
-rows on the first, three on the second — because that is how the document was
-issued.
+## Loading the document
+
+A new Journey Log is issued for every duty, so the page starts empty and asks
+for one: **Load PDF**, or drop the file anywhere on the page. It is read on the
+device and goes nowhere else.
+
+What comes out of it is the document, not a guess at it — the journey log
+number, the date and the captain, the legs with their flight numbers and
+scheduled times, and the crew with their staff numbers and leg markers. The
+sheets, and the number of rows in each of their three tables, are however many
+the PDF has: every row of the form prints its own row number, so the tables
+announce their own length and the page is built to match.
+
+The document names itself once it is open: its number is across the top of the
+sheet, where the paper carries it.
 
 ## Filling it in
 
-Everything is editable, the printed content included, so the same form serves
-the next flight: the journey log number, the date and the captain across the
-top, the flight identity down the left of the leg table, and the crew roster.
-Those read as print until you put the cursor in them.
+What tells a box from print is where it came from, not what is in it. A cell the
+document arrived with something in reads as print; a cell the document left
+blank is a box.
 
-- **Times take four digits.** `0340` becomes `03:40` when you leave the box.
+What was printed is locked. The journey log number, the date and the captain
+across the top, the flight identity down the left of the leg table and the crew
+roster are the document's own record and are shown rather than offered: they
+take no tap, raise no keyboard, and the return key steps straight past them.
+Nothing you do on the iPad can quietly disagree with the paper.
+
+Everything the document left blank is yours, all the way across. So the spare
+rows at the foot of the leg table are open the whole width of the form and a leg
+flown but not issued can be written in by hand — date, flight, registration and
+all — and it goes down in blue, apart from the legs that came printed.
+
+- **Times take four digits.** `0340` becomes `03:40` when you leave the box —
+  in the leg table and in Duty time, Night duty and Alwd. time alike. DUTY is
+  left alone, being a code rather than a clock.
 - **Blk and Flt work themselves out** — Blk from ATD and ATA, Flt from TKOF and
-  TDWN, past midnight included. They stay in the lighter weight while they are
-  worked out. Write your own figure in and the box is yours from then on; clear
-  it again and it goes back to following the times.
-- **Enter steps to the next box**, Shift+Enter back, in reading order across the
-  page. Tab does the same.
+  TDWN, past midnight included. They are set like every other entry, since that
+  is what they are. Write your own figure in and the box is yours from then on;
+  clear it again and it goes back to following the times.
+- **The duty columns carry down.** DUTY, Duty time, Night duty and Alwd. time
+  are the same for the whole crew far more often than not, so the captain's row
+  has a small **↓** in each of those four columns: it puts that figure on every
+  crew member below. Correct anyone afterwards and only that row changes.
+- **The return key steps to the next box**, in reading order across the page —
+  the one key the on-screen keyboard offers for it. With a keyboard attached,
+  Shift+Return goes back and Tab does the same as Return.
 - Fill-in boxes take capitals, as the form is written.
-- Everything is saved on the device as you type. **Reset** clears it and returns
-  the document as issued.
+- The captain's signature has no box. It goes on the paper by hand, so the
+  space under it is left clear.
+- Everything is saved on the device as you type, and is still there next time.
+  **Clear entries** takes back what you wrote and leaves the document as it was
+  loaded; **Remove log** discards the document itself and returns the load
+  screen, which is how the next one is put in.
 
 Where a name or a heading is wider than its column — the device's font is rarely
 the Calibri the document was set in — it is set down a little until it fits, so a
@@ -316,18 +349,38 @@ one sheet per page, with the toolbar and the box tints left off. The browser's
 
 ## Zoom
 
-The page is fitted to the window on opening. **−** and **+** step through fixed
-sizes and **Fit** returns to the window; the choice is remembered. The button in
-the header switches the surround between light and dark — the sheet itself stays
-white, because it is paper.
+**Pinch the sheet**, the way any document is handled; **two taps** put it back to
+the width of the window. It opens fitted, and where you leave it is where it is
+next time. A sheet zoomed past the window is panned rather than lost — the
+header keeps its place and the sheets scroll under it, both ways, so every edge
+can be reached.
+
+Only the sheet scales. The page itself is held at one size on purpose: were the
+browser left to zoom it, a tapped box would jump under the finger as iOS pulled
+the keyboard up, and the header would sail off the screen with it.
+
+## Alongside the companion
+
+The chrome is the OFP companion's — the same colours, the same buttons at the
+same sizes, the same load card — and light or dark is whatever that page is set
+to, since one switch serves both and it lives over there. Only the surround
+changes; the sheet stays white, because it is paper.
+
+The header carries a title and its buttons, nothing else, and **OFP Companion**
+sits on the same rectangle as the **Journey Log** button on that page — same
+place, same size, in landscape and portrait alike. One spot on the glass moves
+between the two documents, and neither has to be looked for.
 
 ---
 
 ## What is inside
 
 No external libraries — no pdf.js, no pdf-lib, no CDN. `journey-log.html` is one
-file of plain HTML, CSS and script that draws the form and remembers what is
-typed into it; it reads no PDF at all. `index.html` carries its own
+file of plain HTML, CSS and script; it borrows the OFP companion's PDF reader to
+find the text and where it sits, then bins each item into the cell its
+coordinates land in. The Journey Log's fonts are Type0/Identity-H, so the glyph
+numbers are put back into letters through each font's ToUnicode map — that is
+what makes the Cyrillic come out as Cyrillic. `index.html` carries its own
 minimal PDF engine: it reads text with coordinates out of FlateDecode streams and
 appends an overlay through an incremental update, so the original bytes of the
 document stay untouched and new content is simply added at the end of the file.
