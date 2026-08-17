@@ -55,7 +55,9 @@ body{
   --statusbar:max(20px, env(safe-area-inset-top, 0px));
   flex:0 0 auto; z-index:50;
   padding-top:var(--statusbar);
-  background:var(--panel); border-bottom:1px solid var(--gold);
+  /* The companion's header sits straight on the page colour, under a gold rule
+     — so does this one, or the two would not read as the same surface. */
+  background:var(--bg); border-bottom:1px solid var(--gold);
 }
 /* Named apart from the sheet's own .hd, which marks the document's header
    lines — one stylesheet serves both the chrome and the paper. */
