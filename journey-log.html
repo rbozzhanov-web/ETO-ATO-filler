@@ -71,8 +71,11 @@ body{
 .swgap{flex:0 0 auto; width:93px; height:40px}   /* the theme switch, on the other page */
 #bar button{height:40px; min-height:40px; padding:0 16px; font-size:13.5px}
 #bar button.ghost{background:var(--panel)}
-#ofp{width:138px; padding:0}   /* the same rectangle as its opposite number, and
-                                  wide enough that its label breathes like the rest */
+/* Held to one rectangle with its opposite number on the companion. The width
+   is generous for the label, but the device picks the font, so the label is
+   also kept from ever spilling past the border whatever that font turns out
+   to be. */
+#ofp{width:150px; padding:0 8px; overflow:hidden; text-overflow:ellipsis}
 /* An iPad reports no inset at all and still draws the status bar over the page,
    so the 20px floor stands in for it — the same floor the companion uses, which
    is what keeps the two headers on the same line. */
