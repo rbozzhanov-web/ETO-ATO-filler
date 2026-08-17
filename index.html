@@ -1276,6 +1276,15 @@ const showGuide = on => {
 };
 $('#guideBtn').onclick = () => showGuide(true);
 $('#jlogBtn').onclick = () => { location.href = './journey-log.html'; };
+
+// Coming back from the Journey Log, which asks for #top: Safari would otherwise
+// restore wherever this page was last scrolled to, and the header — and the
+// button that crosses back — would not be where it was left.
+if (location.hash === '#top'){
+  history.replaceState(null, '', location.pathname + location.search);
+  scrollTo(0, 0);
+  addEventListener('load', () => scrollTo(0, 0), { once: true });
+}
 $('#guideClose').onclick = () => showGuide(false);
 guide.onclick = e => { if (e.target === guide) showGuide(false); };
 document.addEventListener('keydown', e => {

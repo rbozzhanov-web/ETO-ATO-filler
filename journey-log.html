@@ -1301,7 +1301,10 @@ function applyTheme(){
 applyTheme();
 addEventListener('storage', e=>{ if(e.key === 'etofill:theme') applyTheme(); });
 
-document.getElementById('ofp').onclick = ()=>{ location.href = './index.html'; };
+/* The companion's header travels with its page, so it is only under this button
+   while that page is at the top. Crossing back asks for the top, or the return
+   would land wherever the page was last left and the button would be elsewhere. */
+document.getElementById('ofp').onclick = ()=>{ location.href = './index.html#top'; };
 
 document.getElementById('print').onclick = ()=>{
   if(document.activeElement) document.activeElement.blur();
