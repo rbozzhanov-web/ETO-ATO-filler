@@ -1,6 +1,9 @@
-/* OFP Companion — offline cache. The whole app lives in index.html. */
-const V = 'eto-filler-v22';
-const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+/* OFP Companion — offline cache. Two apps, one page each:
+   index.html is the OFP companion, journey-log.html the Journey Log form. */
+const V = 'eto-filler-v23';
+const FILES = ['./', './index.html', './journey-log.html',
+               './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+const PAGES = ['./index.html', './journey-log.html'];
 const NET_MS = 2500;            // give the network this long before falling back to the cache
 
 self.addEventListener('install', e => {
@@ -16,16 +19,25 @@ self.addEventListener('activate', e => {
 // picked up on the next launch instead of waiting on a service-worker update
 // check. Everything else stays cache-first — it only changes with the page.
 // A slow link must not delay start-up, hence the race against NET_MS.
+// Which of the two pages a navigation is asking for. Anything else — the root
+// included — is the OFP companion, as it always was.
+function pageFor(req){
+  const path = new URL(req.url).pathname;
+  const hit = PAGES.find(p => path.endsWith(p.slice(1)));
+  return hit || './index.html';
+}
+
 function freshPage(req){
+  const key = pageFor(req);
   return new Promise(resolve => {
     let done = false;
-    const fallback = () => { if (!done){ done = true; resolve(caches.match('./index.html')); } };
+    const fallback = () => { if (!done){ done = true; resolve(caches.match(key)); } };
     const timer = setTimeout(fallback, NET_MS);
     fetch(req).then(r => {
       clearTimeout(timer);
-      if (done) { caches.open(V).then(c => c.put('./index.html', r.clone())).catch(() => {}); return; }
+      caches.open(V).then(c => c.put(key, r.clone())).catch(() => {});
+      if (done) return;
       done = true;
-      caches.open(V).then(c => c.put('./index.html', r.clone())).catch(() => {});
       resolve(r);
     }).catch(() => { clearTimeout(timer); fallback(); });
   });
@@ -40,6 +52,6 @@ self.addEventListener('fetch', e => {
         const copy = r.clone();
         caches.open(V).then(c => c.put(e.request, copy)).catch(() => {});
         return r;
-      }).catch(() => caches.match('./index.html')))
+      }).catch(() => caches.match(pageFor(e.request))))
   );
 });

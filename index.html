@@ -55,7 +55,7 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
   color:var(--acc);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 40%,transparent)}
 @media(hover:hover){.themesw button:hover{color:var(--txt)}
   .themesw button[aria-pressed=true]:hover{color:var(--acc)}}
-#guideBtn{height:40px;min-height:40px;padding:0 16px;font-size:13.5px;background:var(--panel)}
+#guideBtn,#jlogBtn{height:40px;min-height:40px;padding:0 16px;font-size:13.5px;background:var(--panel)}
 @media(max-width:560px){.hd{gap:12px}.logo{height:19px}}
 
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
@@ -356,6 +356,7 @@ td.diff{text-align:right;font-weight:700}
          theme switch alone onto the next row at the far left. -->
     <div class="hdctl">
     <button id="guideBtn" type="button" class="ghost">User guide</button>
+    <button id="jlogBtn" type="button" class="ghost" title="Journey Log / Задание на полет">Journey Log</button>
     <div class="themesw" role="group" aria-label="Colour theme">
       <button type="button" data-theme-set="light" aria-label="Light theme" title="Light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 1.8v2.6M12 19.6v2.6M4.2 4.2l1.9 1.9M17.9 17.9l1.9 1.9M1.8 12h2.6M19.6 12h2.6M4.2 19.8l1.9-1.9M17.9 6.1l1.9-1.9"/></svg></button>
       <button type="button" data-theme-set="dark" aria-label="Dark theme" title="Dark theme"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
@@ -506,7 +507,7 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 22</h3>
+        <h3>New in version 23</h3>
         <ul>
           <li>Page turning is withdrawn — the page scrolls freely again, and a scroll that comes
               to rest near the start of a card is carried the rest of the way onto it.</li>
@@ -514,6 +515,8 @@ td.diff{text-align:right;font-weight:700}
               underneath it.</li>
           <li>The <b>UTC now</b> clock sits beside the takeoff box, so it is there while the
               airborne time is being typed rather than only after <b>Calculate</b>.</li>
+          <li>The <b>Journey Log</b> button in the header opens the second form. Both pages are
+              cached, so either opens offline.</li>
         </ul>
       </div>
 
@@ -678,7 +681,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 22 &nbsp;·&nbsp; published 16 Aug 2026 08:30 UTC</span></p>
+      <span class="build">Version 23 &nbsp;·&nbsp; published 16 Aug 2026 09:20 UTC</span></p>
 
     </div>
   </div>
@@ -1255,6 +1258,7 @@ const showGuide = on => {
   document.body.style.overflow = on ? 'hidden' : '';
 };
 $('#guideBtn').onclick = () => showGuide(true);
+$('#jlogBtn').onclick = () => { location.href = './journey-log.html'; };
 $('#guideClose').onclick = () => showGuide(false);
 guide.onclick = e => { if (e.target === guide) showGuide(false); };
 document.addEventListener('keydown', e => {

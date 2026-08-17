@@ -5,6 +5,12 @@ No network access after installation, nothing is uploaded anywhere.
 
 Requires iPadOS 16.4 or newer (`DecompressionStream` is needed to inflate PDF streams).
 
+> **There is also a native app.** `ios/` holds a Swift rewrite of everything below — the same
+> document, the same arithmetic, the same print colours, built as a real iPadOS/iOS app
+> rather than a page in Safari. It installs from Xcode instead of from a web address, and it
+> can have a plan opened straight into it from Files or Mail. See [`ios/README.md`](ios/README.md).
+> This web version is not going anywhere; the two read the same plans and write the same overlay.
+
 ---
 
 ## Option 1. Home screen icon (recommended)
@@ -16,11 +22,16 @@ Everything required is in the `pwa/` folder:
 
 ```
 pwa/index.html
+pwa/journey-log.html
 pwa/sw.js
 pwa/manifest.webmanifest
 pwa/icon-192.png
 pwa/icon-512.png
 ```
+
+There are two pages: `index.html` is the OFP companion described below, and
+`journey-log.html` is the Journey Log form. Each links to the other from its
+header, and both are cached, so either can be opened offline.
 
 1. Upload the **contents** of `pwa/` to any https host.
    GitHub Pages is free for public repositories: create a repo, put the files in
@@ -261,9 +272,65 @@ Everything written is printed in bold Courier-Bold so it stands out from the for
 
 ---
 
+# Journey Log — Задание на полет
+
+`journey-log.html` is the second page. It is the paper Journey Log itself, drawn
+on screen: the same two landscape sheets, the same blue banding, the same column
+widths and 16.56pt rows, all measured off the issued document and laid out in
+points. Nothing is a rendering of the PDF — the form is redrawn, so every blank
+in it is a box you can type into.
+
+The boxes are tinted, which is the only thing on the page the paper does not
+have: the cells you fill in show pale blue, the cells the document was printed
+with do not. What you write goes down in blue so it reads apart from the form's
+own black.
+
+Both sheets are there, one under the other, with their own leg counts — four
+rows on the first, three on the second — because that is how the document was
+issued.
+
+## Filling it in
+
+Everything is editable, the printed content included, so the same form serves
+the next flight: the journey log number, the date and the captain across the
+top, the flight identity down the left of the leg table, and the crew roster.
+Those read as print until you put the cursor in them.
+
+- **Times take four digits.** `0340` becomes `03:40` when you leave the box.
+- **Blk and Flt work themselves out** — Blk from ATD and ATA, Flt from TKOF and
+  TDWN, past midnight included. They stay in the lighter weight while they are
+  worked out. Write your own figure in and the box is yours from then on; clear
+  it again and it goes back to following the times.
+- **Enter steps to the next box**, Shift+Enter back, in reading order across the
+  page. Tab does the same.
+- Fill-in boxes take capitals, as the form is written.
+- Everything is saved on the device as you type. **Reset** clears it and returns
+  the document as issued.
+
+Where a name or a heading is wider than its column — the device's font is rarely
+the Calibri the document was set in — it is set down a little until it fits, so a
+column never loses its last character.
+
+## Getting it onto paper
+
+**Print / PDF** puts the sheets out at their true size: A4 landscape, 297 × 210mm,
+one sheet per page, with the toolbar and the box tints left off. The browser's
+"Save as PDF" therefore gives back the same document with the entries in it.
+
+## Zoom
+
+The page is fitted to the window on opening. **−** and **+** step through fixed
+sizes and **Fit** returns to the window; the choice is remembered. The button in
+the header switches the surround between light and dark — the sheet itself stays
+white, because it is paper.
+
+---
+
 ## What is inside
 
-No external libraries — no pdf.js, no pdf-lib, no CDN. `index.html` carries its own
+No external libraries — no pdf.js, no pdf-lib, no CDN. `journey-log.html` is one
+file of plain HTML, CSS and script that draws the form and remembers what is
+typed into it; it reads no PDF at all. `index.html` carries its own
 minimal PDF engine: it reads text with coordinates out of FlateDecode streams and
 appends an overlay through an incremental update, so the original bytes of the
 document stay untouched and new content is simply added at the end of the file.
