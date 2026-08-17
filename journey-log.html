@@ -11,26 +11,37 @@
 <title>Journey Log — Задание на полет</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <style>
+/* The chrome is the OFP companion's, to the value — one set of colours, one set
+   of buttons across the two pages. The sheet keeps its own, because it is paper
+   and does not answer to a theme. */
 :root{
-  --chrome:#22262c; --chrome-2:#2c313a; --chrome-line:#3b414b; --chrome-ink:#e7eaee;
-  --chrome-dim:#9aa3af; --accent:#3498db;
+  --bg:#0f1419; --panel:#171d24; --panel2:#1e262f; --line:#2c3742; --line2:#232c35;
+  --txt:#e6edf3; --dim:#8b98a5; --acc:#4d9fff; --acc2:#1f6feb;
+  --ok:#3fb950; --warn:#d29922; --err:#f85149;
+  --gold:#9b804d; --hdr:#131a21; --fld:#4a5560; --dangerbtn:#c93a3a;
+
   --paper:#ffffff; --ink:#000000; --band:#3498db; --band-2:#dcdcdc;
   --written:#0b4f9e;                       /* what you write, so it reads apart from the form */
   --fill:rgba(52,152,219,.09);             /* the boxes you type into */
   --fill-hover:rgba(52,152,219,.18);
   --fill-focus:rgba(52,152,219,.26);
 }
-html[data-theme="light"]{
-  --chrome:#e9ecf1; --chrome-2:#ffffff; --chrome-line:#c9cfd8; --chrome-ink:#1b1f25;
-  --chrome-dim:#5c6672;
+html[data-theme=light]{
+  --bg:#f2f5f8; --panel:#ffffff; --panel2:#f1f4f7; --line:#d6dde4; --line2:#e6ebf0;
+  --txt:#16202b; --dim:#5d6b7a; --acc:#0b62d6; --acc2:#0b62d6;
+  --ok:#1a7f37; --warn:#9a6700; --err:#cf222e;
+  --gold:#8a6f3e; --hdr:#eef2f6; --fld:#9aa7b4; --dangerbtn:#cf222e;
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
+/* A viewer, not a scrolling page: the toolbar holds its place and the sheets
+   pan under it, which is what lets a zoomed sheet be reached at all. */
 body{
-  background:var(--chrome); color:var(--chrome-ink);
-  font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  overscroll-behavior-y:none;
+  margin:0; background:var(--bg); color:var(--txt);
+  -webkit-tap-highlight-color:transparent;
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  transition:background .15s,color .15s;
+  height:100vh; height:100dvh; display:flex; flex-direction:column;
 }
 
 /* ---------- toolbar ---------- */
@@ -38,13 +49,13 @@ body{
    toolbar carries the inset itself and its own padding on top of it. */
 #bar{
   --statusbar:env(safe-area-inset-top, 0px);
-  position:sticky; top:0; z-index:50;
+  flex:0 0 auto; z-index:50;
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  padding:calc(8px + var(--statusbar))
-          calc(10px + env(safe-area-inset-right, 0px))
-          8px
-          calc(10px + env(safe-area-inset-left, 0px));
-  background:var(--chrome-2); border-bottom:1px solid var(--chrome-line);
+  padding:calc(10px + var(--statusbar))
+          max(18px, env(safe-area-inset-right, 0px))
+          10px
+          max(18px, env(safe-area-inset-left, 0px));
+  background:var(--panel); border-bottom:1px solid var(--gold);
 }
 /* An iPad has no notch, so it reports no inset at all — and still draws the
    status bar over the page. Once launched from the Home Screen the bar is
@@ -53,30 +64,49 @@ body{
   #bar{--statusbar:max(24px, env(safe-area-inset-top, 0px))}
 }
 html.standalone #bar{--statusbar:max(24px, env(safe-area-inset-top, 0px))}
-#bar h1{font-size:14px; font-weight:600; margin:0 6px 0 0; white-space:nowrap}
-#bar h1 span{color:var(--chrome-dim); font-weight:400}
-.grp{display:flex; align-items:center; gap:4px}
+#bar h1{font-size:20px; letter-spacing:.3px; margin:0 4px 0 0; white-space:nowrap}
+#bar h1 span{color:var(--dim); font-size:13px; letter-spacing:0; font-weight:400}
+.grp{display:flex; align-items:center; gap:8px}
 .spacer{flex:1}
+
 button{
-  font:inherit; font-size:13px; color:var(--chrome-ink);
-  background:transparent; border:1px solid var(--chrome-line); border-radius:7px;
-  padding:5px 10px; cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent;
+  background:var(--acc2); color:#fff; border:0; border-radius:8px; padding:13px 22px;
+  font:600 15px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  cursor:pointer; transition:.15s; touch-action:manipulation; min-height:44px; white-space:nowrap;
 }
-button:hover{border-color:var(--accent)}
-button:active{background:var(--chrome-line)}
-button.on{border-color:var(--accent); color:var(--accent)}
-button.wide{min-width:64px}
-#zoomval{min-width:52px; text-align:center; color:var(--chrome-dim); font-variant-numeric:tabular-nums; font-size:13px}
-#saved{color:var(--chrome-dim); font-size:12px; min-width:112px; text-align:right}
-#docinfo{color:var(--chrome-dim); font-size:12.5px; margin-left:4px; white-space:nowrap}
+button:active:not(:disabled){transform:scale(.98)}
+button:disabled{opacity:.4}
+button.ghost{background:transparent; border:1px solid var(--line); color:var(--dim)}
+button.danger{background:var(--dangerbtn); color:#fff}
+button.sm{padding:9px 15px; font-size:13.5px; min-height:38px}
+button.on{border-color:var(--acc); color:var(--acc);
+  background:color-mix(in srgb, var(--acc) 16%, transparent)}
+@media(hover:hover){
+  button:hover:not(:disabled){filter:brightness(1.12)}
+  button.ghost:hover:not(:disabled){background:var(--panel2); color:var(--txt)}
+  #drop:hover{border-color:var(--acc)}
+}
+
+#zoomval{min-width:50px; text-align:center; color:var(--dim);
+  font:600 13.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace; font-variant-numeric:tabular-nums}
+#saved{color:var(--dim); font-size:12.5px; min-width:104px; text-align:right}
+#docinfo{color:var(--acc); letter-spacing:.4px;
+  font:700 12.5px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:nowrap}
 
 /* ---------- the sheet ---------- */
+/* The sheets pan inside here, both ways. A zoomed sheet that outgrows the
+   window is reached by scrolling it, and the toolbar does not travel with it. */
 #stage{
-  display:flex; flex-direction:column; align-items:center; gap:18px;
-  padding:16px calc(env(safe-area-inset-right, 0px)) calc(40px + env(safe-area-inset-bottom, 0px))
-          calc(env(safe-area-inset-left, 0px));
+  flex:1 1 auto; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  display:flex; flex-direction:column; align-items:flex-start; gap:18px;
+  padding:16px calc(12px + env(safe-area-inset-right, 0px))
+          calc(24px + env(safe-area-inset-bottom, 0px))
+          calc(12px + env(safe-area-inset-left, 0px));
 }
-.wrap{position:relative}
+/* Auto margins centre a sheet that fits and go to nothing on one that does not,
+   so nothing is ever pushed off the left where no scrolling can reach it. */
+.wrap{position:relative; flex:0 0 auto; margin-inline:auto}
 .sheet{
   position:absolute; left:0; top:0; transform-origin:0 0;
   width:841.89pt; height:595.28pt;
@@ -123,14 +153,14 @@ input.l{text-align:left; padding-left:2pt}
 
 /* Carries the captain's figure down the column — the crew almost always share it. */
 button.dup{
-  position:absolute; padding:0; margin:0; width:9pt; height:9pt;
+  position:absolute; padding:0; margin:0; width:9pt; height:9pt; min-height:0;
   border:0; border-radius:50%; cursor:pointer;
   background:rgba(52,152,219,.28); color:var(--written);
   font-size:6pt; font-weight:700; line-height:1;
   display:flex; align-items:center; justify-content:center;
 }
-button.dup:hover{background:var(--accent); color:#fff; border:0}
-button.dup:active{background:var(--accent)}
+@media(hover:hover){button.dup:hover{background:#3498db; color:#fff; filter:none}}
+button.dup:active:not(:disabled){transform:none; background:#3498db; color:#fff}
 
 /* the underlined items in the page head */
 .ed{
@@ -146,10 +176,10 @@ button.dup:active{background:var(--accent)}
 /* ---------- print: the sheet at its true size, nothing else on the paper ---------- */
 @page{size:A4 landscape; margin:0}
 @media print{
-  body{background:#fff}
-  #bar,#hint{display:none !important}
-  #stage{padding:0; gap:0; display:block}
-  .wrap{width:auto !important; height:auto !important}
+  body{background:#fff; height:auto; display:block}
+  #bar,#empty{display:none !important}
+  #stage{padding:0; gap:0; display:block; overflow:visible; min-height:0}
+  .wrap{width:auto !important; height:auto !important; margin:0 !important}
   .sheet{
     position:relative; transform:none !important;
     box-shadow:none; break-after:page; page-break-after:always;
@@ -159,27 +189,40 @@ button.dup:active{background:var(--accent)}
   input.fill,.ed:not(.pre){color:var(--written)}
   button.dup{display:none !important}
 }
-#hint{
-  color:var(--chrome-dim); font-size:12px; text-align:center;
-  padding:0 16px 8px; max-width:820px; margin:0 auto;
-}
+.disc b{color:var(--txt); font-family:ui-monospace,Menlo,monospace; font-weight:600}
+.disc{align-items:flex-start; line-height:1.5}
+.disc::before{margin-top:7px}
 
 /* ---------- before a document is loaded ---------- */
-#empty{max-width:560px; margin:0 auto; padding:48px 16px}
-#drop{
-  border:1.5px dashed var(--chrome-line); border-radius:12px;
-  padding:38px 20px; text-align:center; cursor:pointer; color:var(--chrome-dim);
-  background:var(--chrome-2);
+#empty{
+  flex:1 1 auto; min-height:0; overflow:auto;
+  padding:22px max(18px, env(safe-area-inset-right, 0px))
+          calc(40px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
 }
-#drop:hover,#drop.over{border-color:var(--accent); color:var(--chrome-ink)}
-#drop b{display:block; font-size:15px; color:var(--chrome-ink); margin-bottom:6px}
-#empty p{color:var(--chrome-dim); font-size:13px; line-height:1.55; text-align:center}
-#msg{margin:14px 0 0; text-align:center; font-size:13px; min-height:18px}
-#msg.err{color:#e5645a}
-#msg.ok{color:var(--accent)}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:18px; max-width:640px; margin:0 auto}
+.step{display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600;
+  letter-spacing:.8px; text-transform:uppercase; color:var(--dim); margin-bottom:14px}
+.step i{display:grid; place-items:center; min-width:20px; height:20px; padding:0 6px;
+  border-radius:10px; background:var(--acc2); color:#fff; font-style:normal;
+  font-size:11px; font-weight:700; line-height:1; letter-spacing:0; flex:0 0 auto}
+#drop{border:2px dashed var(--line); border-radius:8px; padding:32px 20px; text-align:center;
+  cursor:pointer; transition:.15s; background:var(--panel2)}
+#drop.over{border-color:var(--acc)}
+#drop b{color:var(--acc)}
+#drop .fn{margin-top:8px; font-size:13px; color:var(--dim); word-break:break-all}
+.disc{display:flex; align-items:center; gap:8px; margin:12px 0 0; font-size:12.5px; color:var(--dim)}
+.disc::before{content:""; flex:0 0 auto; width:6px; height:6px; border-radius:50%; background:var(--gold)}
+.msg{margin-top:12px; font-size:13.5px; padding:11px 13px; border-radius:7px; display:none}
+.msg.show{display:block}
+.msg.ok{background:color-mix(in srgb, var(--ok) 14%, transparent); color:var(--ok);
+  border:1px solid color-mix(in srgb, var(--ok) 34%, transparent)}
+.msg.err{background:color-mix(in srgb, var(--err) 14%, transparent); color:var(--err);
+  border:1px solid color-mix(in srgb, var(--err) 34%, transparent)}
+
 body.loaded #empty{display:none}
-body:not(.loaded) #stage,body:not(.loaded) #hint,
-body:not(.loaded) #zoomgrp,body:not(.loaded) #print,body:not(.loaded) #reset{display:none}
+body:not(.loaded) #stage,body:not(.loaded) #zoomgrp,
+body:not(.loaded) #print,body:not(.loaded) #reset,body:not(.loaded) #remove{display:none}
 </style>
 <script>
 /* Older iOS answers navigator.standalone but not the display-mode query, so
@@ -189,21 +232,19 @@ if (navigator.standalone) document.documentElement.classList.add('standalone');
 
 <div id="bar">
   <h1>Journey Log <span>· Задание на полет</span></h1>
-  <div class="grp">
-    <button id="load">Load PDF</button>
-    <span id="docinfo"></span>
-  </div>
+  <div class="grp"><span id="docinfo"></span></div>
   <div class="grp" id="zoomgrp">
-    <button id="zoomOut" title="Zoom out">−</button>
+    <button id="zoomOut" class="ghost sm" title="Zoom out">−</button>
     <span id="zoomval">100%</span>
-    <button id="zoomIn" title="Zoom in">+</button>
-    <button id="zoomFit" class="wide">Fit</button>
+    <button id="zoomIn" class="ghost sm" title="Zoom in">+</button>
+    <button id="zoomFit" class="ghost sm">Fit</button>
   </div>
   <div class="spacer"></div>
   <div class="grp">
-    <button id="ofp" title="Back to the OFP companion">OFP Companion</button>
-    <button id="print">Print / PDF</button>
-    <button id="reset">Reset</button>
+    <button id="ofp" class="ghost sm" title="Back to the OFP companion">OFP Companion</button>
+    <button id="print" class="ghost sm">Print / PDF</button>
+    <button id="reset" class="ghost sm">Clear entries</button>
+    <button id="remove" class="danger sm">Remove log</button>
   </div>
   <div id="saved"></div>
 </div>
@@ -211,24 +252,23 @@ if (navigator.standalone) document.documentElement.classList.add('standalone');
 <input type="file" id="file" accept="application/pdf,.pdf" hidden>
 
 <div id="empty">
-  <div id="drop">
-    <b>Load the Journey Log PDF</b>
-    Tap to choose one, or drop it on this page
-    <div class="fn" id="fname"></div>
+  <div class="card">
+    <div class="step"><i>1</i> Load the Journey Log PDF</div>
+    <div id="drop">
+      Tap to choose a PDF
+      <div class="fn" id="fname"></div>
+    </div>
+    <p class="disc"><span>Only Air Astana Journey Logs are supported.</span></p>
+    <p class="disc"><span>The form is drawn from the document you load — its legs, its crew,
+      its number of rows. Nothing leaves the device.</span></p>
+    <p class="disc"><span>Enter steps to the next box, Shift+Enter back. Times take four digits —
+      <b>0340</b> becomes <b>03:40</b>. Blk and Flt are worked out from the times either
+      side until you write in them yourself.</span></p>
+    <div class="msg" id="msg"></div>
   </div>
-  <div id="msg"></div>
-  <p style="margin-top:22px">
-    The form is drawn from the document you load — its legs, its crew, its
-    number of rows. Nothing leaves the device.
-  </p>
 </div>
 
 <div id="stage"></div>
-<div id="hint">
-  Everything is saved on this device as you type. Enter steps to the next box,
-  Shift+Enter back. Times take four digits — <b>0340</b> becomes <b>03:40</b>.
-  Blk and Flt are worked out from the times either side until you write in them yourself.
-</div>
 
 <script>
 'use strict';
@@ -1239,7 +1279,10 @@ document.getElementById('reset').onclick = ()=>{
 const msg = document.getElementById('msg');
 const fileInput = document.getElementById('file');
 const dropZone = document.getElementById('drop');
-function say(text, kind){ msg.textContent = text; msg.className = kind || ''; }
+function say(text, kind){
+  msg.textContent = text || '';
+  msg.className = 'msg' + (text ? ' show ' + (kind || '') : '');
+}
 
 async function loadPdf(file){
   if(!file) return;
@@ -1263,7 +1306,18 @@ async function loadPdf(file){
   }
 }
 
-document.getElementById('load').onclick = ()=> fileInput.click();
+/* Taking the log away is the way back to the load screen, so it is the one
+   button that stands in for "load another". */
+document.getElementById('remove').onclick = ()=>{
+  if(!confirm('Remove the Journey Log?\n\nThe loaded document and everything entered on it will be discarded.')) return;
+  doc = emptyDoc();
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  document.getElementById('fname').textContent = '';
+  render();
+  say('', '');
+  note('');
+};
+
 dropZone.onclick = ()=> fileInput.click();
 fileInput.onchange = ()=>{ loadPdf(fileInput.files[0]); fileInput.value = ''; };
 

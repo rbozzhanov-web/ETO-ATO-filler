@@ -332,7 +332,9 @@ blue, apart from the legs that came printed.
 - The captain's signature has no box. It goes on the paper by hand, so the
   space under it is left clear.
 - Everything is saved on the device as you type, and is still there next time.
-  **Reset** clears what you wrote and puts back the document as it was loaded.
+  **Clear entries** takes back what you wrote and leaves the document as it was
+  loaded; **Remove log** discards the document itself and returns the load
+  screen, which is how the next one is put in.
 
 Where a name or a heading is wider than its column — the device's font is rarely
 the Calibri the document was set in — it is set down a little until it fits, so a
@@ -347,10 +349,14 @@ one sheet per page, with the toolbar and the box tints left off. The browser's
 ## Zoom
 
 The page is fitted to the window on opening. **−** and **+** step through fixed
-sizes and **Fit** returns to the window; the choice is remembered. Light or dark
-is whatever the OFP companion is set to — one switch serves both pages, and it
-lives over there. Only the surround changes; the sheet stays white, because it
-is paper.
+sizes and **Fit** returns to the window; the choice is remembered. A sheet
+zoomed past the window is panned rather than lost: the toolbar keeps its place
+and the sheets scroll under it, both ways, so every edge can be reached.
+
+The chrome is the OFP companion's — the same colours, the same buttons at the
+same sizes, the same load card — and light or dark is whatever that page is set
+to, since one switch serves both and it lives over there. Only the surround
+changes; the sheet stays white, because it is paper.
 
 ---
 
