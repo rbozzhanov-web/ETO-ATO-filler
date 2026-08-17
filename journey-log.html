@@ -21,6 +21,7 @@
   --gold:#9b804d; --hdr:#131a21; --fld:#4a5560; --dangerbtn:#c93a3a;
 
   --paper:#ffffff; --ink:#000000; --band:#3498db; --band-2:#dcdcdc;
+  --accent:#3498db;                        /* the sheet's own blue — paper does not follow a theme */
   --written:#0b4f9e;                       /* what you write, so it reads apart from the form */
   --fill:rgba(52,152,219,.09);             /* the boxes you type into */
   --fill-hover:rgba(52,152,219,.18);
@@ -140,9 +141,9 @@ input.f{
 }
 input.f::placeholder{color:#9bb7d1}
 input.f:focus{outline:0}
-/* pre-printed content: reads as print until you touch it */
-input.pre:hover{background:rgba(0,0,0,.05)}
-input.pre:focus{background:rgba(0,0,0,.06); box-shadow:inset 0 0 0 .75pt var(--accent)}
+/* What the document was printed with is shown, not offered: it reads as print,
+   takes no tap and raises no keyboard. */
+input.pre{pointer-events:none; user-select:none; -webkit-user-select:none}
 /* what you fill in: a box, and blue ink */
 input.fill{background:var(--fill); color:var(--written); font-weight:700}
 input.fill:hover{background:var(--fill-hover)}
@@ -169,9 +170,8 @@ button.dup:active:not(:disabled){transform:none; background:#3498db; color:#fff}
 }
 .ed:hover{background:var(--fill-hover)}
 .ed:focus{background:var(--fill-focus); box-shadow:inset 0 0 0 .75pt var(--accent)}
-.ed.pre{background:transparent; color:var(--ink)}
-.ed.pre:hover{background:rgba(0,0,0,.05)}
-.ed.pre:focus{background:rgba(0,0,0,.06); box-shadow:inset 0 0 0 .75pt var(--accent)}
+.ed.pre{background:transparent; color:var(--ink);
+  pointer-events:none; user-select:none; -webkit-user-select:none}
 
 /* ---------- print: the sheet at its true size, nothing else on the paper ---------- */
 @page{size:A4 landscape; margin:0}
@@ -845,7 +845,10 @@ function field(parent, x0, x1, y, h, opt){
   if(!opt.pre) inp.dataset.upper = '1';
   if(opt.maxlength) inp.maxLength = opt.maxlength;
   parent.appendChild(inp);
-  inputs.push(inp);
+  /* Printed cells are locked, and stay out of the run of boxes the return key
+     steps through — there is nothing to write in them. */
+  if(opt.pre){ inp.readOnly = true; inp.tabIndex = -1; }
+  else inputs.push(inp);
   return inp;
 }
 
@@ -854,10 +857,11 @@ function field(parent, x0, x1, y, h, opt){
 function editable(parent, cls, path, value){
   const s = document.createElement('span');
   s.className = 'ed ' + cls;
-  s.contentEditable = 'true';
   s.spellcheck = false;
   s.textContent = value || '';
   s.dataset.path = path;
+  if(cls === 'pre'){ s.contentEditable = 'false'; return parent.appendChild(s), s; }
+  s.contentEditable = 'true';
   s.addEventListener('input', ()=>{ set(path, s.textContent); save(); });
   parent.appendChild(s);
   return s;

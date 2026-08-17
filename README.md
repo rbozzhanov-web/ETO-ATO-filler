@@ -303,17 +303,20 @@ legs — so there is no doubt which duty is on screen.
 
 ## Filling it in
 
-Everything is editable, the printed content included: the journey log number,
-the date and the captain across the top, the flight identity down the left of
-the leg table, and the crew roster. Those read as print until you put the cursor
-in them, so a correction can be made without reaching for the paper.
-
 What tells a box from print is where it came from, not what is in it. A cell the
 document arrived with something in reads as print; a cell the document left
-blank is a box, all the way across. So the spare rows at the foot of the leg
-table are open the whole width of the form and a leg flown but not issued can be
-written in by hand — date, flight, registration and all — and it goes down in
-blue, apart from the legs that came printed.
+blank is a box.
+
+What was printed is locked. The journey log number, the date and the captain
+across the top, the flight identity down the left of the leg table and the crew
+roster are the document's own record and are shown rather than offered: they
+take no tap, raise no keyboard, and the return key steps straight past them.
+Nothing you do on the iPad can quietly disagree with the paper.
+
+Everything the document left blank is yours, all the way across. So the spare
+rows at the foot of the leg table are open the whole width of the form and a leg
+flown but not issued can be written in by hand — date, flight, registration and
+all — and it goes down in blue, apart from the legs that came printed.
 
 - **Times take four digits.** `0340` becomes `03:40` when you leave the box —
   in the leg table and in Duty time, Night duty and Alwd. time alike. DUTY is
