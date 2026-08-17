@@ -67,7 +67,10 @@ body{
   padding:0 max(18px, env(safe-area-inset-right, 0px))
           16px max(18px, env(safe-area-inset-left, 0px));
 }
-.hdctl{display:flex; align-items:center; gap:12px; margin-left:auto}
+/* Pinned as on the companion, so both groups measure from the top of the row
+   and neither can drift with whatever sits beside it. */
+.hdctl{display:flex; align-items:center; gap:12px; margin-left:auto;
+  align-self:flex-start; margin-top:6.3px; flex:0 0 auto}
 .swgap{flex:0 0 auto; width:93px; height:40px}   /* the theme switch, on the other page */
 #bar button{height:40px; min-height:40px; padding:0 16px; font-size:13.5px}
 #bar button.ghost{background:var(--panel)}
