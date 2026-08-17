@@ -51,6 +51,7 @@ button.on{border-color:var(--accent); color:var(--accent)}
 button.wide{min-width:64px}
 #zoomval{min-width:52px; text-align:center; color:var(--chrome-dim); font-variant-numeric:tabular-nums; font-size:13px}
 #saved{color:var(--chrome-dim); font-size:12px; min-width:112px; text-align:right}
+#docinfo{color:var(--chrome-dim); font-size:12.5px; margin-left:4px; white-space:nowrap}
 
 /* ---------- the sheet ---------- */
 #stage{padding:16px 0 40px; display:flex; flex-direction:column; align-items:center; gap:18px}
@@ -129,11 +130,32 @@ input.l{text-align:left; padding-left:2pt}
   color:var(--chrome-dim); font-size:12px; text-align:center;
   padding:0 16px 8px; max-width:820px; margin:0 auto;
 }
+
+/* ---------- before a document is loaded ---------- */
+#empty{max-width:560px; margin:0 auto; padding:48px 16px}
+#drop{
+  border:1.5px dashed var(--chrome-line); border-radius:12px;
+  padding:38px 20px; text-align:center; cursor:pointer; color:var(--chrome-dim);
+  background:var(--chrome-2);
+}
+#drop:hover,#drop.over{border-color:var(--accent); color:var(--chrome-ink)}
+#drop b{display:block; font-size:15px; color:var(--chrome-ink); margin-bottom:6px}
+#empty p{color:var(--chrome-dim); font-size:13px; line-height:1.55; text-align:center}
+#msg{margin:14px 0 0; text-align:center; font-size:13px; min-height:18px}
+#msg.err{color:#e5645a}
+#msg.ok{color:var(--accent)}
+body.loaded #empty{display:none}
+body:not(.loaded) #stage,body:not(.loaded) #hint,
+body:not(.loaded) #zoomgrp,body:not(.loaded) #print,body:not(.loaded) #reset{display:none}
 </style>
 
 <div id="bar">
   <h1>Journey Log <span>· Задание на полет</span></h1>
   <div class="grp">
+    <button id="load">Load PDF</button>
+    <span id="docinfo"></span>
+  </div>
+  <div class="grp" id="zoomgrp">
     <button id="zoomOut" title="Zoom out">−</button>
     <span id="zoomval">100%</span>
     <button id="zoomIn" title="Zoom in">+</button>
@@ -142,11 +164,25 @@ input.l{text-align:left; padding-left:2pt}
   <div class="spacer"></div>
   <div class="grp">
     <button id="ofp" title="Back to the OFP companion">OFP Companion</button>
-    <button id="theme" class="wide" title="Light / dark surround">Light</button>
     <button id="print">Print / PDF</button>
     <button id="reset">Reset</button>
   </div>
   <div id="saved"></div>
+</div>
+
+<input type="file" id="file" accept="application/pdf,.pdf" hidden>
+
+<div id="empty">
+  <div id="drop">
+    <b>Load the Journey Log PDF</b>
+    Tap to choose one, or drop it on this page
+    <div class="fn" id="fname"></div>
+  </div>
+  <div id="msg"></div>
+  <p style="margin-top:22px">
+    The form is drawn from the document you load — its legs, its crew, its
+    number of rows. Nothing leaves the device.
+  </p>
 </div>
 
 <div id="stage"></div>
@@ -158,8 +194,249 @@ input.l{text-align:left; padding-left:2pt}
 
 <script>
 'use strict';
-const VERSION = '1';
+const VERSION = '2';
 const KEY = 'journeylog.v1';
+
+/* ==================================================================== reader
+   Enough of a PDF to find the text and where it sits. Taken as it stands from
+   the OFP companion, which has read Air Astana's PDFs for a while now: a
+   classic cross-reference table, FlateDecode streams, and an object lexer.  */
+/* ---------- bytes <-> latin1 string (1:1, index == byte offset) ---------- */
+function toStr(u8){
+  let s = '', C = 0x8000;
+  for (let i = 0; i < u8.length; i += C)
+    s += String.fromCharCode.apply(null, u8.subarray(i, i + C));
+  return s;
+}
+
+/* ---------- object parsing ---------- */
+const WS = ' \t\r\n\f\0', DELIM = '()<>[]{}/%';
+const isWS = c => WS.indexOf(c) >= 0;
+const isDelim = c => DELIM.indexOf(c) >= 0;
+
+class Lexer {
+  constructor(s, i = 0){ this.s = s; this.i = i; }
+  skip(){
+    const s = this.s;
+    for (;;){
+      while (this.i < s.length && isWS(s[this.i])) this.i++;
+      if (s[this.i] === '%'){ while (this.i < s.length && s[this.i] !== '\n' && s[this.i] !== '\r') this.i++; }
+      else return;
+    }
+  }
+  // reads one object; "N G R" references collapse into {ref:N}
+  obj(){
+    this.skip();
+    const s = this.s, c = s[this.i];
+    if (c === undefined) return null;
+    if (c === '<' && s[this.i + 1] === '<') return this.dict();
+    if (c === '<') return this.hexStr();
+    if (c === '(') return this.str();
+    if (c === '[') return this.arr();
+    if (c === '/') return this.name();
+    if (c === ']' || c === '>'){ this.i++; return undefined; }
+    return this.token();
+  }
+  name(){
+    const s = this.s; this.i++; let r = '';
+    while (this.i < s.length && !isWS(s[this.i]) && !isDelim(s[this.i])){
+      let ch = s[this.i++];
+      if (ch === '#'){ ch = String.fromCharCode(parseInt(s.substr(this.i, 2), 16)); this.i += 2; }
+      r += ch;
+    }
+    return { name: r };
+  }
+  dict(){
+    this.i += 2; const d = {};
+    for (;;){
+      this.skip();
+      if (this.s[this.i] === undefined) break;
+      if (this.s[this.i] === '>' && this.s[this.i + 1] === '>'){ this.i += 2; break; }
+      if (this.s[this.i] !== '/'){ this.i++; continue; }
+      const k = this.name().name;
+      d[k] = this.obj();
+    }
+    return d;
+  }
+  arr(){
+    this.i++; const a = [];
+    for (;;){
+      this.skip();
+      if (this.s[this.i] === undefined) break;
+      if (this.s[this.i] === ']'){ this.i++; break; }
+      const v = this.obj();
+      if (v === undefined) break;
+      a.push(v);
+    }
+    return a;
+  }
+  str(){
+    const s = this.s; this.i++; let depth = 1, r = '';
+    while (this.i < s.length){
+      let ch = s[this.i++];
+      if (ch === '\\'){
+        const n = s[this.i++];
+        if (n === 'n') r += '\n'; else if (n === 'r') r += '\r';
+        else if (n === 't') r += '\t'; else if (n === 'b') r += '\b';
+        else if (n === 'f') r += '\f';
+        else if (n >= '0' && n <= '7'){
+          let o = n;
+          for (let k = 0; k < 2 && s[this.i] >= '0' && s[this.i] <= '7'; k++) o += s[this.i++];
+          r += String.fromCharCode(parseInt(o, 8));
+        }
+        else if (n === '\n') { /* line continuation */ }
+        else if (n === '\r'){ if (s[this.i] === '\n') this.i++; }
+        else r += n;
+      }
+      else if (ch === '('){ depth++; r += ch; }
+      else if (ch === ')'){ if (--depth === 0) break; r += ch; }
+      else r += ch;
+    }
+    return { text: r };
+  }
+  hexStr(){
+    const s = this.s; this.i++; let h = '';
+    while (this.i < s.length && s[this.i] !== '>') h += s[this.i++];
+    this.i++;
+    h = h.replace(/[^0-9a-fA-F]/g, '');
+    if (h.length & 1) h += '0';
+    let r = '';
+    for (let k = 0; k < h.length; k += 2) r += String.fromCharCode(parseInt(h.substr(k, 2), 16));
+    return { text: r };
+  }
+  token(){
+    const s = this.s; let t = '';
+    while (this.i < s.length && !isWS(s[this.i]) && !isDelim(s[this.i])) t += s[this.i++];
+    if (/^[-+.\d]/.test(t)){
+      const save = this.i, m = /^\d+$/.test(t);
+      if (m){                                   // may be an "N G R" reference
+        this.skip();
+        const j = this.i; let g = '';
+        while (this.i < s.length && /\d/.test(s[this.i])) g += s[this.i++];
+        if (g){
+          this.skip();
+          if (s[this.i] === 'R' && (isWS(s[this.i + 1]) || isDelim(s[this.i + 1]) || s[this.i + 1] === undefined)){
+            this.i++; return { ref: parseInt(t, 10) };
+          }
+        }
+        this.i = save;
+      }
+      return parseFloat(t);
+    }
+    if (t === 'true') return true;
+    if (t === 'false') return false;
+    if (t === 'null') return null;
+    return { op: t || s[this.i++] };
+  }
+}
+
+/* ---------- document ---------- */
+class Doc {
+  constructor(u8){
+    this.bytes = u8;
+    this.s = toStr(u8);
+    this.xref = new Map();
+    this.trailer = {};
+    this.readXref();
+  }
+  readXref(){
+    const m = /startxref\s+(\d+)\s*%%EOF\s*$/.exec(this.s.slice(-2048))
+           || /startxref\s+(\d+)/g.exec(this.s.slice(this.s.lastIndexOf('startxref')));
+    if (!m) throw new Error('startxref not found');
+    let off = parseInt(m[1], 10);
+    const seen = new Set();
+    while (off !== undefined && !seen.has(off)){
+      seen.add(off);
+      const lx = new Lexer(this.s, off);
+      lx.skip();
+      if (this.s.substr(lx.i, 4) !== 'xref')
+        throw new Error('only a classic xref table is supported');
+      lx.i += 4;
+      for (;;){
+        lx.skip();
+        if (this.s.substr(lx.i, 7) === 'trailer'){ lx.i += 7; break; }
+        const start = lx.obj(), count = lx.obj();
+        if (typeof start !== 'number' || typeof count !== 'number') break;
+        lx.skip();
+        for (let k = 0; k < count; k++){
+          const e = this.s.substr(lx.i, 20);
+          const em = /^(\d{10})\s(\d{5})\s([nf])/.exec(e);
+          if (em){
+            const num = start + k;
+            if (em[3] === 'n' && !this.xref.has(num)) this.xref.set(num, parseInt(em[1], 10));
+            lx.i += (e[18] === '\r' || e[18] === '\n' || e[18] === ' ') ? 20 : 19;
+          } else { lx.i += 20; }
+        }
+      }
+      const tr = new Lexer(this.s, lx.i).obj();
+      for (const k in tr) if (!(k in this.trailer)) this.trailer[k] = tr[k];
+      off = typeof tr.Prev === 'number' ? tr.Prev : undefined;
+    }
+  }
+  get(o){                                        // dereference
+    if (o && typeof o === 'object' && 'ref' in o){
+      const off = this.xref.get(o.ref);
+      if (off === undefined) return null;
+      const lx = new Lexer(this.s, off);
+      lx.obj(); lx.obj();                        // "N G"
+      lx.skip();
+      if (this.s.substr(lx.i, 3) === 'obj') lx.i += 3;
+      const v = lx.obj();
+      lx.skip();
+      if (this.s.substr(lx.i, 6) === 'stream'){
+        let p = lx.i + 6;
+        if (this.s[p] === '\r') p++;
+        if (this.s[p] === '\n') p++;
+        const len = this.get(v.Length);
+        return { dict: v, start: p, length: typeof len === 'number' ? len : 0 };
+      }
+      return v;
+    }
+    return o;
+  }
+  async stream(obj){                             // decoded stream data
+    const raw = this.bytes.subarray(obj.start, obj.start + obj.length);
+    const f = this.get(obj.dict.Filter);
+    const names = (Array.isArray(f) ? f : f ? [f] : []).map(x => x && x.name);
+    if (!names.length) return raw;
+    if (names.length > 1 || (names[0] !== 'FlateDecode' && names[0] !== 'Fl'))
+      throw new Error('unsupported stream filter: ' + names.join(','));
+    const ds = new DecompressionStream('deflate');
+    const ab = await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer();
+    return new Uint8Array(ab);
+  }
+  async content(page){                           // /Contents: a ref or an array of refs
+    const c = this.get(page.dict.Contents);
+    const list = Array.isArray(c) ? c.map(r => this.get(r)) : [c];
+    let s = '';
+    for (const o of list){
+      if (!o || !o.dict) continue;
+      s += toStr(await this.stream(o)) + '\n';
+    }
+    return s;
+  }
+  pages(){
+    const root = this.get(this.trailer.Root);
+    const out = [];
+    const walk = (nodeRef, inherited) => {
+      const n = this.get(nodeRef);
+      if (!n) return;
+      const inh = {
+        Resources: n.Resources !== undefined ? n.Resources : inherited.Resources,
+        MediaBox:  n.MediaBox  !== undefined ? n.MediaBox  : inherited.MediaBox
+      };
+      if (n.Type && n.Type.name === 'Page'){
+        out.push({ ref: nodeRef.ref, dict: n,
+                   Resources: this.get(inh.Resources), MediaBox: this.get(inh.MediaBox) });
+        return;
+      }
+      const kids = this.get(n.Kids) || [];
+      for (const k of kids) walk(k, inh);
+    };
+    walk(root.Pages, {});
+    return out;
+  }
+}
 
 /* ------------------------------------------------------------------ geometry
    Straight off the document, in points. The page is A4 landscape and every
@@ -195,49 +472,216 @@ const GAP_CREW = 6.00;            // fuel table bottom to the crew table
 const IMM_RULES = [28.27,39.52,50.77];   // from the crew table bottom
 const REM_BOX = {top:11.24, bot:78.89, x0:491.58, x1:817.42};
 
-/* ------------------------------------------------------------------- content
-   The document as issued. Everything here can be edited, so the same form
-   serves the next flight.                                                    */
-const CREW = [
-  ['9871','CP','BOZZHANOV RAMIL'],   ['13355','FO','DUISENBAYEVA LAILO'],
-  ['2776','IS','ASSATULINA ZARINA'], ['7147','PU','SABYRBEKOVA SALTANAT'],
-  ['8960','FJ','SUNNATOVA ROZA'],    ['13952','FJ','YERZHANOVA ARUZHAN'],
-  ['2770','FY','KUDINOVA IRINA'],    ['7645','FY','AKHMETOVA ASSIYA'],
-  ['12666','FY','MUBARAK DANARA'],   ['17101','FY','UMAROVA AYAULYM'],
-];
-const crewRows = mark => CREW.map(([staff,pos,name]) =>
-  ({staff,pos,name,duty:'',dutytime:'',night:'',alwd:'',remarks:'',leg:mark}));
-const blanks = n => Array.from({length:n},()=>({}));
+/* ================================================================= the form
+   The document is read rather than assumed. Every row of every table carries
+   a printed row number in its narrow left column, so the tables announce their
+   own length; the three header labels below say where each one starts.       */
 
-function defaultDoc(){
+/* One text item per BT block: the position comes from Tm, and each cell on the
+   form is its own block, so no glyph widths are needed to place anything. */
+function blockItems(content, fonts){
+  const lx = new Lexer(content, 0);
+  const st = [];
+  const out = [];
+  let font = null, cur = null;
+  const flush = ()=>{ if(cur && cur.t.trim()) out.push(cur); cur = null; };
+  for(;;){
+    const o = lx.obj();
+    if(o === null) break;
+    if(o === undefined) continue;
+    if(typeof o === 'object' && 'op' in o){
+      const op = o.op;
+      if(op === 'BT'){ flush(); font = null; }
+      else if(op === 'ET') flush();
+      else if(op === 'Tf'){
+        const n = st[st.length - 2];
+        font = (n && n.name) ? fonts[n.name] : null;
+      }
+      else if(op === 'Tm'){
+        const v = st.slice(-6);
+        if(v.length === 6){
+          flush();
+          cur = { x:v[4], y:v[5], size:Math.abs(v[0]) || Math.abs(v[1]), t:'' };
+        }
+      }
+      else if(op === 'Tj' || op === "'" || op === '"'){
+        const s = st[st.length - 1];
+        if(cur && s && s.text !== undefined) cur.t += decode(s.text, font);
+      }
+      else if(op === 'TJ'){
+        const a = st[st.length - 1];
+        if(cur && Array.isArray(a)) for(const el of a)
+          if(el && el.text !== undefined) cur.t += decode(el.text, font);
+      }
+      st.length = 0;
+    } else st.push(o);
+  }
+  flush();
+  return out;
+}
+
+/* Identity-H puts two bytes to the glyph; the ToUnicode map says what each one
+   stands for. A simple font is its bytes. */
+function decode(raw, font){
+  if(!font || !font.two){
+    let s = '';
+    for(let i = 0; i < raw.length; i++) s += raw[i];
+    return s;
+  }
+  let s = '';
+  for(let i = 0; i + 1 < raw.length; i += 2){
+    const code = (raw.charCodeAt(i) << 8) | raw.charCodeAt(i + 1);
+    const u = font.map.get(code);
+    s += u === undefined ? ' ' : u;
+  }
+  return s;
+}
+
+const hexToChars = h => {
+  let s = '';
+  for(let i = 0; i + 3 < h.length; i += 4) s += String.fromCharCode(parseInt(h.substr(i, 4), 16));
+  return s;
+};
+function parseCMap(txt){
+  const map = new Map();
+  txt.replace(/beginbfchar([\s\S]*?)endbfchar/g, (m, blk)=>{
+    blk.replace(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g, (m2, a, b)=>{
+      map.set(parseInt(a, 16), hexToChars(b)); return '';
+    });
+    return '';
+  });
+  txt.replace(/beginbfrange([\s\S]*?)endbfrange/g, (m, blk)=>{
+    // <lo><hi><dst>  and  <lo><hi>[<d1><d2>...]
+    blk.replace(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*(<([0-9A-Fa-f]+)>|\[([\s\S]*?)\])/g,
+      (m2, a, b, whole, single, list)=>{
+        const lo = parseInt(a, 16), hi = parseInt(b, 16);
+        if(single !== undefined){
+          const base = parseInt(single.slice(-4), 16), pre = hexToChars(single).slice(0, -1);
+          for(let c = lo; c <= hi && c - lo < 65536; c++) map.set(c, pre + String.fromCharCode(base + c - lo));
+        } else {
+          let k = 0;
+          list.replace(/<([0-9A-Fa-f]+)>/g, (m3, d)=>{ map.set(lo + k++, hexToChars(d)); return ''; });
+        }
+        return '';
+      });
+    return '';
+  });
+  return map;
+}
+
+async function pageFonts(pdf, page){
+  const res = pdf.get(page.Resources) || {};
+  const fd = pdf.get(res.Font) || {};
+  const fonts = {};
+  for(const name of Object.keys(fd)){
+    const f = pdf.get(fd[name]);
+    if(!f) continue;
+    const two = f.Subtype && f.Subtype.name === 'Type0';
+    let map = new Map();
+    const tu = pdf.get(f.ToUnicode);
+    if(tu && tu.dict){
+      try{ map = parseCMap(toStr(await pdf.stream(tu))); }catch(e){}
+    }
+    fonts[name] = { two, map };
+  }
+  return fonts;
+}
+
+/* Which column an item's left edge falls in. */
+function colOf(xs, x){
+  for(let i = 0; i < xs.length - 1; i++) if(x >= xs[i] - 1 && x < xs[i + 1] - 1) return i;
+  return -1;
+}
+
+const LEG_COL  = [null,'date','flight','acreg','dep','arr','std','sta','atd','ata','tkof',
+                  'tdwn','blk','ntblk','flt','to','ld','ma','flalt','detail'];
+const FUEL_COL = [null,'init','uplfw','calcramp','actramp','stdn','burn','uplfv','fueldisc','slip1','slip2'];
+const PL_COL   = ['adl','chl','inf','cargo','mail','bag','zfw'];
+const CREW_COL = [null,'staff','pos','name','duty','dutytime','night','alwd','remarks','leg'];
+
+function readPage(items, pageH){
+  for(const it of items) it.ty = pageH - it.y;          // baseline, measured from the top
+  items.sort((a,b)=> a.ty - b.ty || a.x - b.x);
+  const at = t => items.find(i => i.t.trim() === t);
+
+  const legHdr = at('Date'), fuelHdr = at('Init'), crewHdr = at('Staff No');
+  if(!legHdr || !fuelHdr || !crewHdr) throw new Error('not a Journey Log — its table headings are missing');
+
+  // Every row prints its number in the narrow left column, blank rows included.
+  const nums = items.filter(i => i.x >= 17 && i.x <= 28 && /^\d+$/.test(i.t.trim()));
+  const bandOf = (lo, hi) => {
+    const ys = [];
+    for(const i of nums){
+      if(i.ty <= lo + 2 || i.ty >= hi - 2) continue;
+      if(!ys.some(y => Math.abs(y - i.ty) < 3)) ys.push(i.ty);
+    }
+    return ys.sort((a,b)=> a - b);
+  };
+  const legY  = bandOf(legHdr.ty,  fuelHdr.ty);
+  const fuelY = bandOf(fuelHdr.ty, crewHdr.ty);
+  const crewY = bandOf(crewHdr.ty, Infinity);
+  if(!legY.length || !fuelY.length || !crewY.length) throw new Error('no rows found in the form');
+
+  const fill = (ys, specs) => {
+    const rows = ys.map(()=> ({}));
+    for(const it of items){
+      if(it.x < 17) continue;
+      let r = -1;
+      for(let k = 0; k < ys.length; k++) if(Math.abs(it.ty - ys[k]) < 3){ r = k; break; }
+      if(r < 0) continue;
+      for(const [xs, keys] of specs){
+        const c = colOf(xs, it.x);
+        if(c >= 0 && keys[c]){ rows[r][keys[c]] = it.t.trim(); break; }
+      }
+    }
+    return rows;
+  };
+
+  const legs = fill(legY, [[LEG_X, LEG_COL]]);
+  const both = fill(fuelY, [[FUEL_X, FUEL_COL], [PL_X, PL_COL]]);
+  const crew = fill(crewY, [[CREW_X, CREW_COL]]);
+  const pick = (row, keys) => {
+    const o = {};
+    for(const k of keys) if(k && row[k] !== undefined) o[k] = row[k];
+    return o;
+  };
+
+  const head = items.filter(i => i.ty < legHdr.ty - 6);
+  const near = x => (head.find(i => Math.abs(i.x - x) < 4) || {}).t || '';
+  const title = near(325.49);
+  const cap = near(233.99);
+  const capM = /Captain\/\w+:\s*([\s\S]*?)\s*\/\/FD/.exec(cap);
+
   return {
-    version: VERSION,
-    manual: {},
-    pages: [
-      {
-        operator:'AIR ASTANA', stamp:'16 08.26, 05:23 UTC', docno:'08-16 - F915  - 1',
-        captain:'BOZZHANOV RAMIL', cat:'', lt:'',
-        legs:[
-          {date:'16 Aug 2026', flight:'915A', acreg:'EI-KEC', dep:'ALA', arr:'ALA', std:'03:40', sta:'09:40'},
-          {date:'16 Aug 2026', flight:'915',  acreg:'EI-KEC', dep:'ALA', arr:'AYT', std:'03:40', sta:'09:40'},
-          {}, {},
-        ],
-        fuel:blanks(4), payload:blanks(4), crew:crewRows('XX'),
-        immigration:['','',''], remarks:['','',''], signature:'',
-      },
-      {
-        operator:'AIR ASTANA', stamp:'16 08.26, 05:23 UTC', docno:'08-16 - F915  - 2',
-        captain:'BOZZHANOV RAMIL', cat:'', lt:'',
-        legs:[
-          {date:'17 Aug 2026', flight:'916', acreg:'EI-KEC', dep:'AYT', arr:'ALA', std:'10:40', sta:'15:50'},
-          {}, {},
-        ],
-        fuel:blanks(3), payload:blanks(3), crew:crewRows('X'),
-        immigration:['','',''], remarks:['','',''], signature:'',
-      },
-    ],
+    operator: near(53.88).trim(),
+    stamp:    near(156.64).trim(),
+    docno:    title.replace(/^Journey Log No\.\/\S+(\s+\S+)*?\s{2,}/, '').trim() || title.trim(),
+    captain:  capM ? capM[1].trim() : '',
+    cat:'', lt:'',
+    legs,
+    fuel:    both.map(r => pick(r, FUEL_COL)),
+    payload: both.map(r => pick(r, PL_COL)),
+    crew,
+    immigration:['','',''], remarks:['','',''], signature:'',
   };
 }
+
+async function parseJourneyLog(bytes){
+  const pdf = new Doc(bytes);
+  const pages = pdf.pages();
+  if(!pages.length) throw new Error('the PDF has no pages');
+  const out = [];
+  for(const p of pages){
+    const mb = (pdf.get(p.MediaBox) || [0,0,PAGE_W,PAGE_H]).map(v => pdf.get(v));
+    const h = Math.abs(mb[3] - mb[1]) || PAGE_H;
+    const fonts = await pageFonts(pdf, p);
+    out.push(readPage(blockItems(await pdf.content(p), fonts), h));
+  }
+  return out;
+}
+
+function emptyDoc(){ return { version: VERSION, manual: {}, pages: [], source: null }; }
+const clone = o => JSON.parse(JSON.stringify(o));
 
 /* --------------------------------------------------------------------- state */
 let doc = load();
@@ -253,7 +697,7 @@ function load(){
       if(d && d.version === VERSION && Array.isArray(d.pages)){ d.manual = d.manual || {}; return d; }
     }
   }catch(e){}
-  return defaultDoc();
+  return emptyDoc();
 }
 let saveTimer = null;
 function save(){
@@ -540,9 +984,23 @@ function fitAll(root){
 
 /* ------------------------------------------------------------------- render */
 const stage = document.getElementById('stage');
+
+/* Which document is open, named in the toolbar so it is never in doubt. */
+function paintDocInfo(){
+  const el = document.getElementById('docinfo');
+  if(!doc.pages.length){ el.textContent = ''; return; }
+  const n = doc.pages.length;
+  const legs = doc.pages.reduce((k,p)=> k + p.legs.filter(l => l.flight).length, 0);
+  const no = (doc.pages[0].docno || '').replace(/\s+/g, ' ').trim();
+  el.textContent = (no ? no + ' · ' : '') +
+    n + (n === 1 ? ' page · ' : ' pages · ') + legs + (legs === 1 ? ' leg' : ' legs');
+}
 function render(){
   stage.textContent = '';
   inputs.length = 0; derived.clear(); clears.length = 0;
+  document.body.classList.toggle('loaded', doc.pages.length > 0);
+  paintDocInfo();
+  if(!doc.pages.length) return;
   doc.pages.forEach((p,i)=>{
     const wrap = document.createElement('div');
     wrap.className = 'wrap';
@@ -671,21 +1129,18 @@ document.getElementById('zoomFit').onclick = ()=> setZoom(null);
 addEventListener('resize', ()=>{ if(zoom == null) applyZoom(); });
 
 /* --------------------------------------------------------------------- chrome */
-const themeBtn = document.getElementById('theme');
-function paintTheme(){
-  themeBtn.textContent = document.documentElement.dataset.theme === 'light' ? 'Dark' : 'Light';
+/* The surround follows whatever the OFP companion is set to — one switch for
+   both pages, and it lives over there. */
+function applyTheme(){
+  let t = null;
+  try{ t = localStorage.getItem('etofill:theme'); }catch(e){}
+  if(!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+  const m = document.querySelector('meta[name=theme-color]');
+  if(m) m.content = t === 'light' ? '#ffffff' : '#1c1f24';
 }
-try{
-  const th = localStorage.getItem(KEY + '.theme');
-  if(th) document.documentElement.dataset.theme = th;
-}catch(e){}
-paintTheme();
-themeBtn.onclick = ()=>{
-  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-  document.documentElement.dataset.theme = next;
-  try{ localStorage.setItem(KEY + '.theme', next); }catch(e){}
-  paintTheme();
-};
+applyTheme();
+addEventListener('storage', e=>{ if(e.key === 'etofill:theme') applyTheme(); });
 
 document.getElementById('ofp').onclick = ()=>{ location.href = './index.html'; };
 
@@ -695,15 +1150,61 @@ document.getElementById('print').onclick = ()=>{
 };
 
 document.getElementById('reset').onclick = ()=>{
+  if(!doc.source) return;
   if(!confirm('Clear everything entered and return to the document as issued?')) return;
-  doc = defaultDoc();
-  try{ localStorage.removeItem(KEY); }catch(e){}
+  doc.pages = clone(doc.source);
+  doc.manual = {};
   render();
+  save();
   note('Reset');
 };
 
+/* ---------------------------------------------------------- loading the PDF */
+const msg = document.getElementById('msg');
+const fileInput = document.getElementById('file');
+const dropZone = document.getElementById('drop');
+function say(text, kind){ msg.textContent = text; msg.className = kind || ''; }
+
+async function loadPdf(file){
+  if(!file) return;
+  document.getElementById('fname').textContent = file.name || '';
+  say('Reading ' + (file.name || 'the PDF') + '…');
+  if(typeof DecompressionStream === 'undefined'){
+    say('Browser too old: no DecompressionStream. Safari 16.4+ / iPadOS 16.4+ required.', 'err');
+    return;
+  }
+  try{
+    const pages = await parseJourneyLog(new Uint8Array(await file.arrayBuffer()));
+    doc = emptyDoc();
+    doc.source = pages;
+    doc.pages = clone(pages);
+    render();
+    save();
+    say('', '');
+    scrollTo(0, 0);
+  }catch(err){
+    say('Could not read it: ' + (err && err.message ? err.message : err), 'err');
+  }
+}
+
+document.getElementById('load').onclick = ()=> fileInput.click();
+dropZone.onclick = ()=> fileInput.click();
+fileInput.onchange = ()=>{ loadPdf(fileInput.files[0]); fileInput.value = ''; };
+
+['dragenter','dragover'].forEach(t => addEventListener(t, e=>{
+  e.preventDefault(); dropZone.classList.add('over');
+}));
+['dragleave','drop'].forEach(t => addEventListener(t, e=>{
+  e.preventDefault(); if(t === 'dragleave' && e.relatedTarget) return;
+  dropZone.classList.remove('over');
+}));
+addEventListener('drop', e=>{
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f) loadPdf(f);
+});
+
 render();
-note('Ready');
+note(doc.pages.length ? 'Ready' : '');
 
 if('serviceWorker' in navigator){
   addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js').catch(()=>{}));

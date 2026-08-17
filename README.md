@@ -274,26 +274,38 @@ Everything written is printed in bold Courier-Bold so it stands out from the for
 # Journey Log — Задание на полет
 
 `journey-log.html` is the second page. It is the paper Journey Log itself, drawn
-on screen: the same two landscape sheets, the same blue banding, the same column
-widths and 16.56pt rows, all measured off the issued document and laid out in
-points. Nothing is a rendering of the PDF — the form is redrawn, so every blank
-in it is a box you can type into.
+on screen: the same landscape sheets, the same blue banding, the same column
+widths and 16.56pt rows, all measured off the document and laid out in points.
+Nothing is a rendering of the PDF — the form is redrawn, so every blank in it is
+a box you can type into.
 
 The boxes are tinted, which is the only thing on the page the paper does not
 have: the cells you fill in show pale blue, the cells the document was printed
 with do not. What you write goes down in blue so it reads apart from the form's
 own black.
 
-Both sheets are there, one under the other, with their own leg counts — four
-rows on the first, three on the second — because that is how the document was
-issued.
+## Loading the document
+
+A new Journey Log is issued for every duty, so the page starts empty and asks
+for one: **Load PDF**, or drop the file anywhere on the page. It is read on the
+device and goes nowhere else.
+
+What comes out of it is the document, not a guess at it — the journey log
+number, the date and the captain, the legs with their flight numbers and
+scheduled times, and the crew with their staff numbers and leg markers. The
+sheets, and the number of rows in each of their three tables, are however many
+the PDF has: every row of the form prints its own row number, so the tables
+announce their own length and the page is built to match.
+
+The toolbar then names what is open — the log number, how many sheets, how many
+legs — so there is no doubt which duty is on screen.
 
 ## Filling it in
 
-Everything is editable, the printed content included, so the same form serves
-the next flight: the journey log number, the date and the captain across the
-top, the flight identity down the left of the leg table, and the crew roster.
-Those read as print until you put the cursor in them.
+Everything is editable, the printed content included: the journey log number,
+the date and the captain across the top, the flight identity down the left of
+the leg table, and the crew roster. Those read as print until you put the cursor
+in them, so a correction can be made without reaching for the paper.
 
 - **Times take four digits.** `0340` becomes `03:40` when you leave the box.
 - **Blk and Flt work themselves out** — Blk from ATD and ATA, Flt from TKOF and
@@ -303,8 +315,8 @@ Those read as print until you put the cursor in them.
 - **Enter steps to the next box**, Shift+Enter back, in reading order across the
   page. Tab does the same.
 - Fill-in boxes take capitals, as the form is written.
-- Everything is saved on the device as you type. **Reset** clears it and returns
-  the document as issued.
+- Everything is saved on the device as you type, and is still there next time.
+  **Reset** clears what you wrote and puts back the document as it was loaded.
 
 Where a name or a heading is wider than its column — the device's font is rarely
 the Calibri the document was set in — it is set down a little until it fits, so a
@@ -319,17 +331,21 @@ one sheet per page, with the toolbar and the box tints left off. The browser's
 ## Zoom
 
 The page is fitted to the window on opening. **−** and **+** step through fixed
-sizes and **Fit** returns to the window; the choice is remembered. The button in
-the header switches the surround between light and dark — the sheet itself stays
-white, because it is paper.
+sizes and **Fit** returns to the window; the choice is remembered. Light or dark
+is whatever the OFP companion is set to — one switch serves both pages, and it
+lives over there. Only the surround changes; the sheet stays white, because it
+is paper.
 
 ---
 
 ## What is inside
 
 No external libraries — no pdf.js, no pdf-lib, no CDN. `journey-log.html` is one
-file of plain HTML, CSS and script that draws the form and remembers what is
-typed into it; it reads no PDF at all. `index.html` carries its own
+file of plain HTML, CSS and script; it borrows the OFP companion's PDF reader to
+find the text and where it sits, then bins each item into the cell its
+coordinates land in. The Journey Log's fonts are Type0/Identity-H, so the glyph
+numbers are put back into letters through each font's ToUnicode map — that is
+what makes the Cyrillic come out as Cyrillic. `index.html` carries its own
 minimal PDF engine: it reads text with coordinates out of FlateDecode streams and
 appends an overlay through an incremental update, so the original bytes of the
 document stay untouched and new content is simply added at the end of the file.
