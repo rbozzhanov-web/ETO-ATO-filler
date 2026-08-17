@@ -23,15 +23,20 @@ Everything required is in the `pwa/` folder:
 ```
 pwa/index.html
 pwa/journey-log.html
+pwa/viewer.html
 pwa/sw.js
 pwa/manifest.webmanifest
+pwa/viewer.webmanifest
 pwa/icon-192.png
 pwa/icon-512.png
 ```
 
-There are two pages: `index.html` is the OFP companion described below, and
-`journey-log.html` is the Journey Log form. Each links to the other from its
-header, and both are cached, so either can be opened offline.
+There are three pages: `index.html` is the OFP companion described below,
+`journey-log.html` is the Journey Log form, and `viewer.html` is the phone
+reader — [OFP Viewer](#ofp-viewer--the-plan-on-the-phone), further down. The
+first two link to each other from their headers; the viewer stands on its own
+and is opened at its own address. All three are cached, so any of them can be
+opened offline.
 
 1. Upload the **contents** of `pwa/` to any https host.
    GitHub Pages is free for public repositories: create a repo, put the files in
@@ -272,6 +277,77 @@ Everything written is printed in bold Courier-Bold so it stands out from the for
 
 ---
 
+# OFP Viewer — the plan on the phone
+
+`viewer.html` is the third page and the only one meant for the phone: the same
+package, read rather than filled in. It is for the hour before the flight —
+in the car, on the bus, in the crew room — when the question is what is in
+this plan, not what has to be written into it.
+
+Nothing on it can be typed into the document. There is no ETO or ATO column, no
+altimeter checks, no export: it never writes a byte back, and it carries no
+Journey Log button, because a phone in a pocket is not where that form is filled
+in either. What it does carry is the companion's own reader — the same PDF
+engine, the same parsers, the same colours — so a plan reads the same on the
+phone as it does on the iPad.
+
+## The five tabs
+
+**Flight** is the page you look at first. The two aerodromes across the top with
+their names, then the callsign, type, registration, date of flight and cost
+index; the route ID, request number and release time under them, so the document
+on screen can be checked against the one you were given. Then STD / ETD / STA /
+ETA and the trip time as figures big enough to read at arm's length, with the
+time to STD counted against the clock — **STD in 3 h 12 min** — from the DOF in
+the flight plan. Without a DOF the count says so, since it is then only good to
+the nearest half day.
+
+Under that the weights, each against the certificate limit printed on the line
+above it in the document — `TOW 145 979`, and beneath it `−41 021 vs MTOW
+187 000` — so the margin is read rather than worked out. Then the fuel block as
+the plan prints it, TRIP through BLOCK, with the planned remaining at
+destination added from the last waypoint of the main route. Last, the flight
+plan in brief: cruise speed and level, alternates, en-route alternate, the FIR
+boundaries, equipment, PBN, SELCAL.
+
+**Route** is every waypoint with the leg times the plan gives it. The times down
+the right are counted from the off-block time in the box at the top — it starts
+at the plan's own ETD and everything follows if it is changed, which is how a
+delay is read off the table without arithmetic. Each waypoint carries its
+running total and the planned fuel remaining, the level and the wind where the
+form's own columns can be recognised beyond doubt, and the rest of what is
+printed on the line — airway, temperature, distance, ground speed, position —
+as a strip underneath. The alternate route follows under its own heading.
+
+**Weather** is the METAR, TAF and NOTAMs the package carries, one aerodrome at a
+time. The aerodromes of this flight are chips across the top for a single tap;
+the dropdown under them holds everything the package covers, grouped as this
+flight, areas along the route, and other aerodromes. A busy aerodrome runs to
+eighty-odd NOTAMs, so the first eight are shown and the rest open on a tap.
+
+**Charts** pages through the full-page sheets — wind components, tropopause and
+MORA, significant weather — pulled straight out of the PDF, with **Zoom**
+switching between the whole sheet and full size.
+
+**ICAO** is the flight plan itself, reassembled where it breaks across a page,
+with Copy putting it on the clipboard as one line.
+
+## What it keeps
+
+The plan is kept on the device, so opening the app again brings back the same
+document without going to look for the file. The dark and light setting is the
+same one the companion uses, so a phone carrying both does not change theme
+between them.
+
+`viewer.html` reads the package under keys of its own, so nothing it does can
+disturb a plan open in the companion on the same device.
+
+One thing it reads differently: where a NOTAM has no subject line of its own,
+the viewer leaves it without one rather than printing the previous NOTAM's
+above it.
+
+---
+
 # Journey Log — Задание на полет
 
 `journey-log.html` is the second page. It is the paper Journey Log itself, drawn
@@ -378,7 +454,12 @@ between the two documents, and neither has to be looked for.
 
 ## What is inside
 
-No external libraries — no pdf.js, no pdf-lib, no CDN. `journey-log.html` is one
+No external libraries — no pdf.js, no pdf-lib, no CDN. `viewer.html` carries a
+copy of the companion's PDF reader with the overlay writer left out — it has no
+use for it — and the parsers cut back to what a reader needs: the waypoint
+pairs, the flight header, the ICAO plan, the identity, the weights, the weather
+pages and the charts. The dotted blanks are places to write and are not read at
+all. `journey-log.html` is one
 file of plain HTML, CSS and script; it borrows the OFP companion's PDF reader to
 find the text and where it sits, then bins each item into the cell its
 coordinates land in. The Journey Log's fonts are Type0/Identity-H, so the glyph

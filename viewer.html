@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1419">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OFP Viewer">
+<link rel="manifest" href="viewer.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<title>OFP Viewer</title>
+<style>
+/* The OFP companion's palette, unchanged: the two are one family and a plan must
+   not look different because it is being read on the phone rather than filled in
+   on the iPad. */
+:root{
+  --bg:#0f1419; --panel:#171d24; --panel2:#1e262f; --line:#2c3742; --line2:#232c35;
+  --txt:#e6edf3; --dim:#8b98a5; --acc:#4d9fff; --acc2:#1f6feb;
+  --ok:#3fb950; --warn:#d29922; --err:#f85149;
+  --gold:#9b804d; --hdr:#131a21; --fld:#4a5560;
+  --eto:#7aa9ff; --ato:#4cc06a;
+}
+html[data-theme=light]{
+  --bg:#f2f5f8; --panel:#ffffff; --panel2:#f1f4f7; --line:#d6dde4; --line2:#e6ebf0;
+  --txt:#16202b; --dim:#5d6b7a; --acc:#0b62d6; --acc2:#0b62d6;
+  --ok:#1a7f37; --warn:#9a6700; --err:#cf222e;
+  --gold:#8a6f3e; --hdr:#eef2f6; --fld:#9aa7b4;
+  --eto:#0b62d6; --ato:#1a7f37;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--txt);-webkit-tap-highlight-color:transparent;
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  overscroll-behavior-y:none}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.hide{display:none!important}
+
+button{background:var(--acc2);color:#fff;border:0;border-radius:9px;padding:13px 20px;
+  font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation;min-height:46px}
+button:active:not(:disabled){transform:scale(.98)}
+button:disabled{opacity:.4}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--dim)}
+button.sm{padding:8px 13px;font-size:13px;min-height:38px;border-radius:8px}
+
+/* ================= the load screen ================= */
+.load{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:center;
+  gap:18px;padding:max(24px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-left))
+  calc(28px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-right));
+  max-width:560px;margin:0 auto}
+.load .brand{background:#fff;border-radius:9px;padding:10px 15px;align-self:flex-start;
+  box-shadow:0 0 0 1px rgba(0,0,0,.07)}
+.load .brand svg{height:22px;width:auto;display:block}
+.load h1{font-size:23px;margin:0 0 4px;letter-spacing:.3px}
+.load .sub{color:var(--dim);font-size:14px;line-height:1.55}
+#drop{border:2px dashed var(--line);border-radius:12px;padding:34px 18px;text-align:center;
+  cursor:pointer;background:var(--panel2);font-size:16px}
+#drop.over{border-color:var(--acc)}
+#drop b{color:var(--acc)}
+#drop .fn{margin-top:8px;font-size:13px;color:var(--dim);word-break:break-all}
+.disc{display:flex;align-items:flex-start;gap:9px;margin:0;font-size:12.5px;line-height:1.6;color:var(--dim)}
+.disc::before{content:"";flex:0 0 auto;width:6px;height:6px;margin-top:7px;border-radius:50%;background:var(--gold)}
+.msg{font-size:13.5px;padding:11px 13px;border-radius:8px;display:none;line-height:1.5}
+.msg.show{display:block}
+.msg.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);
+  border:1px solid color-mix(in srgb,var(--ok) 34%,transparent)}
+.msg.err{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err);
+  border:1px solid color-mix(in srgb,var(--err) 34%,transparent)}
+.msg.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn);
+  border:1px solid color-mix(in srgb,var(--warn) 34%,transparent)}
+
+/* ================= the header =================
+   Two lines and no more: what the document is, and the way into its parts. The
+   phone gives about 640 points of height and every one spent up here is one the
+   plan does not get. */
+.bar{position:sticky;top:0;z-index:20;background:var(--hdr);
+  border-bottom:1px solid var(--gold);padding-top:env(safe-area-inset-top)}
+.bartop{display:flex;align-items:center;gap:10px;
+  padding:9px max(12px,env(safe-area-inset-right)) 9px max(12px,env(safe-area-inset-left))}
+.ident{flex:1;min-width:0}
+.ident b{display:block;font:700 16px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.4px}
+.ident span{display:block;margin-top:2px;font:11.5px/1.3 ui-monospace,Menlo,monospace;color:var(--dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barbtn{flex:0 0 auto;width:40px;height:40px;padding:0;display:grid;place-items:center;
+  background:transparent;border:1px solid var(--line);border-radius:9px;color:var(--dim)}
+.barbtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+/* The tabs scroll sideways rather than shrink: five legible labels do not fit
+   across 375 points, and a label clipped to three letters names nothing. */
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;
+  padding:0 max(8px,env(safe-area-inset-left)) 7px max(8px,env(safe-area-inset-right))}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:0 0 auto;background:transparent;border:0;border-radius:8px;color:var(--dim);
+  padding:8px 13px;min-height:36px;font-size:13.5px;font-weight:600;letter-spacing:.2px}
+.tabs button[aria-selected=true]{background:color-mix(in srgb,var(--acc) 16%,transparent);
+  color:var(--acc);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 38%,transparent)}
+.tabs button i{font-style:normal;margin-left:6px;font-size:11px;opacity:.75;
+  font-family:ui-monospace,Menlo,monospace}
+
+/* ================= panels ================= */
+main{max-width:760px;margin:0 auto;
+  padding:12px max(12px,env(safe-area-inset-right)) calc(34px + env(safe-area-inset-bottom))
+          max(12px,env(safe-area-inset-left))}
+.panel[hidden]{display:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:13px;margin-bottom:11px}
+.card.flush{padding:0;overflow:hidden}
+.ttl{display:flex;align-items:baseline;gap:8px;font:600 11px/1.3 -apple-system,system-ui,sans-serif;
+  letter-spacing:.9px;text-transform:uppercase;color:var(--dim);margin-bottom:11px}
+.ttl em{margin-left:auto;font-style:normal;letter-spacing:.3px;text-transform:none;
+  font:11.5px/1.3 ui-monospace,Menlo,monospace;color:var(--fld)}
+.card.flush .ttl{margin:0;padding:11px 13px;border-bottom:1px solid var(--line)}
+
+/* the two aerodromes, as big as the screen will give */
+.hero{display:flex;align-items:center;gap:10px}
+.hero .ap{flex:1;min-width:0}
+.hero .ap.to{text-align:right}
+.hero .ap b{display:block;font:700 27px/1.1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1px}
+.hero .ap span{display:block;margin-top:4px;font-size:11.5px;color:var(--dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero .arw{flex:0 0 auto;color:var(--gold);font-size:20px;line-height:1}
+.metaline{margin-top:12px;padding-top:11px;border-top:1px solid var(--line2);
+  font:11.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);
+  word-break:break-word}
+.metaline b{color:var(--acc);font-weight:700}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:7px}
+.tile{background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:8px 6px;text-align:center}
+.tile span{display:block;font:600 10px/1.2 -apple-system,system-ui,sans-serif;
+  letter-spacing:.7px;text-transform:uppercase;color:var(--dim)}
+.tile b{display:block;margin-top:4px;font:700 19px/1.15 ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-variant-numeric:tabular-nums}
+.tile.act b{color:var(--acc)}
+.tile.gold b{color:var(--gold)}
+.tile.wide{grid-column:1/-1}
+.countdown{margin-top:10px;text-align:center;font:12.5px/1.4 ui-monospace,Menlo,monospace;color:var(--dim)}
+.countdown b{color:var(--gold);font-weight:700}
+.countdown.past b{color:var(--dim)}
+
+.kv{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:8px 0;border-bottom:1px solid var(--line2);font-size:13.5px}
+.card.flush .kv{padding:8px 13px}
+.kv:last-child{border-bottom:0}
+.kv .k{color:var(--dim);flex:0 0 auto}
+.kv .v{font:700 14px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;text-align:right;
+  word-break:break-word;font-variant-numeric:tabular-nums}
+.kv .v small{display:block;font:11px/1.4 ui-monospace,Menlo,monospace;font-weight:400;color:var(--dim)}
+.kv .v .neg{color:var(--ok)}      /* under a limit is the comfortable side */
+.kv .v .over{color:var(--err)}
+
+/* ================= the waypoints ================= */
+.base{display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  padding:11px 13px;border-bottom:1px solid var(--line)}
+.base label{font:600 10px/1.2 -apple-system,system-ui,sans-serif;letter-spacing:.7px;
+  text-transform:uppercase;color:var(--dim)}
+.base input{background:var(--bg);border:1px solid var(--line);color:var(--eto);border-radius:8px;
+  padding:8px 10px;width:94px;text-align:center;letter-spacing:2px;
+  font:700 17px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.base input:focus{outline:none;border-color:var(--acc)}
+/* Pushed to the far end rather than parted from the box by a spacer: a spacer
+   that can grow takes the whole line and drops this onto the next one. */
+.base .grow{margin-left:auto;text-align:right}
+.wp{display:flex;align-items:flex-start;gap:10px;padding:9px 13px;border-bottom:1px solid var(--line2)}
+.wp:last-child{border-bottom:0}
+.wp .nm{flex:1;min-width:0}
+.wp .nm b{font:700 15.5px/1.25 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.4px}
+.wp .det{margin-top:3px;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wp .tm{flex:0 0 auto;text-align:right}
+.wp .tm b{font:700 16px/1.25 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--eto);
+  font-variant-numeric:tabular-nums}
+.wp .tm .det{color:var(--dim)}
+.wp .fl{flex:0 0 auto;text-align:right;min-width:44px}
+.wp .fl b{font:700 13px/1.25 ui-monospace,Menlo,monospace;color:var(--gold)}
+.wp .fl .det{color:var(--dim)}
+.wp.sec{background:var(--hdr);padding:8px 13px;
+  font:700 10.5px/1.4 -apple-system,system-ui,sans-serif;letter-spacing:.9px;
+  text-transform:uppercase;color:var(--dim)}
+
+/* ================= weather ================= */
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;margin-bottom:10px}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:0 0 auto;background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+  border-radius:20px;padding:7px 13px;min-height:36px;
+  font:700 12.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px}
+.chips button[aria-pressed=true]{background:color-mix(in srgb,var(--acc) 16%,transparent);
+  border-color:color-mix(in srgb,var(--acc) 42%,transparent);color:var(--acc)}
+select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+  border-radius:9px;padding:11px 10px;
+  font:700 15px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{margin:0;padding:12px 13px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  font:13px/1.62 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;word-break:break-word}
+pre.rep{color:var(--txt)}
+pre.rep+pre.rep{border-top:1px solid var(--line2)}
+.ntm{padding:11px 13px;border-bottom:1px solid var(--line2)}
+.ntm:last-child{border-bottom:0}
+.ntm .id{font:700 12px/1.4 ui-monospace,Menlo,monospace;color:var(--acc)}
+.ntm .val{font-size:11px;color:var(--dim);margin-left:8px}
+.ntm .subj{display:block;margin-top:3px;font:700 10.5px/1.4 -apple-system,system-ui,sans-serif;
+  letter-spacing:.6px;text-transform:uppercase;color:var(--gold)}
+.ntm p{margin:5px 0 0;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:pre-wrap;word-break:break-word}
+/* A long NOTAM list is opened rather than poured onto the page: eighty items put
+   everything after them out of reach of a thumb. */
+.more{display:block;width:100%;background:transparent;border:0;border-top:1px solid var(--line);
+  color:var(--acc);font-size:13.5px;font-weight:600;padding:13px}
+
+/* ================= charts ================= */
+.chartnav{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line)}
+.chartnav .who{flex:1;font:11.5px/1.3 ui-monospace,Menlo,monospace;color:var(--dim)}
+.chartbox{background:#fff;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  max-height:calc(100vh - 260px);min-height:180px;text-align:center}
+.chartbox img{display:block;margin:0 auto;max-width:100%;height:auto}
+.chartbox.zoom img{max-width:none;width:auto}
+.chartbox p{margin:0;padding:50px 14px;color:#5d6b7a;font-size:13px}
+
+.empty{padding:26px 14px;text-align:center;color:var(--dim);font-size:13.5px;line-height:1.6}
+.foot{margin:14px 2px 0;font-size:11.5px;line-height:1.7;color:var(--fld)}
+.foot b{color:var(--dim);font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- ================= load screen ================= -->
+<div class="load" id="loadView">
+  <div class="brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 47.514785 12.039602" role="img" aria-label="Air Astana"><g transform="translate(-89.011869,-149.48493)"><path style="fill:#9b804d" d="m 93.217326,155.50426 c 0.625828,-0.87947 1.352197,-0.7045 2.208389,-0.60572 -0.227189,-0.24271 -0.33902,-0.54892 -0.33902,-0.87771 0,-0.75741 0.628298,-1.3716 1.403703,-1.3716 1.61925,0 1.419225,1.83303 0.716845,1.83303 -0.157692,0 -0.284339,-0.11077 -0.318559,-0.242 -0.02822,-0.10831 -0.0011,-0.23566 -0.03845,-0.33832 -0.05256,-0.14322 -0.197908,-0.24835 -0.360538,-0.24835 -0.104775,0 -0.198967,0.0413 -0.268112,0.10795 -0.218016,0.21025 -0.08184,0.63112 0.06033,0.84631 0.197909,0.29845 0.545395,0.49107 0.944034,0.48719 l 0.06491,-0.002 c 1.110192,-0.12488 1.436864,-1.06997 1.154994,-1.92758 -0.122414,-0.37253 -0.549627,-0.92075 -1.030816,-1.1504 0.886177,-0.51294 1.158169,-1.69581 1.126772,-2.39784 l -9.529939,5.88716 9.529939,5.88786 c 0.0314,-0.70238 -0.240595,-1.88524 -1.126772,-2.39783 0.481189,-0.23001 0.908402,-0.77823 1.030816,-1.15076 0.28187,-0.8576 -0.0448,-1.8027 -1.154994,-1.92793 l -0.06491,-0.002 c -0.398639,-0.004 -0.746125,0.18874 -0.944034,0.48719 -0.142169,0.2152 -0.278341,0.63606 -0.06033,0.84631 0.06915,0.0667 0.163337,0.10795 0.268112,0.10795 0.16263,0 0.307975,-0.10477 0.360538,-0.24835 0.0374,-0.10266 0.01023,-0.22966 0.03845,-0.33831 0.03422,-0.13124 0.160867,-0.24201 0.318559,-0.24201 0.70238,0 0.902405,1.83303 -0.716845,1.83303 -0.775405,0 -1.403703,-0.61418 -1.403703,-1.3716 0,-0.32879 0.111831,-0.635 0.33902,-0.87771 -0.856192,0.0991 -1.582561,0.27411 -2.208389,-0.60607"/><path style="fill:#253168" d="m 104.89551,158.47514 v -3.00637 c 0,-0.0374 -0.001,-0.0741 -0.002,-0.11007 v -0.002 l -0.002,-0.0384 v -0.002 -0.003 l -7e-4,-0.007 v -0.003 c -0.0674,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.70485,0 -1.26577,0.22754 -1.5501,0.50588 v 0.56056 c 0.38346,-0.20672 0.93274,-0.40357 1.36278,-0.40357 0.53445,0 0.9084,0.16086 0.90946,0.75318 l 3.5e-4,0.005 v 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62019,1.49613 1.87008,1.49613 0.42862,0 1.30528,-0.0776 1.6577,-0.26635 m -0.96696,-0.44097 c -0.27588,0.11324 -0.76659,0.12418 -1.02906,0.0459 -0.15204,-0.0455 -0.27693,-0.11536 -0.36865,-0.21908 -0.12065,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67769,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 123.05002,158.64979 v -0.73484 c -0.0833,0.0247 -0.14958,0.0416 -0.2413,0.0416 -0.3496,0 -0.49107,-0.23318 -0.49107,-0.58279 v -2.82469 h 0.73237 v -0.64347 h -0.73237 v -1.13665 l -1.01564,0.6343 3.5e-4,0.50235 h -0.53834 v 0.64347 h 0.53834 v 2.97674 c 0,0.62406 0.3496,1.21567 1.23155,1.21567 0.24165,0 0.42439,-0.0501 0.51611,-0.0917"/><path style="fill:#253168" d="m 120.20001,157.31401 c 0,-0.54786 -0.21202,-1.01812 -1.13877,-1.38359 -0.41486,-0.1651 -0.70626,-0.35666 -0.70626,-0.73943 0,-0.3309 0.23848,-0.61806 0.67981,-0.61806 0.33549,0 0.7186,0.21837 0.89252,0.40287 v -0.57256 c -0.59796,-0.90346 -2.61373,-0.63394 -2.61373,0.83996 0,0.48719 0.18521,0.97438 1.08585,1.31375 0.48542,0.18274 0.76024,0.36512 0.76024,0.76517 0,0.85831 -1.37372,0.7546 -1.85067,0.39935 l 0.005,0.75 c 0.28081,0.14253 0.63571,0.26988 1.19169,0.26988 1.0414,0 1.69474,-0.66146 1.69474,-1.42734"/><path style="fill:#253168" d="m 131.8993,158.6141 -7.1e-4,-3.31329 c 0,-0.74612 -0.45402,-1.41464 -1.83444,-1.41464 -0.78034,0 -1.37195,0.12841 -1.80904,0.33444 l 3.5e-4,4.39349 h 1.04598 l -3.5e-4,-3.93947 c 0.1972,-0.0769 0.37712,-0.12841 0.72002,-0.12841 0.6604,0 0.83185,0.39441 0.83185,0.77152 l 3.5e-4,3.29636 z"/><path style="fill:#253168" d="m 110.42173,153.893 c -1.17016,-0.0402 -1.78682,0.0974 -2.2666,0.32879 v 4.39243 h 1.04493 v -3.92112 c 0.23954,-0.13723 0.81915,-0.2159 1.22132,-0.0526 z"/><path d="m 107.03383,153.9084 h -1.0163 v 4.7057 h 1.0163 z" style="fill:#253168"/><path style="fill:#253168" d="m 116.4726,158.47513 v -3.00637 c 0,-0.0374 -0.001,-0.0741 -0.002,-0.11007 v -0.002 l -0.002,-0.0384 v -0.002 -0.003 l -7e-4,-0.007 v -0.003 c -0.0674,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.70485,0 -1.26577,0.22754 -1.55046,0.50588 v 0.56056 c 0.38382,-0.20672 0.9331,-0.40357 1.36314,-0.40357 0.53445,0 0.9084,0.16086 0.90946,0.75318 v 0.005 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62019,1.49613 1.86972,1.49613 0.42898,0 1.30564,-0.0776 1.65806,-0.26635 m -0.96696,-0.44097 c -0.27623,0.11324 -0.76659,0.12418 -1.02906,0.0459 -0.15204,-0.0455 -0.27728,-0.11536 -0.36865,-0.21908 -0.121,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67733,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 127.13273,158.47513 v -3.00637 c 0,-0.0374 -7.1e-4,-0.0741 -0.002,-0.11007 l -3.5e-4,-0.002 -0.002,-0.0384 v -0.002 -0.003 l -3.5e-4,-0.007 -3.5e-4,-0.003 c -0.067,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.7045,0 -1.26541,0.22754 -1.5501,0.50588 v 0.56056 c 0.38382,-0.20672 0.93274,-0.40357 1.36313,-0.40357 0.53446,0 0.9084,0.16086 0.90946,0.75318 v 0.005 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62054,1.49613 1.87008,1.49613 0.42898,0 1.30563,-0.0776 1.6577,-0.26635 m -0.96696,-0.44097 c -0.27588,0.11324 -0.76624,0.12418 -1.02906,0.0459 -0.15169,-0.0455 -0.27693,-0.11536 -0.36865,-0.21908 -0.12065,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67769,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 136.26195,158.47513 v -3.00637 c 0,-0.0374 -0.001,-0.0741 -0.002,-0.11007 l -3.5e-4,-0.002 -0.002,-0.0384 v -0.002 -0.003 l -7e-4,-0.007 v -0.003 c -0.0674,-1.0541 -0.78811,-1.41605 -1.68628,-1.41605 -0.70485,0 -1.26577,0.22754 -1.5501,0.50588 v 0.56056 c 0.38382,-0.20672 0.93274,-0.40357 1.36278,-0.40357 0.53445,0 0.9084,0.16086 0.90981,0.75318 v 0.005 0.0512 l 0.002,0.29069 c -1.39418,0.13582 -2.56082,0.38876 -2.56082,1.59597 0,0.88406 0.62019,1.49613 1.87008,1.49613 0.42862,0 1.30528,-0.0776 1.6577,-0.26635 m -0.96696,-0.44097 c -0.27588,0.11324 -0.76624,0.12418 -1.02906,0.0459 -0.15169,-0.0455 -0.27693,-0.11536 -0.36865,-0.21908 -0.12065,-0.13652 -0.18556,-0.32843 -0.18556,-0.58173 0,-0.8329 0.67733,-1.01776 1.58327,-1.01776 z"/><path style="fill:#253168" d="m 107.06729,152.77607 c 0,-0.28328 -0.23424,-0.50835 -0.54187,-0.50835 -0.2988,0 -0.54151,0.22507 -0.54151,0.50835 0,0.27481 0.24271,0.49953 0.54151,0.49953 0.30763,0 0.54187,-0.22472 0.54187,-0.49953"/></g></svg></div>
+  <div>
+    <h1>OFP Viewer</h1>
+    <div class="sub">The operational flight plan on the phone — what is in it, at a glance,
+      before you get to the aircraft. Reading only: nothing is written into the document.</div>
+  </div>
+  <div id="drop">
+    Tap to choose a PDF
+    <div class="fn" id="fname"></div>
+  </div>
+  <input type="file" id="file" accept="application/pdf,.pdf" class="hide">
+  <div class="msg" id="m1"></div>
+  <div><button type="button" class="ghost hide" id="backBtn">Back to the plan</button></div>
+  <p class="disc">Only Air Astana computerized flight plans are supported. The document is read
+    on this device and goes nowhere else — no network, no account, no key.</p>
+</div>
+
+<!-- ================= the document ================= -->
+<div id="appView" class="hide">
+  <header class="bar">
+    <div class="bartop">
+      <div class="ident">
+        <b id="hTitle">—</b>
+        <span id="hSub"></span>
+      </div>
+      <button type="button" class="barbtn" id="themeBtn" aria-label="Colour theme" title="Colour theme"></button>
+      <button type="button" class="barbtn" id="openBtn" aria-label="Open another plan" title="Open another plan"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5.2l1.8 2H20v9.5H4z"/><path d="M12 16.5v-5.2M9.6 13.4L12 11l2.4 2.4"/></svg></button>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="flight" aria-selected="true">Flight</button>
+      <button type="button" role="tab" data-tab="route" aria-selected="false">Route<i id="nRoute"></i></button>
+      <button type="button" role="tab" data-tab="wx" aria-selected="false">Weather<i id="nWx"></i></button>
+      <button type="button" role="tab" data-tab="charts" aria-selected="false">Charts<i id="nCharts"></i></button>
+      <button type="button" role="tab" data-tab="fpl" aria-selected="false">ICAO</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel" id="p-flight"></section>
+    <section class="panel" id="p-route" hidden></section>
+    <section class="panel" id="p-wx" hidden></section>
+    <section class="panel" id="p-charts" hidden></section>
+    <section class="panel" id="p-fpl" hidden></section>
+  </main>
+</div>
+
+<script>/* pdfmini — the OFP companion's PDF engine, reading only: text with its
+   coordinates out of FlateDecode streams, and the page images. The overlay writer
+   is left out — this page never touches the document. Targets unencrypted PDFs
+   with a classic xref table and uncompressed objects (Air Astana OFP). */
+
+const PDFMini = (() => {
+
+  /* ---------- bytes <-> latin1 string (1:1, index == byte offset) ---------- */
+  function toStr(u8){
+    let s = '', C = 0x8000;
+    for (let i = 0; i < u8.length; i += C)
+      s += String.fromCharCode.apply(null, u8.subarray(i, i + C));
+    return s;
+  }
+
+  /* ---------- object parsing ---------- */
+  const WS = ' \t\r\n\f\0', DELIM = '()<>[]{}/%';
+  const isWS = c => WS.indexOf(c) >= 0;
+  const isDelim = c => DELIM.indexOf(c) >= 0;
+
+  class Lexer {
+    constructor(s, i = 0){ this.s = s; this.i = i; }
+    skip(){
+      const s = this.s;
+      for (;;){
+        while (this.i < s.length && isWS(s[this.i])) this.i++;
+        if (s[this.i] === '%'){ while (this.i < s.length && s[this.i] !== '\n' && s[this.i] !== '\r') this.i++; }
+        else return;
+      }
+    }
+    // reads one object; "N G R" references collapse into {ref:N}
+    obj(){
+      this.skip();
+      const s = this.s, c = s[this.i];
+      if (c === undefined) return null;
+      if (c === '<' && s[this.i + 1] === '<') return this.dict();
+      if (c === '<') return this.hexStr();
+      if (c === '(') return this.str();
+      if (c === '[') return this.arr();
+      if (c === '/') return this.name();
+      if (c === ']' || c === '>'){ this.i++; return undefined; }
+      return this.token();
+    }
+    name(){
+      const s = this.s; this.i++; let r = '';
+      while (this.i < s.length && !isWS(s[this.i]) && !isDelim(s[this.i])){
+        let ch = s[this.i++];
+        if (ch === '#'){ ch = String.fromCharCode(parseInt(s.substr(this.i, 2), 16)); this.i += 2; }
+        r += ch;
+      }
+      return { name: r };
+    }
+    dict(){
+      this.i += 2; const d = {};
+      for (;;){
+        this.skip();
+        if (this.s[this.i] === undefined) break;
+        if (this.s[this.i] === '>' && this.s[this.i + 1] === '>'){ this.i += 2; break; }
+        if (this.s[this.i] !== '/'){ this.i++; continue; }
+        const k = this.name().name;
+        d[k] = this.obj();
+      }
+      return d;
+    }
+    arr(){
+      this.i++; const a = [];
+      for (;;){
+        this.skip();
+        if (this.s[this.i] === undefined) break;
+        if (this.s[this.i] === ']'){ this.i++; break; }
+        const v = this.obj();
+        if (v === undefined) break;
+        a.push(v);
+      }
+      return a;
+    }
+    str(){
+      const s = this.s; this.i++; let depth = 1, r = '';
+      while (this.i < s.length){
+        let ch = s[this.i++];
+        if (ch === '\\'){
+          const n = s[this.i++];
+          if (n === 'n') r += '\n'; else if (n === 'r') r += '\r';
+          else if (n === 't') r += '\t'; else if (n === 'b') r += '\b';
+          else if (n === 'f') r += '\f';
+          else if (n >= '0' && n <= '7'){
+            let o = n;
+            for (let k = 0; k < 2 && s[this.i] >= '0' && s[this.i] <= '7'; k++) o += s[this.i++];
+            r += String.fromCharCode(parseInt(o, 8));
+          }
+          else if (n === '\n') { /* line continuation */ }
+          else if (n === '\r'){ if (s[this.i] === '\n') this.i++; }
+          else r += n;
+        }
+        else if (ch === '('){ depth++; r += ch; }
+        else if (ch === ')'){ if (--depth === 0) break; r += ch; }
+        else r += ch;
+      }
+      return { text: r };
+    }
+    hexStr(){
+      const s = this.s; this.i++; let h = '';
+      while (this.i < s.length && s[this.i] !== '>') h += s[this.i++];
+      this.i++;
+      h = h.replace(/[^0-9a-fA-F]/g, '');
+      if (h.length & 1) h += '0';
+      let r = '';
+      for (let k = 0; k < h.length; k += 2) r += String.fromCharCode(parseInt(h.substr(k, 2), 16));
+      return { text: r };
+    }
+    token(){
+      const s = this.s; let t = '';
+      while (this.i < s.length && !isWS(s[this.i]) && !isDelim(s[this.i])) t += s[this.i++];
+      if (/^[-+.\d]/.test(t)){
+        const save = this.i, m = /^\d+$/.test(t);
+        if (m){                                   // may be an "N G R" reference
+          this.skip();
+          const j = this.i; let g = '';
+          while (this.i < s.length && /\d/.test(s[this.i])) g += s[this.i++];
+          if (g){
+            this.skip();
+            if (s[this.i] === 'R' && (isWS(s[this.i + 1]) || isDelim(s[this.i + 1]) || s[this.i + 1] === undefined)){
+              this.i++; return { ref: parseInt(t, 10) };
+            }
+          }
+          this.i = save;
+        }
+        return parseFloat(t);
+      }
+      if (t === 'true') return true;
+      if (t === 'false') return false;
+      if (t === 'null') return null;
+      return { op: t || s[this.i++] };
+    }
+  }
+
+  /* ---------- document ---------- */
+  class Doc {
+    constructor(u8){
+      this.bytes = u8;
+      this.s = toStr(u8);
+      this.xref = new Map();
+      this.trailer = {};
+      this.readXref();
+    }
+    readXref(){
+      const m = /startxref\s+(\d+)\s*%%EOF\s*$/.exec(this.s.slice(-2048))
+             || /startxref\s+(\d+)/g.exec(this.s.slice(this.s.lastIndexOf('startxref')));
+      if (!m) throw new Error('startxref not found');
+      let off = parseInt(m[1], 10);
+      const seen = new Set();
+      while (off !== undefined && !seen.has(off)){
+        seen.add(off);
+        const lx = new Lexer(this.s, off);
+        lx.skip();
+        if (this.s.substr(lx.i, 4) !== 'xref')
+          throw new Error('only a classic xref table is supported');
+        lx.i += 4;
+        for (;;){
+          lx.skip();
+          if (this.s.substr(lx.i, 7) === 'trailer'){ lx.i += 7; break; }
+          const start = lx.obj(), count = lx.obj();
+          if (typeof start !== 'number' || typeof count !== 'number') break;
+          lx.skip();
+          for (let k = 0; k < count; k++){
+            const e = this.s.substr(lx.i, 20);
+            const em = /^(\d{10})\s(\d{5})\s([nf])/.exec(e);
+            if (em){
+              const num = start + k;
+              if (em[3] === 'n' && !this.xref.has(num)) this.xref.set(num, parseInt(em[1], 10));
+              lx.i += (e[18] === '\r' || e[18] === '\n' || e[18] === ' ') ? 20 : 19;
+            } else { lx.i += 20; }
+          }
+        }
+        const tr = new Lexer(this.s, lx.i).obj();
+        for (const k in tr) if (!(k in this.trailer)) this.trailer[k] = tr[k];
+        off = typeof tr.Prev === 'number' ? tr.Prev : undefined;
+      }
+    }
+    get(o){                                        // dereference
+      if (o && typeof o === 'object' && 'ref' in o){
+        const off = this.xref.get(o.ref);
+        if (off === undefined) return null;
+        const lx = new Lexer(this.s, off);
+        lx.obj(); lx.obj();                        // "N G"
+        lx.skip();
+        if (this.s.substr(lx.i, 3) === 'obj') lx.i += 3;
+        const v = lx.obj();
+        lx.skip();
+        if (this.s.substr(lx.i, 6) === 'stream'){
+          let p = lx.i + 6;
+          if (this.s[p] === '\r') p++;
+          if (this.s[p] === '\n') p++;
+          const len = this.get(v.Length);
+          return { dict: v, start: p, length: typeof len === 'number' ? len : 0 };
+        }
+        return v;
+      }
+      return o;
+    }
+    async stream(obj){                             // decoded stream data
+      const raw = this.bytes.subarray(obj.start, obj.start + obj.length);
+      const f = this.get(obj.dict.Filter);
+      const names = (Array.isArray(f) ? f : f ? [f] : []).map(x => x && x.name);
+      if (!names.length) return raw;
+      if (names.length > 1 || (names[0] !== 'FlateDecode' && names[0] !== 'Fl'))
+        throw new Error('unsupported stream filter: ' + names.join(','));
+      const ds = new DecompressionStream('deflate');
+      const ab = await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer();
+      return new Uint8Array(ab);
+    }
+    async content(page){                           // /Contents: a ref or an array of refs
+      const c = this.get(page.dict.Contents);
+      const list = Array.isArray(c) ? c.map(r => this.get(r)) : [c];
+      let s = '';
+      for (const o of list){
+        if (!o || !o.dict) continue;
+        s += toStr(await this.stream(o)) + '\n';
+      }
+      return s;
+    }
+    pages(){
+      const root = this.get(this.trailer.Root);
+      const out = [];
+      const walk = (nodeRef, inherited) => {
+        const n = this.get(nodeRef);
+        if (!n) return;
+        const inh = {
+          Resources: n.Resources !== undefined ? n.Resources : inherited.Resources,
+          MediaBox:  n.MediaBox  !== undefined ? n.MediaBox  : inherited.MediaBox
+        };
+        if (n.Type && n.Type.name === 'Page'){
+          out.push({ ref: nodeRef.ref, dict: n,
+                     Resources: this.get(inh.Resources), MediaBox: this.get(inh.MediaBox) });
+          return;
+        }
+        const kids = this.get(n.Kids) || [];
+        for (const k of kids) walk(k, inh);
+      };
+      walk(root.Pages, {});
+      return out;
+    }
+  }
+
+  /* ---------- text extraction ---------- */
+  function textItems(content){
+    const lx = new Lexer(content, 0);
+    const st = [];
+    let size = 0, Tc = 0, Tz = 100, TL = 0;
+    let Tm = [1,0,0,1,0,0], Tlm = [1,0,0,1,0,0];
+    const out = [];
+    const mul = (a, b) => [
+      a[0]*b[0] + a[1]*b[2],       a[0]*b[1] + a[1]*b[3],
+      a[2]*b[0] + a[3]*b[2],       a[2]*b[1] + a[3]*b[3],
+      a[4]*b[0] + a[5]*b[2] + b[4], a[4]*b[1] + a[5]*b[3] + b[5]
+    ];
+    const nextLine = () => { Tlm = mul([1,0,0,1,0,-TL], Tlm); Tm = Tlm.slice(); };
+    const show = t => {
+      if (!t) return;
+      const sc = Math.hypot(Tm[0], Tm[1]) || 1;
+      const cw = size * 0.6 * (Tz / 100) + Tc;     // Courier: 600/1000 em
+      out.push({ str: t, x: Tm[4], y: Tm[5], size: size * sc, cw });
+      Tm = mul([1,0,0,1, t.length * cw, 0], Tm);
+    };
+    for (;;){
+      const o = lx.obj();
+      if (o === null) break;
+      if (o === undefined) continue;
+      if (typeof o === 'object' && 'op' in o){
+        const op = o.op;
+        if (op === 'BT'){ Tm = [1,0,0,1,0,0]; Tlm = Tm.slice(); st.length = 0; }
+        else if (op === 'Tf'){ size = st[st.length - 1] || 0; }
+        else if (op === 'TL'){ TL = st[st.length - 1] || 0; }
+        else if (op === 'Tc'){ Tc = st[st.length - 1] || 0; }
+        else if (op === 'Tz'){ Tz = st[st.length - 1] || 100; }
+        else if (op === 'Td' || op === 'TD'){
+          const y = st.pop() || 0, x = st.pop() || 0;
+          if (op === 'TD') TL = -y;
+          Tlm = mul([1,0,0,1,x,y], Tlm); Tm = Tlm.slice();
+        }
+        else if (op === 'Tm'){
+          const v = st.slice(-6);
+          if (v.length === 6){ Tlm = v.slice(); Tm = v.slice(); }
+        }
+        else if (op === 'T*') nextLine();
+        else if (op === 'Tj') show((st[st.length - 1] || {}).text);
+        else if (op === "'"){ nextLine(); show((st[st.length - 1] || {}).text); }
+        else if (op === '"'){ nextLine(); show((st[st.length - 1] || {}).text); }
+        else if (op === 'TJ'){
+          const a = st[st.length - 1];
+          if (Array.isArray(a)) for (const el of a){
+            if (el && el.text !== undefined) show(el.text);
+            else if (typeof el === 'number') Tm = mul([1,0,0,1, -el / 1000 * size * (Tz/100), 0], Tm);
+          }
+        }
+        st.length = 0;
+      } else st.push(o);
+    }
+    return out;
+  }
+
+  return { Doc, textItems, toStr };
+})();
+</script>
+
+<script>
+const $ = s => document.querySelector(s);
+let DOC = null, NAME = '', PLAN = null;
+
+const esc = s => String(s).replace(/[&<>"]/g, c =>
+  ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const msg = (el, t, k) => { const e = $(el); e.className = 'msg show ' + (k || 'ok'); e.textContent = t; };
+const hideMsg = el => { $(el).className = 'msg'; };
+
+/* ================= theme =================
+   The same key the companion and the Journey Log use, so a phone that has all
+   three on its home screen does not switch to dark on one page and light on the
+   next. */
+const SUN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 1.8v2.6M12 19.6v2.6M4.2 4.2l1.9 1.9M17.9 17.9l1.9 1.9M1.8 12h2.6M19.6 12h2.6M4.2 19.8l1.9-1.9M17.9 6.1l1.9-1.9"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+function applyTheme(t){
+  document.documentElement.dataset.theme = t;
+  const m = document.querySelector('meta[name=theme-color]');
+  if (m) m.content = t === 'dark' ? '#0f1419' : '#f2f5f8';
+  const b = $('#themeBtn');
+  if (b) b.innerHTML = t === 'dark' ? MOON : SUN;   // the state it is in, as the switch shows it
+  try { localStorage.setItem('etofill:theme', t); } catch(e){}
+}
+$('#themeBtn').onclick = () =>
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+(() => {
+  let t = null;
+  try { t = localStorage.getItem('etofill:theme'); } catch(e){}
+  if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  applyTheme(t);
+})();
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+
+/* ================= PDF parsing =================
+   Lifted from the OFP companion and cut back to what a reader needs: the
+   waypoint pairs, the flight header, the ICAO plan, the identity and weights,
+   the weather pages and the charts. The document blanks — ATIS, ATC CLRNC and
+   the rest — are places to write and have no business here. */
+function tokenize(chars, cw){
+  const t = []; let cur = '', prev = null;
+  for (const c of chars){
+    if (prev !== null && c.x - prev > cw * 1.5){ if (cur) t.push(cur); cur = ''; }
+    cur += c.ch; prev = c.x;
+  }
+  if (cur) t.push(cur);
+  return t;
+}
+function tokensX(chars, cw){
+  const t = []; let cur = '', x0 = 0, prev = null;
+  for (const c of chars){
+    if (prev !== null && c.x - prev > cw * 1.5){ if (cur) t.push({ t: cur, x: x0, x1: prev + cw }); cur = ''; }
+    if (!cur) x0 = c.x;
+    cur += c.ch; prev = c.x;
+  }
+  if (cur) t.push({ t: cur, x: x0, x1: prev + cw });
+  return t;
+}
+
+/* The ICAO plan is printed between two markers and often breaks across a page,
+   with headers and footers landing in the middle. Stitch it back into one text. */
+function icaoPlan(lines){
+  const s = lines.findIndex(l => /START OF ICAO FLIGHT PLAN/i.test(l.text));
+  const e = lines.findIndex(l => /END OF ICAO FLIGHT PLAN/i.test(l.text));
+  if (s < 0 || e <= s) return null;
+  const slice = lines.slice(s + 1, e);
+  const pages = [...new Set(slice.map(l => l.page + 1))];
+  const body = slice.map(l => l.text.trim())
+    .filter(t => t && !/^AIR ASTANA BRIEF/i.test(t) && !/^PAGE \d+ OF \d+$/i.test(t));
+  if (!body.length) return null;
+  const fieldsOut = [];                       // a line starting with '-' opens a new ICAO field
+  for (const t of body){
+    if (fieldsOut.length && !t.startsWith('-')) fieldsOut[fieldsOut.length - 1] += ' ' + t;
+    else fieldsOut.push(t);
+  }
+  return { lines: fieldsOut, oneLine: fieldsOut.join(''), pages, split: pages.length > 1 };
+}
+
+/* ---- chart pages ----
+   The wind-component and significant-weather charts are the only pages in the
+   package whose whole content is a single large picture: no body text, one image
+   XObject. Scanned paperwork at the back carries three layers and is left out. */
+function chartPage(doc, page, i, textCount, out){
+  if (textCount > 4) return;
+  const res = page.Resources;
+  if (!res) return;
+  const xo = doc.get(res.XObject);
+  if (!xo) return;
+  const keys = Object.keys(xo);
+  if (keys.length !== 1) return;
+  const o = doc.get(xo[keys[0]]);
+  const d = o && o.dict;
+  if (!d || (doc.get(d.Subtype) || {}).name !== 'Image') return;
+  const w = doc.get(d.Width), h = doc.get(d.Height);
+  if (!(w >= 600 && h >= 400)) return;
+  out.push({ page: i, key: keys[0], w, h });
+}
+
+// Decode one chart to a blob URL. Handles the two encodings these packages use:
+// a raw RGB or palette bitmap under FlateDecode, and a plain JPEG under DCTDecode.
+async function chartUrl(doc, page, key){
+  const o = doc.get(doc.get(page.Resources.XObject)[key]), d = o.dict;
+  const f = doc.get(d.Filter), fn = (Array.isArray(f) ? f[0] : f) || {};
+  const w = doc.get(d.Width), h = doc.get(d.Height);
+  if (fn.name === 'DCTDecode')
+    return URL.createObjectURL(new Blob([doc.bytes.subarray(o.start, o.start + o.length)],
+                                        { type: 'image/jpeg' }));
+  if (fn.name !== 'FlateDecode' && fn.name !== 'Fl')
+    throw new Error('unsupported chart encoding: ' + fn.name);
+
+  const data = await doc.stream(o);
+  const cs = doc.get(d.ColorSpace);
+  const indexed = Array.isArray(cs) && cs[0] && cs[0].name === 'Indexed';
+  let pal = null;
+  if (indexed){
+    const lut = cs[3];
+    pal = lut && typeof lut.text === 'string'
+        ? Uint8Array.from(lut.text, c => c.charCodeAt(0) & 255)
+        : await doc.stream(doc.get(lut));
+  } else if (!(cs && cs.name === 'DeviceRGB')){
+    throw new Error('unsupported chart colour space');
+  }
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(w, h);
+  for (let i = 0, n = w * h; i < n; i++){
+    const s = indexed ? data[i] * 3 : i * 3;
+    const src = indexed ? pal : data;
+    img.data[i * 4] = src[s]; img.data[i * 4 + 1] = src[s + 1];
+    img.data[i * 4 + 2] = src[s + 2]; img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+  cv.width = cv.height = 0;                        // release the backing store
+  return URL.createObjectURL(blob);
+}
+
+/* ---- OFP identity and briefing sections ---- */
+const CHROME = t => /^AIR ASTANA BRIEF/i.test(t) || /^PAGE \d+ OF \d+$/i.test(t);
+
+// Aerodromes and areas named by the ICAO flight plan: field 13 is departure,
+// field 16 destination + alternates, field 18 carries EET/ (the FIRs crossed)
+// and RALT/ (en-route alternates).
+function routeAirports(icao){
+  const role = new Map(), fir = new Set();
+  if (!icao) return { role, fir };
+  const dep = icao.lines.find(l => /^-[A-Z]{4}\d{4}$/.test(l.trim()));
+  if (dep) role.set(dep.trim().slice(1, 5), 'departure');
+  const dst = icao.lines.find(l => /^-[A-Z]{4}\d{4}(\s+[A-Z]{4})*\s*$/.test(l) && l !== dep);
+  if (dst){
+    const codes = dst.trim().slice(1).split(/\s+/);
+    role.set(codes[0].slice(0, 4), 'destination');
+    for (const c of codes.slice(1)) if (/^[A-Z]{4}$/.test(c) && !role.has(c)) role.set(c, 'alternate');
+  }
+  const all = icao.lines.join(' ');
+  const eet = all.match(/\bEET\/((?:[A-Z]{4}\d{4}\s*)+)/);
+  if (eet) for (const m of eet[1].matchAll(/([A-Z]{4})\d{4}/g)) fir.add(m[1]);
+  const ralt = all.match(/\bRALT\/([A-Z]{4}(?:\s+[A-Z]{4})*)/);
+  if (ralt) for (const c of ralt[1].split(/\s+/)) if (!role.has(c)) role.set(c, 'en-route alternate');
+  return { role, fir };
+}
+
+// OFP identity, read from the first page. Air Astana prints it as
+// "ROUTE ID: ALAICN01  GENERATED: 13/08/2026 15:26 GMT  --- REQUEST # 83104 ---".
+function ofpIdent(lines){
+  const page1 = lines.filter(l => l.page === 0 && !CHROME(l.text)).map(l => l.text.trim());
+  let route = null, req = null, issued = null;
+  const FALLBACK = [
+    /\bOFP\s*(?:NO|NR|NUM(?:BER)?|#)?\.?\s*:?\s*([A-Z0-9][A-Z0-9\-\/]{0,14})\b/i,
+    /\bFLIGHT\s+PLAN\s+(?:NO|NR|NUMBER)\.?\s*:?\s*([A-Z0-9][A-Z0-9\-\/]{0,14})\b/i,
+  ];
+  for (const t of page1){
+    let m;
+    if (!route && (m = t.match(/\bROUTE\s*ID\s*:\s*(\S+)/i))) route = m[1];
+    if (!req   && (m = t.match(/\bREQUEST\s*#?\s*(\d+)/i))) req = m[1];
+    if (!issued && (m = t.match(/\bGENERATED\s*:\s*(\S+)\s+(\d{1,2}:\d{2})/i)))
+      issued = m[1] + ' ' + m[2] + 'Z';
+    if (!req) for (const re of FALLBACK){ const f = t.match(re); if (f){ req = f[1]; break; } }
+  }
+  return (route || req || issued) ? { route, req, issued } : null;
+}
+
+// The weights the crew checks at a glance, from page 1, with the certificate
+// limits printed on the line above them so the margin can be shown beside each.
+// Each label is anchored to a word boundary so MTOW cannot be read as TOW.
+const WEIGHTS = [['TOW','MTOW'], ['LW','MLW'], ['ZFW','MZFW'], ['PLD','MPLD']];
+function keyFigures(lines){
+  const page1 = lines.filter(l => l.page === 0 && !CHROME(l.text)).map(l => l.text.trim());
+  const out = {};
+  const grab = (t, k) => {
+    if (out[k]) return;
+    const m = t.match(new RegExp('(?:^|\\s)' + k + '\\s+(\\d{3,7})(?:\\s|$)'));
+    if (m) out[k] = m[1];
+  };
+  for (const t of page1){
+    for (const [k, lim] of WEIGHTS){ grab(t, k); grab(t, lim); }
+    grab(t, 'BLKF');
+    if (!out.CI){ const m = t.match(/\bCI(\d{2,3})\b/); if (m) out.CI = 'CI' + m[1]; }
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/* The fuel block on page 1 is a column of "LABEL H.MM NNNNN" — TRIP, CONT, ALTN,
+   FINRES, EXTRA, BLOCK FUEL. Read as a shape rather than as a fixed list of
+   labels, so a package that carries one more line still shows it. The trailing
+   text of the BLOCK FUEL line (it also carries the PIC BLOCK blank) is ignored. */
+function fuelBlock(lines){
+  const rows = [];
+  const seen = new Set();
+  for (const l of lines){
+    if (l.page !== 0 || CHROME(l.text)) continue;
+    const m = l.text.trim().match(/^([A-Z][A-Z0-9 \/\-]{1,20}?)\s+(\d{1,2}\.[0-5]\d)\s+(\d{2,6})(?:\s|$)/);
+    if (!m) continue;
+    const label = m[1].replace(/\s+/g, ' ').trim();
+    if (seen.has(label)) continue;
+    seen.add(label);
+    rows.push({ label, time: m[2], fuel: +m[3] });
+  }
+  return rows.length >= 2 ? rows : null;
+}
+
+/* The ICAO plan says more about the flight than anything else in the package and
+   says it in a form that cannot be mistaken. Everything here is optional: a field
+   that does not match is simply not shown. */
+function icaoFields(icao){
+  if (!icao) return null;
+  const L = icao.lines.map(l => l.trim()), out = { f18: {} };
+  let m;
+
+  if ((m = (L[0] || '').match(/^\(FPL-([A-Z0-9]{2,7})-([A-Z])([A-Z])/))){
+    out.callsign = m[1]; out.rules = m[2]; out.kind = m[3];
+  }
+  const eq = L.find(l => /^-[A-Z0-9]{2,4}\/[LMHJ]-/.test(l));
+  if (eq && (m = eq.match(/^-([A-Z0-9]{2,4})\/([LMHJ])-([A-Z0-9]+)(?:\/([A-Z0-9]+))?/))){
+    out.acft = m[1]; out.wake = m[2]; out.equip = m[3]; out.surv = m[4] || null;
+  }
+  const dep = L.find(l => /^-[A-Z]{4}\d{4}$/.test(l));
+  if (dep){ out.dep = dep.slice(1, 5); out.off = dep.slice(5, 9); }
+  const spd = L.find(l => /^-[NMK]\d{3,4}[FSAM]\d{3,4}\b/.test(l));
+  if (spd && (m = spd.match(/^-([NMK]\d{3,4})([FSAM]\d{3,4})\s*([\s\S]*)$/))){
+    out.speed = m[1]; out.level = m[2]; out.route = m[3].trim().replace(/\s+/g, ' ');
+  }
+  const di = L.findIndex(l => /^-[A-Z]{4}\d{4}(\s+[A-Z]{4})*$/.test(l) && l !== dep);
+  if (di >= 0){
+    const parts = L[di].slice(1).split(/\s+/);
+    out.dest = parts[0].slice(0, 4); out.eet = parts[0].slice(4, 8);
+    out.altn = parts.slice(1).filter(c => /^[A-Z]{4}$/.test(c));
+  }
+  // Field 18 — "EET/ZLHW0132 ZBPE0304 RALT/ZBAA REG/P4KDC DOF/260813". Each item
+  // runs until the next KEY/ or the closing bracket, so values with spaces in
+  // them (EET, RMK) stay whole.
+  const tail = (di >= 0 ? L.slice(di + 1) : L.slice(1)).join(' ');
+  const re = /\b([A-Z]{3,6})\/\s*([^]*?)(?=\s+[A-Z]{3,6}\/|\)\s*$|$)/g;
+  while ((m = re.exec(tail))) out.f18[m[1]] = m[2].replace(/\)\s*$/, '').replace(/\s+/g, ' ').trim();
+  return out;
+}
+
+/* What the form prints across a waypoint's two lines besides the times: the
+   airway, the position, the level, the wind and temperature, the distance, the
+   ground speed. The rest is shown as printed rather than sorted into named
+   columns — the column order is the form's, not ours — but the two that can be
+   recognised beyond doubt are pulled out for the glance: wind has a slash in it,
+   and a level is the one three-figure number in the row. Where two of them are,
+   neither is claimed to be the level and both stay in the printed strip.
+   The position goes to the end of that strip: it is the longest thing on the
+   line and the least use at a glance, so it is what a narrow screen should clip. */
+function wpDetail(up, low){
+  const mid = up.slice(1, Math.max(1, up.length - 2));
+  const dist = up[up.length - 1];
+  const lowMid = low.slice(0, Math.max(0, low.length - 2));
+  const o = {}, rest = [], tail = [];
+  for (const t of mid){
+    if (!o.wind && /^\d{3}\/\d{2,3}$/.test(t)){ o.wind = t; continue; }
+    if (/^[NS]\d{2,7}(\.\d+)?[EW]\d{2,7}(\.\d+)?$/.test(t)){ tail.push(t); continue; }
+    rest.push(t);
+  }
+  const fl = rest.filter(t => /^(0[1-9]\d|[1-3]\d\d|4[0-5]\d)$/.test(t));
+  if (fl.length === 1){ o.fl = fl[0]; rest.splice(rest.indexOf(fl[0]), 1); }
+  o.raw = [...rest, dist, ...lowMid, ...tail].filter(Boolean).join(' ');
+  return o;
+}
+
+async function parse(buf){
+  const doc = new PDFMini.Doc(new Uint8Array(buf));
+  DOC = doc;
+  const pages = doc.pages();
+  const dotRows = [], page0 = [], allLines = [], charts = [];
+  let fpl = null;
+
+  for (let p = 0; p < pages.length; p++){
+    const items = PDFMini.textItems(await doc.content(pages[p]));
+    chartPage(doc, pages[p], p, items.length, charts);
+    const byLine = new Map();
+    for (const it of items){
+      if (it.size < 9 || it.size > 13) continue;
+      const key = Math.round(it.y * 2) / 2;
+      if (!byLine.has(key)) byLine.set(key, []);
+      const arr = byLine.get(key);
+      for (let i = 0; i < it.str.length; i++){
+        const ch = it.str[i];
+        if (ch === ' ') continue;
+        arr.push({ ch, x: it.x + i * it.cw, base: it.y, size: it.size, cw: it.cw });
+      }
+    }
+    for (const [, chars] of byLine){
+      chars.sort((a, b) => a.x - b.x);
+      const last = chars[chars.length - 1];
+      if (!last) continue;
+      const cw = last.cw;
+      if (p === 0) page0.push({ base: last.base, chars, cw });
+
+      const tk = tokenize(chars, cw);
+      allLines.push({ page: p, base: last.base, text: tk.join(' ') });
+      if (tk[tk.length - 1] === 'ATO' && last.x > 460 && last.x < 540) continue;
+      // the four dots of the ETO / ATO columns mark a waypoint line
+      const dots = chars.filter(c => c.ch === '.' && c.x > 440 && c.x < 540);
+      if (dots.length !== 4) continue;
+      let ok = true;
+      for (let i = 1; i < 4; i++) if (Math.abs(dots[i].x - dots[0].x - cw * i) > 0.8) ok = false;
+      if (!ok) continue;
+      dotRows.push({ page: p, base: dots[0].base,
+                     tok: tokenize(chars.filter(c => c.x < dots[0].x - 3), cw) });
+    }
+  }
+
+  // flight header: STD ETD STA ETA and the row of values
+  page0.sort((a, b) => b.base - a.base);
+  for (let i = 0; i < page0.length && !fpl; i++){
+    const head = tokensX(page0[i].chars, page0[i].cw), cols = {};
+    for (const t of head) if (['STD','ETD','STA','ETA'].includes(t.t)) cols[t.t] = (t.x + t.x1) / 2;
+    if (Object.keys(cols).length < 4) continue;
+    for (let j = i + 1; j < Math.min(i + 4, page0.length); j++){
+      const row = tokensX(page0[j].chars, page0[j].cw);
+      const pick = cx => {
+        let best = null, bd = 1e9;
+        for (const t of row){
+          const d = Math.abs((t.x + t.x1) / 2 - cx);
+          if (/^\d{4}$/.test(t.t) && d < bd){ bd = d; best = t.t; }
+        }
+        return bd < 24 ? best : null;
+      };
+      const v = { STD: pick(cols.STD), ETD: pick(cols.ETD), STA: pick(cols.STA), ETA: pick(cols.ETA) };
+      if (v.ETD){ fpl = v; break; }
+    }
+  }
+  // Trip time, from the fuel block a few lines down: "TRIP 05.10 23051".
+  if (fpl) for (const l of page0){
+    const t = tokenize(l.chars, l.cw);
+    if (t[0] === 'TRIP' && /^\d{1,2}\.\d{2}$/.test(t[1])){ fpl.TRIP = t[1]; break; }
+  }
+
+  dotRows.sort((a, b) => a.page - b.page || b.base - a.base);
+  const pairs = [];
+  const reTT = /^\d+\.\d\d$/, reET = /^\d+$/;
+  let cum = 0, prev = -1, sec = 1;
+
+  for (let i = 0; i < dotRows.length; i++){
+    const a = dotRows[i], b = dotRows[i + 1];
+    if (!b || b.page !== a.page || Math.abs(a.base - b.base - 12) > 2) continue;
+    if (a.tok.length < 3 || b.tok.length < 3) continue;
+    const et = a.tok[a.tok.length - 2], tt = b.tok[b.tok.length - 2], rem = b.tok[b.tok.length - 1];
+    if (!reET.test(et) || !reTT.test(tt)) continue;
+    const ttm = +tt.split('.')[0] * 60 + +tt.split('.')[1];
+    if (ttm < prev){ sec++; cum = 0; }
+    prev = ttm; cum += +et;
+    pairs.push({ i: pairs.length, wp: a.tok[0], et: +et, cum, sec, page: a.page,
+                 rem: /^\d+$/.test(rem) ? +rem : null, drift: cum !== ttm,
+                 ...wpDetail(a.tok, b.tok) });
+    i++;
+  }
+
+  allLines.sort((a, b) => a.page - b.page || b.base - a.base);
+  const icao = icaoPlan(allLines);
+  // A reader is worth showing even when one part of the package is missing, so
+  // nothing here is fatal: a section with nothing behind it simply says so.
+  return { pairs, fpl, icao, charts, pageCount: pages.length,
+           ofp: ofpIdent(allLines), figs: keyFigures(allLines), fuel: fuelBlock(allLines),
+           icaoF: icaoFields(icao), wx: weatherNotams(allLines, icao) };
+}
+
+/* ---- METAR / TAF / NOTAM ----
+   Every report and NOTAM item in this package names its own aerodrome, so the
+   grouping keys off the item lines themselves and never off the page headings. */
+const RE_METAR  = /^(?:METAR|SPECI)(?:\s+(?:COR|AMD))?\s*([A-Z]{4})\s+\d{6}Z/;
+const RE_TAF    = /^TAF(?:\s+(?:AMD|COR))?\s*([A-Z]{4})\s+\d{6}Z/;
+const RE_NTM    = /^(?:-\s*|NOTAM)([A-Z]{4})\s+([A-Z]\d{3,4}\/\d{2})\s+((?:\d{2}[A-Z]{3}\d{4}|WIE)\b[^]*?)\s*$/;
+const RE_CONTM  = /^([A-Z]{4})(?:-([A-Z]{4}))?-(\d{4,6})\s+Oper:/;
+const RE_VALID  = /^VALID FROM:\s*(\S+)\s+TO:\s*(\S+)/;
+const RE_APT    = /^([A-Z]{4})\s+([A-Z]{3})\s+RWY/;
+const RE_ROLE   = /^(DEPARTURE|ARRIVAL|OTHER):\s*(.+)$/;
+const RE_CONHD  = /\bCOMPANY NOTAMS\b/;
+
+function validity(s){
+  const i = s.indexOf('-');
+  if (i < 0) return null;
+  const cut = t => ({ est: /\bEST\b/.test(t), t: t.replace(/\s*\bEST\b/g, '').trim() });
+  const a = cut(s.slice(0, i)), b = cut(s.slice(i + 1));
+  return { from: a.t, to: b.t, est: a.est || b.est };
+}
+
+function weatherNotams(lines, icao){
+  const { role, fir } = routeAirports(icao);
+  const by = new Map(), named = new Set();
+  const at = code => {
+    if (!by.has(code)) by.set(code, { icao: code, iata: null, name: null,
+                                      role: role.get(code) || null,
+                                      metar: [], taf: [], notams: [], co: [] });
+    return by.get(code);
+  };
+  const src = lines.filter(l => l.text.trim() && !CHROME(l.text.trim())).map(l => l.text.trim());
+
+  let open = null, pending = null, subject = null;
+  const close = () => {
+    if (!open) return;
+    const body = open.buf.join(' ').replace(/\s+/g, ' ').trim();
+    if (body || open.kind === 'notams' || open.kind === 'co'){
+      if (open.kind === 'notams'){
+        for (const c of open.codes)
+          at(c).notams.push({ id: open.id, from: open.from, to: open.to, est: open.est,
+                              subject: open.subject, text: body });
+        // Spent on the item it was read for. Left standing it would be printed
+        // again over the next NOTAM, which came with a subject line of its own or
+        // with none at all — either way not this one.
+        subject = null;
+      }
+      else if (open.kind === 'co')
+        for (const c of open.codes)
+          at(c).co.push({ id: open.id, from: open.from, to: open.to, text: body });
+      else at(open.code)[open.kind].push(body.replace(/\s*=$/, ''));
+    }
+    open = null;
+  };
+
+  for (let i = 0; i < src.length; i++){
+    const t = src[i];
+    let m;
+    if ((m = t.match(RE_ROLE))){
+      close(); subject = null;
+      pending = { role: m[1] === 'OTHER' ? null : m[1].toLowerCase(), name: m[2].trim() };
+      continue;
+    }
+    if ((m = t.match(RE_APT))){
+      close(); subject = null;
+      const a = at(m[1]);
+      a.iata = m[2]; named.add(m[1]);
+      if (pending){ a.name = pending.name; if (!a.role) a.role = pending.role; pending = null; }
+      continue;
+    }
+    if (RE_CONHD.test(t)){ close(); subject = null; continue; }
+    if ((m = t.match(RE_METAR))){ close(); open = { kind: 'metar', code: m[1], buf: [t] }; continue; }
+    if ((m = t.match(RE_TAF)))  { close(); open = { kind: 'taf',   code: m[1], buf: [t] }; continue; }
+    if ((m = t.match(RE_NTM))){
+      const v = validity(m[3]);
+      if (v){ close(); open = { kind: 'notams', codes: [m[1]], id: m[2], ...v, subject, buf: [] }; continue; }
+    }
+    if ((m = t.match(RE_CONTM))){
+      close();
+      const codes = m[2] ? [m[1], m[2]] : [m[1]];
+      open = { kind: 'co', codes, id: m[0].split(/\s+/)[0], from: null, to: null, buf: [] };
+      continue;
+    }
+    if (open && open.kind === 'co' && !open.buf.length && (m = t.match(RE_VALID))){
+      open.from = m[1]; open.to = m[2]; continue;
+    }
+    if (t.length <= 40 && !/[.,:]$/.test(t) && RE_NTM.test(src[i + 1] || '')){
+      close(); subject = t; continue;
+    }
+    if (open) open.buf.push(t);
+  }
+  close();
+
+  const rank = { departure: 0, arrival: 1, destination: 1, alternate: 2, 'en-route alternate': 3 };
+  const group = a => a.role ? 'flight'
+                   : (fir.has(a.icao) && !named.has(a.icao)) ? 'fir'
+                   : 'other';
+  const airports = [...by.values()]
+    .filter(a => a.metar.length || a.taf.length || a.notams.length || a.co.length)
+    .map(a => ({ ...a, group: group(a) }))
+    .sort((a, b) => (rank[a.role] ?? 9) - (rank[b.role] ?? 9) || a.icao.localeCompare(b.icao));
+  return { airports };
+}
+
+/* ================= times ================= */
+const parseHHMM = v => {
+  const d = (v || '').replace(/\D/g, '');
+  if (d.length !== 4) return null;
+  const h = +d.slice(0, 2), m = +d.slice(2);
+  return (h > 23 || m > 59) ? null : h * 60 + m;
+};
+const norm = m => ((m % 1440) + 1440) % 1440;
+const clock = m => String(Math.floor(norm(m) / 60)).padStart(2, '0') + String(norm(m) % 60).padStart(2, '0');
+const span = m => Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0');
+const pad2 = n => String(n).padStart(2, '0');
+const nowUtcMin = () => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+const wrapMin = m => { while (m < -720) m += 1440; while (m >= 720) m -= 1440; return m; };
+const group3 = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+/* ================= loading ================= */
+const drop = $('#drop');
+drop.onclick = () => $('#file').click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over');
+  if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); };
+$('#file').onchange = e => { if (e.target.files[0]) load(e.target.files[0]); };
+addEventListener('dragover', e => e.preventDefault());
+addEventListener('drop', e => {
+  const f = e.dataTransfer && e.dataTransfer.files[0];
+  if (f){ e.preventDefault(); load(f); }
+});
+// Opening another plan must never cost the crew the one already on screen: the
+// load screen keeps a way back for a cancelled picker and for a file that turns
+// out not to be a plan.
+$('#openBtn').onclick = () => {
+  hideMsg('#m1');
+  showApp(false);
+  $('#file').value = '';
+  $('#file').click();
+};
+$('#backBtn').onclick = () => showApp(true);
+
+function showApp(on){
+  $('#appView').classList.toggle('hide', !on);
+  $('#loadView').classList.toggle('hide', on);
+  $('#backBtn').classList.toggle('hide', on || !PLAN);
+  scrollTo(0, 0);
+}
+
+async function load(f){ return loadBuffer(f.name, f.size, await f.arrayBuffer(), false); }
+
+async function loadBuffer(name, size, buf, resumed){
+  if (typeof DecompressionStream === 'undefined'){
+    msg('#m1', 'Browser too old: no DecompressionStream. Safari 16.4 / iOS 16.4 or newer is required.', 'err');
+    return false;
+  }
+  $('#fname').textContent = name + '  ·  ' + (size / 1048576).toFixed(1) + ' MB';
+  hideMsg('#m1');
+  let plan;
+  try {
+    plan = await parse(buf);
+  } catch (err){
+    msg('#m1', 'Could not read the document: ' + err.message, 'err');
+    showApp(false);
+    return false;
+  }
+  PLAN = plan; NAME = name;
+  render();
+  showApp(true);
+  if (!resumed) keepSession(name, size, buf);
+  return true;
+}
+
+/* ================= the header ================= */
+function renderHeader(){
+  const f = PLAN.icaoF || {}, o = PLAN.ofp || {};
+  const leg = f.dep && f.dest ? f.dep + ' → ' + f.dest : null;
+  $('#hTitle').textContent = [f.callsign, leg].filter(Boolean).join('   ') || NAME;
+  $('#hSub').textContent = [o.route, o.req && 'REQ ' + o.req, o.issued].filter(Boolean).join(' · ')
+                        || NAME;
+  const n = (el, v) => { const e = $(el); e.textContent = v ? String(v) : ''; };
+  n('#nRoute', PLAN.pairs.filter(p => p.sec === 1).length);
+  n('#nWx', PLAN.wx.airports.length);
+  n('#nCharts', PLAN.charts.length);
+}
+
+/* ================= flight ================= */
+// The scheduled departure against the clock. DOF gives the date, so a plan looked
+// at the evening before counts the hours properly rather than folding into ±12.
+function departureIn(){
+  const f = PLAN.icaoF || {}, std = parseHHMM((PLAN.fpl && PLAN.fpl.STD) || f.off);
+  if (std === null) return null;
+  const dof = f.f18 && f.f18.DOF && /^\d{6}$/.test(f.f18.DOF) ? f.f18.DOF : null;
+  let mins;
+  if (dof){
+    const t = Date.UTC(2000 + +dof.slice(0, 2), +dof.slice(2, 4) - 1, +dof.slice(4, 6),
+                       Math.floor(std / 60), std % 60);
+    mins = Math.round((t - Date.now()) / 60000);
+  } else {
+    mins = -wrapMin(nowUtcMin() - std);
+  }
+  return { mins, exact: !!dof, std };
+}
+
+function renderFlight(){
+  const p = PLAN, f = p.icaoF || {}, o = p.ofp || {}, fpl = p.fpl || {}, g = p.figs || {};
+  const wxOf = code => p.wx.airports.find(a => a.icao === code);
+  const apt = (code, to) => {
+    const a = code ? wxOf(code) : null;
+    const sub = a ? [a.iata, a.name].filter(Boolean).join(' · ') : '';
+    return `<div class="ap${to ? ' to' : ''}"><b>${esc(code || '—')}</b>` +
+           `<span>${esc(sub || (to ? 'destination' : 'departure'))}</span></div>`;
+  };
+  let h = '';
+
+  /* who and where */
+  h += '<div class="card"><div class="hero">'
+     + apt(f.dep, false) + '<div class="arw">✈</div>' + apt(f.dest, true)
+     + '</div><div class="metaline">'
+     + [f.callsign && '<b>' + esc(f.callsign) + '</b>',
+        f.acft && esc(f.acft) + (f.wake ? '/' + esc(f.wake) : ''),
+        f.f18 && f.f18.REG && 'REG ' + esc(f.f18.REG),
+        f.f18 && f.f18.DOF && 'DOF ' + esc(f.f18.DOF),
+        g.CI && esc(g.CI)].filter(Boolean).join('  ·  ')
+     + (o.route || o.req || o.issued
+        ? '<br>' + [o.route, o.req && 'REQ ' + o.req, o.issued].filter(Boolean).map(esc).join('  ·  ')
+        : '')
+     + '</div></div>';
+
+  /* the clock */
+  const tiles = [['STD', fpl.STD], ['ETD', fpl.ETD], ['STA', fpl.STA], ['ETA', fpl.ETA]]
+    .filter(([, v]) => v)
+    .map(([k, v]) => `<div class="tile${k === 'ETD' ? ' act' : ''}"><span>${k}</span><b>${esc(v)}</b></div>`)
+    .join('');
+  if (tiles){
+    const trip = fpl.TRIP || (f.eet && /^\d{4}$/.test(f.eet) ? f.eet.slice(0, 2) + '.' + f.eet.slice(2) : null);
+    const d = departureIn();
+    let cd = '';
+    if (d){
+      const a = Math.abs(d.mins), t = a >= 60 ? Math.floor(a / 60) + ' h ' + pad2(a % 60) + ' min'
+                                              : a + ' min';
+      // Without a DOF the sum is only good to the nearest half day, and saying so
+      // is the difference between a figure and a guess.
+      const caveat = d.exact ? '' : ' — no date in the plan, nearest 12 h';
+      cd = d.mins >= 0
+        ? `<div class="countdown">STD in <b>${t}</b>${caveat}</div>`
+        : `<div class="countdown past">STD was <b>${t}</b> ago${caveat}</div>`;
+    }
+    h += '<div class="card"><div class="ttl">Times, UTC<em>off block / on block</em></div>'
+       + '<div class="tiles">' + tiles
+       + (trip ? `<div class="tile gold"><span>Trip</span><b>${esc(trip)}</b></div>` : '')
+       + '</div>' + cd + '</div>';
+  }
+
+  /* weights */
+  if (p.figs){
+    const rows = WEIGHTS.filter(([k]) => g[k]).map(([k, lim]) => {
+      const v = +g[k], mx = g[lim] ? +g[lim] : null;
+      const margin = mx !== null
+        ? `<small>${mx - v >= 0 ? '<span class="neg">' : '<span class="over">'}`
+          + `${mx - v >= 0 ? '−' : '+'}${group3(Math.abs(mx - v))} vs ${lim} ${group3(mx)}</span></small>`
+        : '';
+      return `<div class="kv"><span class="k">${k}</span>`
+           + `<span class="v">${group3(v)}${margin}</span></div>`;
+    }).join('');
+    if (rows) h += '<div class="card flush"><div class="ttl">Weights, kg</div>' + rows + '</div>';
+  }
+
+  /* fuel */
+  if (p.fuel){
+    const rows = p.fuel.map(r =>
+      `<div class="kv"><span class="k">${esc(r.label)}</span>`
+      + `<span class="v">${group3(r.fuel)}<small>${esc(r.time)}</small></span></div>`).join('');
+    const main = p.pairs.filter(w => w.sec === 1);
+    const land = main.length ? main[main.length - 1].rem : null;
+    h += '<div class="card flush"><div class="ttl">Fuel, kg<em>as planned</em></div>' + rows
+       + (land !== null
+          ? `<div class="kv"><span class="k">At destination</span><span class="v">${group3(land)}`
+            + '<small>last planned remaining</small></span></div>' : '')
+       + '</div>';
+  }
+
+  /* the flight plan in brief */
+  const brief = [];
+  if (f.speed || f.level) brief.push(['Cruise', [f.speed, f.level].filter(Boolean).join(' ')]);
+  if (f.altn && f.altn.length) brief.push(['Alternates', f.altn.join('  ')]);
+  if (f.f18 && f.f18.RALT) brief.push(['En-route alt', f.f18.RALT]);
+  if (f.f18 && f.f18.EET) brief.push(['FIR boundaries', f.f18.EET]);
+  if (f.equip) brief.push(['Equipment', f.equip + (f.surv ? ' / ' + f.surv : '')]);
+  if (f.f18 && f.f18.PBN) brief.push(['PBN', f.f18.PBN]);
+  if (f.f18 && f.f18.SEL) brief.push(['SELCAL', f.f18.SEL]);
+  if (f.f18 && f.f18.RMK) brief.push(['Remarks', f.f18.RMK]);
+  if (brief.length)
+    h += '<div class="card flush"><div class="ttl">Flight plan</div>'
+       + brief.map(([k, v]) =>
+           `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('')
+       + '</div>';
+
+  h += `<p class="foot"><b>${esc(NAME)}</b> · ${p.pageCount} pages · read on this device, `
+     + 'nothing is uploaded and nothing is written back into the document.<br>'
+     + 'The weather and the NOTAMs are exactly as old as this package — re-brief from the '
+     + 'current source before acting on them.</p>';
+
+  $('#p-flight').innerHTML = h;
+}
+
+/* ================= route ================= */
+let BASE = null;                       // the time the ETO column is counted from
+
+function renderRoute(){
+  const p = PLAN;
+  if (!p.pairs.length){
+    $('#p-route').innerHTML = '<div class="card"><p class="empty">No waypoint table was found '
+      + 'in this document.</p></div>';
+    return;
+  }
+  const main = p.pairs.filter(w => w.sec === 1);
+  const arr = main.length ? (BASE === null ? null : BASE + main[main.length - 1].cum) : BASE;
+  // The level column is either there for the whole table or not at all: a column
+  // that appears on some rows and not on others walks the times about the screen.
+  const hasFl = p.pairs.some(w => w.fl || w.wind);
+  let rows = '', sec = 0;
+  for (const w of p.pairs){
+    if (w.sec !== sec){
+      sec = w.sec;
+      if (sec > 1) rows += '<div class="wp sec">Alternate route</div>';
+    }
+    const b = w.sec === 1 ? BASE : arr;
+    const eto = b === null ? '—' : clock(b + w.cum);
+    rows += '<div class="wp"><div class="nm">'
+          + `<b>${esc(w.wp)}</b>`
+          + (w.raw ? `<div class="det">${esc(w.raw)}</div>` : '')
+          + '</div>'
+          + (hasFl
+             ? '<div class="fl">' + (w.fl ? `<b>F${esc(w.fl)}</b>` : '')
+               + (w.wind ? `<div class="det">${esc(w.wind)}</div>` : '') + '</div>'
+             : '')
+          + '<div class="tm">'
+          + `<b>${eto}</b>`
+          + `<div class="det">${span(w.cum)}${w.rem !== null ? ' · ' + group3(w.rem) : ''}</div>`
+          + '</div></div>';
+  }
+
+  const drift = p.pairs.filter(w => w.drift).length;
+  $('#p-route').innerHTML =
+      (drift ? `<div class="msg show warn">At ${drift} waypoint${drift > 1 ? 's' : ''} the leg times `
+             + 'do not add up to the plan\'s own running total — check those by hand.</div>' : '')
+    + '<div class="card flush" style="margin-top:11px">'
+    + '<div class="base"><label for="baseIn">Off block</label>'
+    + `<input id="baseIn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" `
+    + `autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" `
+    + `placeholder="----" `
+    + `value="${BASE === null ? '' : clock(BASE)}">`
+    + `<label class="grow">${main.length} waypoints`
+    + `${p.pairs.length > main.length ? ' + ' + (p.pairs.length - main.length) + ' altn' : ''}</label>`
+    + '</div>'
+    + rows + '</div>'
+    + '<p class="foot">The times on the left of each waypoint are counted from the off-block time '
+    + 'above — change it and they all follow. They are the plan\'s own leg times, not a '
+    + 'position report.</p>';
+
+  const inp = $('#baseIn');
+  inp.oninput = e => { e.target.value = e.target.value.replace(/\D/g, ''); };
+  inp.onchange = () => {
+    const t = parseHHMM(inp.value);
+    if (t !== null || !inp.value.trim()){ BASE = t; renderRoute(); }
+  };
+  inp.onkeydown = e => { if (e.key === 'Enter') e.target.blur(); };
+}
+
+/* ================= weather ================= */
+let wxAt = 0, wxAll = false;
+const stamp = s => {
+  const m = String(s).match(/^(\d{2}[A-Z]{3})(\d{4})(?:\s+(\d{4}))?$/);
+  return m ? `${m[1]} ${m[2]}Z${m[3] ? ' ' + m[3] : ''}` : s;
+};
+const spaced = s => s.replace(/^(METAR|SPECI|TAF)([A-Z]{4}\s)/, '$1 $2');
+const GROUPS = [['flight', 'This flight'], ['fir', 'Areas along the route'], ['other', 'Other aerodromes']];
+const NTM_FIRST = 8;                   // enough to see; the rest opens on a tap
+
+function renderWx(){
+  const list = PLAN.wx.airports;
+  if (!list.length){
+    $('#p-wx').innerHTML = '<div class="card"><p class="empty">This package carries no weather '
+      + 'or NOTAM pages.</p></div>';
+    return;
+  }
+  if (wxAt >= list.length) wxAt = 0;
+  const a = list[wxAt];
+
+  const chips = list.map((x, n) => x.group === 'flight'
+    ? `<button type="button" data-wx="${n}" aria-pressed="${n === wxAt}">${esc(x.icao)}</button>` : '')
+    .join('');
+  const sel = GROUPS.map(([g, label]) => {
+    const items = list.map((x, n) => [x, n]).filter(([x]) => x.group === g);
+    if (!items.length) return '';
+    return `<optgroup label="${label}">` + items.map(([x, n]) =>
+      `<option value="${n}"${n === wxAt ? ' selected' : ''}>${esc(x.icao)}`
+      + `${x.role ? ' — ' + esc(x.role) : x.name ? ' — ' + esc(x.name) : ''}</option>`).join('')
+      + '</optgroup>';
+  }).join('');
+
+  const card = (title, body, note) =>
+    `<div class="card flush"><div class="ttl">${title}${note ? `<em>${esc(note)}</em>` : ''}</div>`
+    + body + '</div>';
+  const reports = arr => arr.map(t => `<pre class="rep">${esc(spaced(t))}</pre>`).join('');
+  const item = n =>
+    `<div class="ntm"><span class="id">${esc(n.id)}</span>`
+    + (n.from ? `<span class="val">${esc(stamp(n.from))} → ${esc(stamp(n.to || '?'))}`
+              + `${n.est ? ' EST' : ''}</span>` : '')
+    + (n.subject ? `<span class="subj">${esc(n.subject)}</span>` : '')
+    + `<p>${esc(n.text)}</p></div>`;
+
+  let h = (chips ? `<div class="chips">${chips}</div>` : '')
+        + `<div class="card"><div class="ttl">Aerodrome<em>${esc(a.icao)}`
+        + `${a.role ? ' · ' + esc(a.role) : ''}</em></div>`
+        + `<select id="wxSel" aria-label="Aerodrome">${sel}</select>`
+        + (a.name ? `<div class="metaline">${esc([a.iata, a.name].filter(Boolean).join(' · '))}</div>` : '')
+        + '</div>';
+
+  if (a.metar.length) h += card('METAR', reports(a.metar));
+  if (a.taf.length)   h += card('TAF', reports(a.taf));
+  if (a.notams.length){
+    const shown = wxAll ? a.notams : a.notams.slice(0, NTM_FIRST);
+    h += card('NOTAM', shown.map(item).join('')
+      + (a.notams.length > shown.length
+         ? `<button type="button" class="more" id="wxMore">Show the remaining `
+           + `${a.notams.length - shown.length}</button>` : ''),
+      a.notams.length + ' items');
+  }
+  if (a.co.length) h += card('Company NOTAMs', a.co.map(item).join(''), a.co.length + ' items');
+  if (!a.metar.length && !a.taf.length && !a.notams.length && !a.co.length)
+    h += '<div class="card"><p class="empty">Nothing recorded for this aerodrome.</p></div>';
+
+  $('#p-wx').innerHTML = h;
+  const pick = n => { wxAt = n; wxAll = false; renderWx(); scrollTo(0, 0); };
+  $('#p-wx').querySelectorAll('[data-wx]').forEach(b => { b.onclick = () => pick(+b.dataset.wx); });
+  $('#wxSel').onchange = e => pick(+e.target.value);
+  const more = $('#wxMore');
+  if (more) more.onclick = () => { wxAll = true; renderWx(); };
+}
+
+/* ================= charts =================
+   Decoding a 1800x1451 bitmap is not free on a phone, so it happens when the
+   chart is asked for and the object URL is kept for the rest of the session. */
+let CHARTS = [], chartAt = 0;
+
+function renderCharts(){
+  if (!CHARTS.length){
+    $('#p-charts').innerHTML = '<div class="card"><p class="empty">No full-page charts in '
+      + 'this package.</p></div>';
+    return;
+  }
+  $('#p-charts').innerHTML =
+      '<div class="card flush"><div class="chartnav">'
+    + '<button type="button" class="ghost sm" id="cPrev">Prev</button>'
+    + '<span class="who" id="cWho"></span>'
+    + '<button type="button" class="ghost sm" id="cZoom">Zoom</button>'
+    + '<button type="button" class="ghost sm" id="cNext">Next</button>'
+    + '</div><div class="chartbox" id="cBox"><p>Loading…</p></div></div>'
+    + '<p class="foot">The wind components, the tropopause and MORA profile, and the significant '
+    + 'weather sheets — pulled straight out of the package, not re-rendered. <b>Zoom</b> switches '
+    + 'between fitting the sheet and full size; a zoomed sheet is dragged to move about it.</p>';
+  $('#cPrev').onclick = () => { if (chartAt > 0){ chartAt--; paintChart(); } };
+  $('#cNext').onclick = () => { if (chartAt < CHARTS.length - 1){ chartAt++; paintChart(); } };
+  $('#cZoom').onclick = () => {
+    const on = $('#cBox').classList.toggle('zoom');
+    $('#cZoom').textContent = on ? 'Fit' : 'Zoom';
+  };
+  paintChart();
+}
+
+async function paintChart(){
+  const c = CHARTS[chartAt], box = $('#cBox');
+  if (!c || !box) return;
+  $('#cWho').textContent = `${chartAt + 1} of ${CHARTS.length} · page ${c.page + 1}`;
+  $('#cPrev').disabled = chartAt === 0;
+  $('#cNext').disabled = chartAt === CHARTS.length - 1;
+  box.classList.remove('zoom');
+  $('#cZoom').textContent = 'Zoom';
+  if (!c.url){
+    box.innerHTML = '<p>Decoding…</p>';
+    try { c.url = await chartUrl(DOC, DOC.pages()[c.page], c.key); }
+    catch (e){ box.innerHTML = `<p>Could not read this chart: ${esc(e.message)}</p>`; return; }
+    if (CHARTS[chartAt] !== c) return;              // paged on while decoding
+  }
+  box.innerHTML = `<img src="${c.url}" alt="Chart on page ${c.page + 1}">`;
+  box.scrollTop = box.scrollLeft = 0;
+}
+
+/* ================= the ICAO plan ================= */
+function renderFpl(){
+  const p = PLAN.icao;
+  if (!p){
+    $('#p-fpl').innerHTML = '<div class="card"><p class="empty">No ICAO flight plan was found '
+      + 'in this document.</p></div>';
+    return;
+  }
+  $('#p-fpl').innerHTML =
+      '<div class="card flush"><div class="ttl">ICAO flight plan<em>'
+    + (p.split ? `pages ${p.pages[0]}–${p.pages[p.pages.length - 1]}` : 'page ' + p.pages[0])
+    + `</em></div><pre>${esc(p.lines.join('\n'))}</pre>`
+    + '<button type="button" class="more" id="fplCopy">Copy as one line</button></div>';
+  $('#fplCopy').onclick = async () => {
+    const btn = $('#fplCopy');
+    let ok = false;
+    try { await navigator.clipboard.writeText(p.oneLine); ok = true; } catch(e){}
+    if (!ok) try {
+      const ta = document.createElement('textarea');
+      ta.value = p.oneLine; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      ok = document.execCommand('copy'); ta.remove();
+    } catch(e){}
+    btn.textContent = ok ? 'Copied' : 'Copy failed';
+    setTimeout(() => { btn.textContent = 'Copy as one line'; }, 1600);
+  };
+}
+
+/* ================= tabs ================= */
+const PANELS = ['flight', 'route', 'wx', 'charts', 'fpl'];
+let tabAt = 'flight';
+function showTab(name){
+  tabAt = name;
+  for (const t of PANELS){
+    $('#p-' + t).hidden = t !== name;
+    const b = document.querySelector(`[data-tab="${t}"]`);
+    if (b) b.setAttribute('aria-selected', String(t === name));
+  }
+  if (name === 'charts') renderCharts();
+  scrollTo(0, 0);
+}
+$('#tabs').onclick = e => {
+  const b = e.target.closest('[data-tab]');
+  if (b) showTab(b.dataset.tab);
+};
+
+function render(){
+  for (const c of CHARTS) if (c.url) URL.revokeObjectURL(c.url);
+  CHARTS = PLAN.charts.map(c => ({ ...c, url: null }));
+  chartAt = 0; wxAt = 0; wxAll = false;
+  BASE = parseHHMM((PLAN.fpl && PLAN.fpl.ETD) || (PLAN.icaoF && PLAN.icaoF.off));
+  renderHeader();
+  renderFlight();
+  renderRoute();
+  renderWx();
+  renderFpl();
+  showTab('flight');
+}
+
+// The clock on the flight card is only worth a minute's accuracy, and redrawing
+// the whole card would take the weather and the route with it.
+setInterval(() => { if (PLAN && tabAt === 'flight') renderFlight(); }, 30000);
+
+/* ================= session survival =================
+   The point of this page is that the plan is there when it is wanted — in the
+   car, on the bus, with no time to go looking for the file again. The PDF goes
+   to IndexedDB under keys of its own, so the companion's session on the same
+   device is left alone. Every failure here is non-fatal: the app just loses the
+   resume and shows the drop zone. */
+const LAST = 'ofpview:last';
+function idb(){
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open('ofpviewer', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('pdf');
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+async function idbSet(key, val){
+  const db = await idb();
+  await new Promise((res, rej) => {
+    const tx = db.transaction('pdf', 'readwrite');
+    tx.objectStore('pdf').put(val, key);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+  db.close();
+}
+async function idbGet(key){
+  const db = await idb();
+  const v = await new Promise((res, rej) => {
+    const rq = db.transaction('pdf', 'readonly').objectStore('pdf').get(key);
+    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+  });
+  db.close();
+  return v;
+}
+async function keepSession(name, size, buf){
+  if (typeof indexedDB === 'undefined') return;
+  try {
+    await idbSet('last', { name, size, buf });
+    localStorage.setItem(LAST, JSON.stringify({ name, size, at: Date.now() }));
+  } catch(e){ /* quota or private mode — carry on without resume */ }
+}
+async function resumeSession(){
+  if (typeof indexedDB === 'undefined') return;
+  let meta;
+  try { meta = JSON.parse(localStorage.getItem(LAST) || 'null'); } catch(e){ return; }
+  if (!meta) return;
+  let rec;
+  try { rec = await idbGet('last'); } catch(e){ return; }
+  if (!rec || !rec.buf || rec.name !== meta.name || rec.size !== meta.size) return;
+  await loadBuffer(rec.name, rec.size, rec.buf, true);
+}
+resumeSession();
+</script>
+</body>
+</html>

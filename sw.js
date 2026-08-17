@@ -1,9 +1,10 @@
-/* OFP Companion — offline cache. Two apps, one page each:
-   index.html is the OFP companion, journey-log.html the Journey Log form. */
-const V = 'eto-filler-v37';
-const FILES = ['./', './index.html', './journey-log.html',
-               './manifest.webmanifest', './icon-192.png', './icon-512.png'];
-const PAGES = ['./index.html', './journey-log.html'];
+/* OFP Companion — offline cache. Three apps, one page each: index.html is the OFP
+   companion, journey-log.html the Journey Log form, viewer.html the phone reader. */
+const V = 'eto-filler-v38';
+const FILES = ['./', './index.html', './journey-log.html', './viewer.html',
+               './manifest.webmanifest', './viewer.webmanifest',
+               './icon-192.png', './icon-512.png'];
+const PAGES = ['./index.html', './journey-log.html', './viewer.html'];
 const NET_MS = 2500;            // give the network this long before falling back to the cache
 
 self.addEventListener('install', e => {
