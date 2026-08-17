@@ -502,7 +502,8 @@ const PL_KEY = ['adl','chl','inf','cargo','mail','bag','zfw'];
 const CREW_X = [17.28,28.61,68.29,85.30,198.67,238.35,278.03,317.71,357.39,640.82,660.66];
 const CREW_HDR = ['','Staff No','POS','Name','DUTY','Duty time','Night duty','Alwd. time','REMARKS',''];
 const CREW_KEY = [null,'staff','pos','name','duty','dutytime','night','alwd','remarks','leg'];
-const CREW_PRE = new Set(['staff','pos','name','leg']);
+const CREW_PRE  = new Set(['staff','pos','name','leg']);
+const CREW_TIME = new Set(['dutytime','night','alwd']);   // written as HH:MM, like the rest
 const DUP_KEYS = ['duty','dutytime','night','alwd'];   // the same for the whole crew, usually
 
 const LEG_TOP = 42.81;            // top of the leg table
@@ -823,9 +824,17 @@ function editable(parent, cls, path, value){
 }
 
 /* ------------------------------------------------------------------ the page */
+/* A cell reads as print only if the document arrived with something in it.
+   Anything the document left blank is a box, so a leg or a crew member can be
+   written in by hand on a row the form was issued empty. */
+function printed(sourceRow, key){
+  return !!(sourceRow && sourceRow[key]);
+}
+
 function buildPage(p, pi){
   const sheet = document.createElement('div');
   sheet.className = 'sheet';
+  const src = doc.source ? doc.source[pi] : p;   // what the PDF held, before any typing
 
   const nLeg  = p.legs.length;
   const legB  = LEG_TOP + ROW*(1 + nLeg);
@@ -877,7 +886,7 @@ function buildPage(p, pi){
       if(!k) return;
       const path = `pages.${pi}.legs.${r}.${k}`;
       const inp = field(sheet, LEG_X[c], LEG_X[c+1], y, ROW, {
-        path, value: leg[k], pre: LEG_PRE.has(k),
+        path, value: leg[k], pre: LEG_PRE.has(k) && printed(src && src.legs[r], k),
         time: LEG_TIME.has(k), numeric: LEG_TIME.has(k),
       });
       if(k === 'blk' || k === 'flt') derived.set(path, inp);
@@ -926,8 +935,9 @@ function buildPage(p, pi){
     CREW_KEY.forEach((k,c)=>{
       if(!k) return;
       field(sheet, CREW_X[c], CREW_X[c+1], y, ROW, {
-        path:`pages.${pi}.crew.${r}.${k}`, value:m[k], pre:CREW_PRE.has(k),
-        left: k === 'remarks', numeric: k === 'dutytime' || k === 'night' || k === 'alwd',
+        path:`pages.${pi}.crew.${r}.${k}`, value:m[k],
+        pre: CREW_PRE.has(k) && printed(src && src.crew[r], k),
+        left: k === 'remarks', time: CREW_TIME.has(k), numeric: CREW_TIME.has(k),
       });
     });
   });

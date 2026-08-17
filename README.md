@@ -308,7 +308,16 @@ the date and the captain across the top, the flight identity down the left of
 the leg table, and the crew roster. Those read as print until you put the cursor
 in them, so a correction can be made without reaching for the paper.
 
-- **Times take four digits.** `0340` becomes `03:40` when you leave the box.
+What tells a box from print is where it came from, not what is in it. A cell the
+document arrived with something in reads as print; a cell the document left
+blank is a box, all the way across. So the spare rows at the foot of the leg
+table are open the whole width of the form and a leg flown but not issued can be
+written in by hand — date, flight, registration and all — and it goes down in
+blue, apart from the legs that came printed.
+
+- **Times take four digits.** `0340` becomes `03:40` when you leave the box —
+  in the leg table and in Duty time, Night duty and Alwd. time alike. DUTY is
+  left alone, being a code rather than a clock.
 - **Blk and Flt work themselves out** — Blk from ATD and ATA, Flt from TKOF and
   TDWN, past midnight included. They are set like every other entry, since that
   is what they are. Write your own figure in and the box is yours from then on;
