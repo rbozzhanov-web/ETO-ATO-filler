@@ -229,18 +229,16 @@ tr.skipped.abeam-next td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb,
   background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);
   font:700 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.5px;margin-left:4px}
 .dctchip b{cursor:pointer;font-size:13px;line-height:1}
-/* Experimental: a short flick settles on a card, a long drag scrolls past freely. */
-/* CSS scroll-snap was tried for this and withdrawn: the engine re-snaps on every
-   layout change, and this page reveals cards as a plan is parsed, so it moved the
-   view by itself. The settling is done from JS instead — see settle() — which can
-   be made to run only after the crew's own scroll has come to rest.
-   Page turning was tried after it and withdrawn too — one gesture, one card, no free
-   scrolling at all — so this is the third answer to the same question and the one
-   that stays.
-   --topgap is where the top of a settled card should sit. It is also assigned to
-   scroll-padding-top, which is how settle() reads it: a custom property is handed
-   back unresolved by getComputedStyle — literally "calc(env(…) + 12px)" — while a
-   real property resolves to used pixels. */
+/* The page scrolls plainly, and nothing helps it along. Three attempts to improve
+   on that have been made and all three withdrawn — CSS scroll-snap, which re-snapped
+   on every layout change and so moved the view by itself as cards appeared; then
+   settling, which pulled a resting scroll onto the nearest card; then page turning,
+   one gesture per card with no free scrolling at all. Each was tried in the aircraft
+   and each got in the way. Leave the scrolling alone.
+   --topgap survives them: it is where the top of the page's content should clear the
+   status bar, and scroll-padding-top carries it so that anything the browser scrolls
+   into view of its own accord — a focused field, most often — stops below the
+   notch rather than under it. */
 :root{--topgap:calc(env(safe-area-inset-top, 0px) + 12px)}
 html{scroll-padding-top:var(--topgap)}
 td input,.fld input,.altrow input{background:transparent;border:1px solid var(--line);color:var(--txt);
@@ -509,12 +507,15 @@ td.diff{text-align:right;font-weight:700}
       <div class="new">
         <h3>New in version 23</h3>
         <ul>
-          <li>Page turning is withdrawn — the page scrolls freely again, and a scroll that comes
-              to rest near the start of a card is carried the rest of the way onto it.</li>
+          <li>The page just scrolls now. Page turning is gone, and so is the pull onto the
+              nearest card that preceded it — where you stop is where it stays.</li>
           <li>Takeoff time and the actuals stay one card: enter the time and the table opens
               underneath it.</li>
           <li>The <b>UTC now</b> clock sits beside the takeoff box, so it is there while the
               airborne time is being typed rather than only after <b>Calculate</b>.</li>
+          <li>A fuel check falls due when you actually pass the waypoint it sits on, so the
+              time follows the ATOs as you enter them instead of standing on a half-hour grid
+              drawn at takeoff.</li>
           <li>The <b>Journey Log</b> button in the header opens the second form. Both pages are
               cached, so either opens offline.</li>
         </ul>
@@ -1134,52 +1135,6 @@ const NUM = 'inputmode="numeric" pattern="[0-9]*" autocomplete="off" ' +
 
 const msg = (el, t, k) => { const e = $(el); e.className = 'msg show ' + (k || 'ok'); e.textContent = t; };
 const hide = el => { $(el).className = 'msg'; };
-
-/* ---- settling on a card ----
-   Finishes the crew's scroll onto the start of the nearest card. Driven from the
-   scroll gesture rather than by CSS snap, so it cannot fire while a plan is being
-   parsed and cards are appearing: nothing happens until a real wheel, touch or key
-   has been seen and the scrolling has stopped. */
-let userScrolled = false, settleT = null, settleUntil = 0;
-
-for (const ev of ['wheel', 'touchstart', 'pointerdown', 'keydown'])
-  addEventListener(ev, () => { userScrolled = true; }, { passive: true });
-
-addEventListener('scroll', () => {
-  if (!userScrolled || Date.now() < settleUntil) return;
-  clearTimeout(settleT);
-  settleT = setTimeout(settle, 140);      // fires once the momentum has run out
-}, { passive: true });
-
-function settle(){
-  userScrolled = false;
-  // Not while the keyboard is up, not under an overlay, and never away from the
-  // very top — resting with the header in view is a legitimate place to be.
-  // The keyboard, not merely focus: Enter steps from one field to the next, so
-  // from the first actual entered a box stays focused for the rest of the flight
-  // and testing focus switched settling off for good. visualViewport reports the
-  // keyboard directly; where it is absent there is no keyboard to report.
-  const vv = window.visualViewport;
-  if (vv && vv.height < innerHeight - 120) return;
-  if (!$('#charts').classList.contains('hide') || !$('#guide').classList.contains('hide')) return;
-  const gap = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
-  if (scrollY <= gap) return;
-
-  const reach = Math.min(220, innerHeight * 0.3);
-  const max = document.documentElement.scrollHeight - innerHeight;
-  // The top of the page is a resting place in its own right, so a short scroll
-  // near it comes back to the header rather than being pulled past it.
-  let best = scrollY <= reach ? 0 : null, bd = scrollY <= reach ? scrollY : reach;
-  for (const c of document.querySelectorAll('.card:not(.hide)')){
-    const want = Math.round(scrollY + c.getBoundingClientRect().top - gap);
-    if (want < 0 || want > max) continue;
-    const d = Math.abs(want - scrollY);
-    if (d < bd){ bd = d; best = want; }
-  }
-  if (best === null || Math.abs(best - scrollY) < 4) return;
-  settleUntil = Date.now() + 700;         // ignore the scroll events we are about to cause
-  scrollTo({ top: best, behavior: 'smooth' });
-}
 
 // Marks a scrollable box while there is more below it, so the crew can see at a
 // glance that the list goes on. Idempotent: safe to call again on the same box.
@@ -2440,16 +2395,29 @@ function renderAlt(){
 // on the planned figure then point at waypoints the aeroplane never flew.
 const flown = () => RESULT.filter(p => p.sec === 1 && !isSkipped(p.i));
 
+// When a waypoint is actually passed: its own ATO once that has been entered,
+// otherwise the plan's time carried by however far the flight is running from it.
+const atTime = (p, off) => {
+  const a = ACT[p.i] && ACT[p.i].ato ? parseTime(ACT[p.i].ato) : null;
+  return a === null ? p.t + off : a;
+};
+
 function fuelChecks(off){
   const main = flown();
   if (!main.length) return [];
   const total = main[main.length - 1].cum + off, out = [];
   for (let mark = 30; total - mark >= 30; mark += 30){
-    const c = { mark, from: mark - 30, to: mark, due: T0 + mark };
+    const c = { mark, from: mark - 30, to: mark };
     // Only past the end of the flight is a window dropped. The half-hour rule runs
     // on the clock, so a direct that empties a window does not excuse its check —
     // fuelBox hands it the next waypoint actually overflown instead.
-    if (fuelBox(c, off).length) out.push(c);
+    const box = fuelBox(c, off);
+    if (!box.length) continue;
+    // The check falls due when the aeroplane actually passes the waypoint it sits
+    // on, so the time follows the ATOs as they are entered rather than standing on
+    // a half-hour grid drawn at takeoff.
+    c.due = atTime(box[box.length - 1], off);
+    out.push(c);
   }
   return out;
 }

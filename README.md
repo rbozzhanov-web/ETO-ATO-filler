@@ -125,7 +125,10 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    Watch the **fuel check** figure above the table. Company rule is a fuel check
    on overflying a waypoint, or at least every 30 minutes, and it is watched on
    the waypoint card itself because the record it needs — the fuel column — is
-   already there. The figure shows when the next check is due, amber as it comes
+   already there. A check falls due when you actually pass the waypoint it sits on:
+   that waypoint's own ATO once you have entered one, the plan's time carried by
+   however far the flight is running from it until then — so the figure follows the
+   actuals as they go in. It shows when the next check is due, amber as it comes
    up and red once it has passed unrecorded, with a warning above the table; the
    fuel boxes of the window in question are ringed so it is plain where the
    reading goes. Any one of them will do. Saving with a check overdue asks for
@@ -133,8 +136,8 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    The windows follow the flight rather than the paper: a waypoint counts towards the
    window it is actually reached in, moved by however far the flight is running from
    plan. A direct that cuts out everything in a half-hour does not cancel that check —
-   the clock is what the rule runs on — so it is written on the next waypoint overflown
-   instead. Only past the end of the flight is a window dropped.
+   it is written on the next waypoint overflown instead. Only past the end of the
+   flight is a window dropped.
 4. Record the hourly altimeter cross-checks. The app works out which waypoint
    falls on each full hour after takeoff and lists one row per hour; enter
    ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly
@@ -150,16 +153,10 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 6. **Open charts** to page through the wind components and the significant
    weather sheets on their own.
 
-When a scroll comes to rest near the start of a card, it is carried the rest of the way onto it.
-This runs from the scroll gesture, not from CSS snapping: it fires only once your own scroll has
-stopped, so it can never move the page while a plan is being read in and cards are appearing. It
-holds still while the on-screen keyboard is up or a sheet is open, and the top of the page counts
-as a resting place of its own, so a short scroll near the header comes back to it rather than
-being pulled past.
-
-Page-by-page turning was tried in place of this and withdrawn: one gesture, one card, and no free
-scrolling at all. It is the third answer to the same question, after CSS scroll snapping and this
-one, and this one is what stays.
+The page scrolls plainly. Three attempts to help it along have been made and all three
+withdrawn — CSS scroll snapping, then a pull onto the nearest card once your scroll came to
+rest, then page-by-page turning. Each was flown with and each got in the way, so where you
+stop is where it stays.
 
 The button in the header switches between light and dark themes; the choice is remembered.
 
