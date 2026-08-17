@@ -326,8 +326,9 @@ blue, apart from the legs that came printed.
   are the same for the whole crew far more often than not, so the captain's row
   has a small **↓** in each of those four columns: it puts that figure on every
   crew member below. Correct anyone afterwards and only that row changes.
-- **Enter steps to the next box**, Shift+Enter back, in reading order across the
-  page. Tab does the same.
+- **The return key steps to the next box**, in reading order across the page —
+  the one key the on-screen keyboard offers for it. With a keyboard attached,
+  Shift+Return goes back and Tab does the same as Return.
 - Fill-in boxes take capitals, as the form is written.
 - The captain's signature has no box. It goes on the paper by hand, so the
   space under it is left clear.
