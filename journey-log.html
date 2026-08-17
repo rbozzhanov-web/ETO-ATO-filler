@@ -96,8 +96,20 @@ input.pre:focus{background:rgba(0,0,0,.06); box-shadow:inset 0 0 0 .75pt var(--a
 input.fill{background:var(--fill); color:var(--written); font-weight:700}
 input.fill:hover{background:var(--fill-hover)}
 input.fill:focus{background:var(--fill-focus); box-shadow:inset 0 0 0 .75pt var(--accent)}
-input.fill.auto{color:#3a7bbf; font-weight:400}   /* worked out from the times either side */
+/* Blk and Flt are worked out from the times either side, but they are entries
+   like any other and are set like them. */
 input.l{text-align:left; padding-left:2pt}
+
+/* Carries the captain's figure down the column — the crew almost always share it. */
+button.dup{
+  position:absolute; padding:0; margin:0; width:9pt; height:9pt;
+  border:0; border-radius:50%; cursor:pointer;
+  background:rgba(52,152,219,.28); color:var(--written);
+  font-size:6pt; font-weight:700; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+}
+button.dup:hover{background:var(--accent); color:#fff; border:0}
+button.dup:active{background:var(--accent)}
 
 /* the underlined items in the page head */
 .ed{
@@ -124,7 +136,7 @@ input.l{text-align:left; padding-left:2pt}
   .sheet:last-child{break-after:auto; page-break-after:auto}
   input.f,.ed{background:transparent !important; box-shadow:none !important}
   input.fill,.ed:not(.pre){color:var(--written)}
-  input.fill.auto{color:var(--written); font-weight:700}
+  button.dup{display:none !important}
 }
 #hint{
   color:var(--chrome-dim); font-size:12px; text-align:center;
@@ -465,6 +477,7 @@ const CREW_X = [17.28,28.61,68.29,85.30,198.67,238.35,278.03,317.71,357.39,640.8
 const CREW_HDR = ['','Staff No','POS','Name','DUTY','Duty time','Night duty','Alwd. time','REMARKS',''];
 const CREW_KEY = [null,'staff','pos','name','duty','dutytime','night','alwd','remarks','leg'];
 const CREW_PRE = new Set(['staff','pos','name','leg']);
+const DUP_KEYS = ['duty','dutytime','night','alwd'];   // the same for the whole crew, usually
 
 const LEG_TOP = 42.81;            // top of the leg table
 const GAP_FUEL = 5.25;            // leg table bottom to the Fuel / PayLoad title band
@@ -662,7 +675,7 @@ function readPage(items, pageH){
     fuel:    both.map(r => pick(r, FUEL_COL)),
     payload: both.map(r => pick(r, PL_COL)),
     crew,
-    immigration:['','',''], remarks:['','',''], signature:'',
+    immigration:['','',''], remarks:['','',''],
   };
 }
 
@@ -893,6 +906,21 @@ function buildPage(p, pi){
     });
   });
 
+  /* The duty figures are the same for the whole crew far more often than not,
+     so the captain's row carries a button that puts its figure on every row. */
+  const cpRow = Math.max(0, p.crew.findIndex(m => (m.pos || '').trim().toUpperCase() === 'CP'));
+  if(p.crew.length > 1) DUP_KEYS.forEach(k=>{
+    const c = CREW_KEY.indexOf(k);
+    const y = crewT + ROW*(1 + cpRow);
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'dup'; b.textContent = '↓';
+    b.tabIndex = -1;
+    b.title = 'Put this on every crew member';
+    b.style.left = pt(CREW_X[c+1] - 10.5); b.style.top = pt(y + (ROW - 9)/2);
+    b.dataset.page = pi; b.dataset.key = k; b.dataset.from = cpRow;
+    sheet.appendChild(b);
+  });
+
   /* ---- footnote, immigration, remarks ---- */
   label(sheet, 'txt', 18.78, crewB + 2.56, 400, 7.5,
     'x : Operating Leg    * : Deadheading Leg    - : PAX Leg    . : Crew member not on board A/C');
@@ -936,18 +964,9 @@ function buildPage(p, pi){
     sheet.appendChild(inp); inputs.push(inp);
     if(i === 0) clears.push({label:remLbl, at:493.83, input:inp, right:816, min:556});
   });
-  const sigLbl = label(sheet, 'txt b', 493.83, crewB + 59.63, 0, 7.5, "Captain's Signature");
-  const sigLbl2 = label(sheet, 'txt b', 493.83, crewB + 68.78, 0, 7.5, 'Подпись KBC:');
-  sigLbl.style.width = sigLbl2.style.width = 'auto';
-  const sig = document.createElement('input');
-  sig.type = 'text'; sig.className = 'f fill l';
-  sig.style.left = '588pt'; sig.style.top = pt(crewB + 58.5);
-  sig.style.width = '226pt'; sig.style.height = '18pt';
-  sig.value = p.signature || '';
-  sig.dataset.path = `pages.${pi}.signature`;
-  sig.dataset.upper = '1';
-  sheet.appendChild(sig); inputs.push(sig);
-  clears.push({label:sigLbl, also:sigLbl2, at:493.83, input:sig, right:814, min:588});
+  // The signature is put on the paper by hand, so there is nothing to type here.
+  label(sheet, 'txt b', 493.83, crewB + 59.63, 0, 7.5, "Captain's Signature").style.width = 'auto';
+  label(sheet, 'txt b', 493.83, crewB + 68.78, 0, 7.5, 'Подпись KBC:').style.width = 'auto';
 
   return sheet;
 }
@@ -1043,11 +1062,10 @@ function refreshDerived(){
     [['blk','atd','ata'], ['flt','tkof','tdwn']].forEach(([k,a,b])=>{
       const path = `pages.${pi}.legs.${r}.${k}`;
       const inp = derived.get(path);
-      if(!inp || doc.manual[path]) { if(inp) inp.classList.remove('auto'); return; }
+      if(!inp || doc.manual[path]) return;
       const v = span(leg[a], leg[b]);
       leg[k] = v;
       if(inp.value !== v){ inp.value = v; fitOne(inp); }
-      inp.classList.toggle('auto', !!v);
     });
   }));
 }
@@ -1064,7 +1082,6 @@ stage.addEventListener('input', e=>{
   set(path, t.value);
   if(derived.has(path)){
     if(t.value) doc.manual[path] = 1; else delete doc.manual[path];
-    t.classList.remove('auto');
   }
   fitOne(t);
   refreshDerived();
@@ -1082,6 +1099,23 @@ stage.addEventListener('change', e=>{
       t.value = v; set(t.dataset.path, v); refreshDerived(); save();
     }
   }
+});
+
+/* Carry the captain's duty figure down its column. */
+stage.addEventListener('click', e=>{
+  const b = e.target.closest('button.dup');
+  if(!b) return;
+  const pi = +b.dataset.page, key = b.dataset.key, from = +b.dataset.from;
+  const crew = doc.pages[pi].crew;
+  const v = crew[from][key] || '';
+  crew.forEach((m,r)=>{
+    if(r === from) return;
+    m[key] = v;
+    const inp = stage.querySelector(`input[data-path="pages.${pi}.crew.${r}.${key}"]`);
+    if(inp){ inp.value = v; fitOne(inp); }
+  });
+  save();
+  note(v ? 'Copied to the crew' : 'Cleared for the crew');
 });
 
 stage.addEventListener('keydown', e=>{

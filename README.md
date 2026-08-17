@@ -309,12 +309,18 @@ in them, so a correction can be made without reaching for the paper.
 
 - **Times take four digits.** `0340` becomes `03:40` when you leave the box.
 - **Blk and Flt work themselves out** — Blk from ATD and ATA, Flt from TKOF and
-  TDWN, past midnight included. They stay in the lighter weight while they are
-  worked out. Write your own figure in and the box is yours from then on; clear
-  it again and it goes back to following the times.
+  TDWN, past midnight included. They are set like every other entry, since that
+  is what they are. Write your own figure in and the box is yours from then on;
+  clear it again and it goes back to following the times.
+- **The duty columns carry down.** DUTY, Duty time, Night duty and Alwd. time
+  are the same for the whole crew far more often than not, so the captain's row
+  has a small **↓** in each of those four columns: it puts that figure on every
+  crew member below. Correct anyone afterwards and only that row changes.
 - **Enter steps to the next box**, Shift+Enter back, in reading order across the
   page. Tab does the same.
 - Fill-in boxes take capitals, as the form is written.
+- The captain's signature has no box. It goes on the paper by hand, so the
+  space under it is left clear.
 - Everything is saved on the device as you type, and is still there next time.
   **Reset** clears what you wrote and puts back the document as it was loaded.
 
