@@ -102,13 +102,17 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    be compared against the planned one, and it is never written into the document.
 3. Enter the takeoff (airborne) time in UTC, four digits: `0210`.
    The button next to it fills in the ETD from the plan — but that is off-block
-   time and takeoff is normally later, so check it. The card then opens underneath
+   time and takeoff is normally later, so check it. The **UTC now** clock sits beside
+   Calculate on the same row, laid out like the box itself — label above, figure
+   below — and ticks from the moment the plan loads, so the time you need in order
+   to fill the box is next to the box.
+   The card then opens underneath
    into the waypoint table: entering the time and reading what it produces is one
-   job, so it is one page.
+   job, so it is one card.
    Enter actual ATO and remaining fuel per waypoint. Enter jumps to the next
-   field. Everything is saved automatically. The figures above the table carry
-   the UTC clock, ticking every second and shown in gold so it is not mistaken
-   for a time read off the plan, next to the waypoint you are running to.
+   field. Everything is saved automatically. The clock is shown in gold so it is
+   not mistaken for a time read off the plan, and the figures above the table name
+   the waypoint you are running to.
    The table follows the clock: passed
    points fade back, the last one passed is shaded and the one you are running to
    is highlighted, and the table brings that row to its middle as the flight moves
@@ -146,25 +150,16 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 6. **Open charts** to page through the wind components and the significant
    weather sheets on their own.
 
-## Turning the page
+When a scroll comes to rest near the start of a card, it is carried the rest of the way onto it.
+This runs from the scroll gesture, not from CSS snapping: it fires only once your own scroll has
+stopped, so it can never move the page while a plan is being read in and cards are appearing. It
+holds still while the on-screen keyboard is up or a sheet is open, and the top of the page counts
+as a resting place of its own, so a short scroll near the header comes back to it rather than
+being pulled past.
 
-The page does not scroll freely. One flick turns to the next card and it lands in the same place
-every time, so there is nothing in between to be left at. Swipe up or down, use the arrow keys or
-PageUp / PageDown, or tap the **‹ 3 / 7 ›** control at the bottom right. Home and End go to the
-first and last page.
-
-There are seven pages: load the plan, document fields, takeoff time and the actuals, altimeter
-cross-checks, export, weather and NOTAMs, charts. A card taller than the screen is stepped through
-a screenful at a time before the next one is reached, so nothing is out of reach.
-
-The boxes inside a card — the waypoint table, the NOTAM list, the charts — keep scrolling on their
-own. A flick over one of them belongs to that box; the page turns once the box has nothing left to
-give in that direction.
-
-Nothing moves the view but a turn you asked for, so cards appearing as a plan is read in cannot
-shift what you are looking at. Two earlier attempts at this — CSS scroll snapping, then a pull
-onto the nearest card — both had to guess where you meant to stop, and both moved the page by
-themselves.
+Page-by-page turning was tried in place of this and withdrawn: one gesture, one card, and no free
+scrolling at all. It is the third answer to the same question, after CSS scroll snapping and this
+one, and this one is what stays.
 
 The button in the header switches between light and dark themes; the choice is remembered.
 
