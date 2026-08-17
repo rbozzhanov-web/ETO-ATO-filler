@@ -48,27 +48,31 @@ body{
 /* ---------- toolbar ---------- */
 /* Added to the Home Screen the page runs under a translucent status bar, so the
    toolbar carries the inset itself and its own padding on top of it. */
+/* The header is the companion's, to the pixel: same container, same row height,
+   same trailing gap where its theme switch sits. The button back to it then
+   lands under the one that opens this page, and the two toggle on one spot. */
 #bar{
-  --statusbar:env(safe-area-inset-top, 0px);
+  --statusbar:max(20px, env(safe-area-inset-top, 0px));
   flex:0 0 auto; z-index:50;
-  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  padding:calc(10px + var(--statusbar))
-          max(18px, env(safe-area-inset-right, 0px))
-          10px
-          max(18px, env(safe-area-inset-left, 0px));
+  padding-top:var(--statusbar);
   background:var(--panel); border-bottom:1px solid var(--gold);
 }
-/* An iPad has no notch, so it reports no inset at all — and still draws the
-   status bar over the page. Once launched from the Home Screen the bar is
-   therefore given a floor to clear rather than an inset to trust. */
-@media (display-mode:standalone){
-  #bar{--statusbar:max(24px, env(safe-area-inset-top, 0px))}
+.hd{
+  max-width:1120px; margin:0 auto;
+  display:flex; align-items:center; gap:18px; min-height:68.5px;
+  padding:0 max(18px, env(safe-area-inset-right, 0px))
+          16px max(18px, env(safe-area-inset-left, 0px));
 }
-html.standalone #bar{--statusbar:max(24px, env(safe-area-inset-top, 0px))}
+.hdctl{display:flex; align-items:center; gap:12px; margin-left:auto}
+.swgap{flex:0 0 auto; width:93px; height:40px}   /* the theme switch, on the other page */
+#bar button{height:40px; min-height:40px; padding:0 16px; font-size:13.5px}
+#bar button.ghost{background:var(--panel)}
+#ofp{width:115px; padding:0}                     /* the same rectangle as its opposite number */
+/* An iPad reports no inset at all and still draws the status bar over the page,
+   so the 20px floor stands in for it — the same floor the companion uses, which
+   is what keeps the two headers on the same line. */
 #bar h1{font-size:20px; letter-spacing:.3px; margin:0 4px 0 0; white-space:nowrap}
 #bar h1 span{color:var(--dim); font-size:13px; letter-spacing:0; font-weight:400}
-.grp{display:flex; align-items:center; gap:8px}
-.spacer{flex:1}
 
 button{
   background:var(--acc2); color:#fff; border:0; border-radius:8px; padding:13px 22px;
@@ -79,7 +83,6 @@ button:active:not(:disabled){transform:scale(.98)}
 button:disabled{opacity:.4}
 button.ghost{background:transparent; border:1px solid var(--line); color:var(--dim)}
 button.danger{background:var(--dangerbtn); color:#fff}
-button.sm{padding:9px 15px; font-size:13.5px; min-height:38px}
 button.on{border-color:var(--acc); color:var(--acc);
   background:color-mix(in srgb, var(--acc) 16%, transparent)}
 @media(hover:hover){
@@ -88,11 +91,6 @@ button.on{border-color:var(--acc); color:var(--acc);
   #drop:hover{border-color:var(--acc)}
 }
 
-#zoomval{min-width:50px; text-align:center; color:var(--dim);
-  font:600 13.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace; font-variant-numeric:tabular-nums}
-#saved{color:var(--dim); font-size:12.5px; min-width:104px; text-align:right}
-#docinfo{color:var(--acc); letter-spacing:.4px;
-  font:700 12.5px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:nowrap}
 
 /* ---------- the sheet ---------- */
 /* The sheets pan inside here, both ways. A zoomed sheet that outgrows the
@@ -221,32 +219,22 @@ button.dup:active:not(:disabled){transform:none; background:#3498db; color:#fff}
   border:1px solid color-mix(in srgb, var(--err) 34%, transparent)}
 
 body.loaded #empty{display:none}
-body:not(.loaded) #stage,body:not(.loaded) #zoomgrp,
+body:not(.loaded) #stage,
 body:not(.loaded) #print,body:not(.loaded) #reset,body:not(.loaded) #remove{display:none}
 </style>
-<script>
-/* Older iOS answers navigator.standalone but not the display-mode query, so
-   both are asked. Runs before the toolbar is laid out, so nothing jumps. */
-if (navigator.standalone) document.documentElement.classList.add('standalone');
-</script>
-
 <div id="bar">
-  <h1>Journey Log <span>· Задание на полет</span></h1>
-  <div class="grp"><span id="docinfo"></span></div>
-  <div class="grp" id="zoomgrp">
-    <button id="zoomOut" class="ghost sm" title="Zoom out">−</button>
-    <span id="zoomval">100%</span>
-    <button id="zoomIn" class="ghost sm" title="Zoom in">+</button>
-    <button id="zoomFit" class="ghost sm">Fit</button>
+  <div class="hd">
+    <h1>Journey Log</h1>
+    <div class="hdctl">
+      <button id="print" class="ghost">Print / PDF</button>
+      <button id="reset" class="ghost">Clear entries</button>
+      <button id="remove" class="danger">Remove log</button>
+      <!-- Last but for the gap: it comes to rest exactly where the OFP
+           companion keeps the button that opens this page. -->
+      <button id="ofp" class="ghost" title="Back to the OFP companion">OFP Companion</button>
+      <i class="swgap" aria-hidden="true"></i>
+    </div>
   </div>
-  <div class="spacer"></div>
-  <div class="grp">
-    <button id="ofp" class="ghost sm" title="Back to the OFP companion">OFP Companion</button>
-    <button id="print" class="ghost sm">Print / PDF</button>
-    <button id="reset" class="ghost sm">Clear entries</button>
-    <button id="remove" class="danger sm">Remove log</button>
-  </div>
-  <div id="saved"></div>
 </div>
 
 <input type="file" id="file" accept="application/pdf,.pdf" hidden>
@@ -785,12 +773,9 @@ function save(){
   saveTimer = setTimeout(()=>{
     try{
       localStorage.setItem(KEY, JSON.stringify(doc));
-      const t = new Date();
-      note('Saved ' + String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0'));
-    }catch(e){ note('Not saved — storage full'); }
+    }catch(e){ say('There is no room left on the device to save this.', 'err'); }
   }, 250);
 }
-function note(s){ document.getElementById('saved').textContent = s; }
 
 function get(path){
   return path.split('.').reduce((o,k)=> o == null ? o : o[k], doc);
@@ -1084,21 +1069,10 @@ function fitAll(root){
 /* ------------------------------------------------------------------- render */
 const stage = document.getElementById('stage');
 
-/* Which document is open, named in the toolbar so it is never in doubt. */
-function paintDocInfo(){
-  const el = document.getElementById('docinfo');
-  if(!doc.pages.length){ el.textContent = ''; return; }
-  const n = doc.pages.length;
-  const legs = doc.pages.reduce((k,p)=> k + p.legs.filter(l => l.flight).length, 0);
-  const no = (doc.pages[0].docno || '').replace(/\s+/g, ' ').trim();
-  el.textContent = (no ? no + ' · ' : '') +
-    n + (n === 1 ? ' page · ' : ' pages · ') + legs + (legs === 1 ? ' leg' : ' legs');
-}
 function render(){
   stage.textContent = '';
   inputs.length = 0; derived.clear(); clears.length = 0;
   document.body.classList.toggle('loaded', doc.pages.length > 0);
-  paintDocInfo();
   if(!doc.pages.length) return;
   doc.pages.forEach((p,i)=>{
     const wrap = document.createElement('div');
@@ -1195,7 +1169,6 @@ stage.addEventListener('click', e=>{
     if(inp){ inp.value = v; fitOne(inp); }
   });
   save();
-  note(v ? 'Copied to the crew' : 'Cleared for the crew');
 });
 
 stage.addEventListener('keydown', e=>{
@@ -1209,9 +1182,13 @@ stage.addEventListener('keydown', e=>{
   if(next){ next.focus(); next.select(); }
 });
 
-/* ---------------------------------------------------------------------- zoom */
-const STEPS = [0.5,0.65,0.8,1,1.25,1.5,2,2.5];
-let zoom = null;                                   // null = fit to the window
+/* ---------------------------------------------------------------------- zoom
+   Pinch the sheets, the way any document is handled. The page itself is held
+   at one scale — were the browser to zoom it, a tapped box would jump under
+   the finger and the toolbar would sail off — so the gesture is caught here
+   and turned into the sheet's own scale.                                     */
+const ZOOM_MIN = 0.3, ZOOM_MAX = 4;
+let zoom = null;                                   // null = fitted to the window
 try{ const z = localStorage.getItem(KEY + '.zoom'); if(z && z !== 'fit') zoom = +z; }catch(e){}
 
 function sheetPx(){ return PAGE_W * 4/3; }         // 1pt = 4/3 css px
@@ -1220,33 +1197,82 @@ function sheetPx(){ return PAGE_W * 4/3; }         // 1pt = 4/3 css px
 function availWidth(){
   const cs = getComputedStyle(stage);
   return Math.max(320, stage.clientWidth
-    - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 24);
+    - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
 }
+const fitK = ()=> availWidth() / sheetPx();
+const scale = ()=> zoom == null ? fitK() : zoom;
+const clampK = k => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, k));
+
 function applyZoom(){
-  const k = zoom == null ? availWidth() / sheetPx() : zoom;
+  const k = scale();
   document.querySelectorAll('.sheet').forEach(s=> s.style.transform = 'scale(' + k + ')');
   document.querySelectorAll('.wrap').forEach(w=>{
     w.style.width  = (sheetPx() * k) + 'px';
     w.style.height = (PAGE_H * 4/3 * k) + 'px';
   });
-  document.getElementById('zoomval').textContent = Math.round(k*100) + '%';
-  document.getElementById('zoomFit').classList.toggle('on', zoom == null);
 }
-function setZoom(z){
+let zoomSaveTimer = null;
+function setZoom(z, anchor){
+  const before = scale();
   zoom = z;
-  try{ localStorage.setItem(KEY + '.zoom', z == null ? 'fit' : String(z)); }catch(e){}
   applyZoom();
+  if(anchor){
+    // hold the point under the fingers still while the scale changes around it
+    const k = scale() / before;
+    stage.scrollLeft = (stage.scrollLeft + anchor.x) * k - anchor.x;
+    stage.scrollTop  = (stage.scrollTop  + anchor.y) * k - anchor.y;
+  }
+  clearTimeout(zoomSaveTimer);
+  zoomSaveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(KEY + '.zoom', zoom == null ? 'fit' : String(zoom)); }catch(e){}
+  }, 250);
 }
-function step(dir){
-  const cur = zoom == null ? availWidth() / sheetPx() : zoom;
-  const list = dir > 0 ? STEPS : STEPS.slice().reverse();
-  const next = list.find(v => dir > 0 ? v > cur + 0.001 : v < cur - 0.001);
-  setZoom(next || (dir > 0 ? STEPS[STEPS.length-1] : STEPS[0]));
-}
-document.getElementById('zoomIn').onclick  = ()=> step(1);
-document.getElementById('zoomOut').onclick = ()=> step(-1);
-document.getElementById('zoomFit').onclick = ()=> setZoom(null);
 addEventListener('resize', ()=>{ if(zoom == null) applyZoom(); });
+
+/* ---- the gesture ---- */
+const gap = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+const anchorOf = t => {
+  const r = stage.getBoundingClientRect();
+  return { x:(t[0].clientX + t[1].clientX)/2 - r.left,
+           y:(t[0].clientY + t[1].clientY)/2 - r.top };
+};
+let pinch = null;
+stage.addEventListener('touchstart', e=>{
+  if(e.touches.length !== 2){ pinch = null; return; }
+  const t = [e.touches[0], e.touches[1]];
+  pinch = { d:gap(t) || 1, k:scale() };
+}, {passive:true});
+stage.addEventListener('touchmove', e=>{
+  if(!pinch || e.touches.length !== 2) return;
+  e.preventDefault();                      // ours to handle, not the scroller's
+  const t = [e.touches[0], e.touches[1]];
+  setZoom(clampK(pinch.k * gap(t) / pinch.d), anchorOf(t));
+}, {passive:false});
+['touchend','touchcancel'].forEach(ev =>
+  stage.addEventListener(ev, ()=>{ pinch = null; }, {passive:true}));
+
+/* A trackpad pinch arrives as a wheel with ctrl held; so does ⌘+scroll. */
+stage.addEventListener('wheel', e=>{
+  if(!e.ctrlKey) return;
+  e.preventDefault();
+  const r = stage.getBoundingClientRect();
+  setZoom(clampK(scale() * (1 - e.deltaY / 300)),
+          { x:e.clientX - r.left, y:e.clientY - r.top });
+}, {passive:false});
+
+/* Two taps on the paper put it back to the width of the window — the way back
+   from a pinch, without a button standing in the header for it. */
+let lastTap = 0;
+stage.addEventListener('touchend', e=>{
+  if(e.touches.length || e.changedTouches.length !== 1) return;
+  if(e.target.closest('input,button')) return;
+  const now = Date.now();
+  if(now - lastTap < 320){ setZoom(null); lastTap = 0; } else lastTap = now;
+}, {passive:true});
+stage.addEventListener('dblclick', e=>{
+  if(e.target.closest('input,button')) return;
+  setZoom(null);
+});
 
 /* --------------------------------------------------------------------- chrome */
 /* The surround follows whatever the OFP companion is set to — one switch for
@@ -1276,7 +1302,6 @@ document.getElementById('reset').onclick = ()=>{
   doc.manual = {};
   render();
   save();
-  note('Reset');
 };
 
 /* ---------------------------------------------------------- loading the PDF */
@@ -1319,7 +1344,6 @@ document.getElementById('remove').onclick = ()=>{
   document.getElementById('fname').textContent = '';
   render();
   say('', '');
-  note('');
 };
 
 dropZone.onclick = ()=> fileInput.click();
@@ -1338,7 +1362,6 @@ addEventListener('drop', e=>{
 });
 
 render();
-note(doc.pages.length ? 'Ready' : '');
 
 if('serviceWorker' in navigator){
   addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js').catch(()=>{}));

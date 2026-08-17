@@ -298,8 +298,8 @@ sheets, and the number of rows in each of their three tables, are however many
 the PDF has: every row of the form prints its own row number, so the tables
 announce their own length and the page is built to match.
 
-The toolbar then names what is open — the log number, how many sheets, how many
-legs — so there is no doubt which duty is on screen.
+The document names itself once it is open: its number is across the top of the
+sheet, where the paper carries it.
 
 ## Filling it in
 
@@ -352,15 +352,27 @@ one sheet per page, with the toolbar and the box tints left off. The browser's
 
 ## Zoom
 
-The page is fitted to the window on opening. **−** and **+** step through fixed
-sizes and **Fit** returns to the window; the choice is remembered. A sheet
-zoomed past the window is panned rather than lost: the toolbar keeps its place
-and the sheets scroll under it, both ways, so every edge can be reached.
+**Pinch the sheet**, the way any document is handled; **two taps** put it back to
+the width of the window. It opens fitted, and where you leave it is where it is
+next time. A sheet zoomed past the window is panned rather than lost — the
+header keeps its place and the sheets scroll under it, both ways, so every edge
+can be reached.
+
+Only the sheet scales. The page itself is held at one size on purpose: were the
+browser left to zoom it, a tapped box would jump under the finger as iOS pulled
+the keyboard up, and the header would sail off the screen with it.
+
+## Alongside the companion
 
 The chrome is the OFP companion's — the same colours, the same buttons at the
 same sizes, the same load card — and light or dark is whatever that page is set
 to, since one switch serves both and it lives over there. Only the surround
 changes; the sheet stays white, because it is paper.
+
+The header carries a title and its buttons, nothing else, and **OFP Companion**
+sits on the same rectangle as the **Journey Log** button on that page — same
+place, same size, in landscape and portrait alike. One spot on the glass moves
+between the two documents, and neither has to be looked for.
 
 ---
 
