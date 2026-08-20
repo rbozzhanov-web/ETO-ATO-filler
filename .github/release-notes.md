@@ -1,5 +1,13 @@
-The operational flight plan companion as a native iPadOS / iOS app: the same document, the
-same arithmetic and the same print colours as the web version, without Safari in the way.
+Both flight documents as one native iPadOS / iOS app, with the same arithmetic and the same
+print colours as the web version, without Safari in the way.
+
+- **OFP Companion** — the operational flight plan worked in flight: times, fuel, weather,
+  NOTAMs, charts and checks, written back over the document it came from.
+- **Journey Log** — the log form, read from the PDF it arrives as, filled in on screen and
+  saved as a PDF of its own.
+
+Each screen carries the button that crosses to the other in the same corner, as the two web
+pages do. Ported from web release 24.
 
 ## Installing it
 
