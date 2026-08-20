@@ -12,7 +12,7 @@ struct ExportCard: View {
     @State private var confirmingReset = false
 
     var body: some View {
-        Card(step: "6", title: "Export") {
+        Card(step: "5", title: "Export") {
             HStack(spacing: 12) {
                 Button("Save PDF") { startSave() }
                     .buttonStyle(FilledButtonStyle())

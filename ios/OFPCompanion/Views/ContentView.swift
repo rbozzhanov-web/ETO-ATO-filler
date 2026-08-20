@@ -5,6 +5,8 @@ struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
 
+    let showJourneyLog: () -> Void
+
     @State private var showingGuide = false
     @State private var showingCharts = false
 
@@ -13,7 +15,8 @@ struct ContentView: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                HeaderView(showingGuide: $showingGuide)
+                HeaderView(showingGuide: $showingGuide,
+                           showJourneyLog: showJourneyLog)
 
                 LoadCard()
 
@@ -22,11 +25,8 @@ struct ContentView: View {
                         DocumentFieldsCard()
                     }
                     TakeoffCard()
-                    if model.takeoff != nil {
-                        WaypointCard()
-                        if !model.altimeterChecks.isEmpty {
-                            AltimeterCard()
-                        }
+                    if model.takeoff != nil, !model.altimeterChecks.isEmpty {
+                        AltimeterCard()
                     }
                     ExportCard()
                     if !(model.plan?.airports.isEmpty ?? true) {
@@ -67,6 +67,7 @@ struct HeaderView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.palette) private var palette
     @Binding var showingGuide: Bool
+    let showJourneyLog: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -103,6 +104,10 @@ struct HeaderView: View {
 
     private var controls: some View {
         HStack(spacing: 12) {
+            Button("Journey Log") { showJourneyLog() }
+                .buttonStyle(GhostButtonStyle(small: false))
+                .lineLimit(1)
+
             Button("User guide") { showingGuide = true }
                 .buttonStyle(GhostButtonStyle(small: false))
 

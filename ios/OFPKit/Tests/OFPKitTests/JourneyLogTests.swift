@@ -184,3 +184,95 @@ final class JourneyLogDocumentTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(JourneyLogDocument.self, from: data), doc)
     }
 }
+
+final class JourneyLogLayoutTests: XCTestCase {
+
+    private func layout() throws -> (JourneyLogDocument, JourneyLogLayout) {
+        let pdf = try PDFMiniDocument(bytes: loadFixture("synthetic-journeylog.pdf"))
+        let doc = JourneyLogDocument(pages: try JourneyLogReader.parse(pdf), fileName: "log.pdf")
+        return (doc, JourneyLogLayout.build(document: doc, page: 0))
+    }
+
+    func testEveryCellOfEveryTableGetsAField() throws {
+        let (doc, sheet) = try layout()
+        let page = doc.pages[0]
+
+        func count(_ table: JourneyLogDocument.Table) -> Int {
+            sheet.fields.filter { $0.table == table }.count
+        }
+        let legKeys = JourneyLogForm.legKeys.compactMap { $0 }.count
+        XCTAssertEqual(count(.leg), legKeys * page.legs.count)
+        XCTAssertEqual(count(.fuel), JourneyLogForm.fuelKeys.compactMap { $0 }.count * page.fuel.count)
+        XCTAssertEqual(count(.payload), JourneyLogForm.payloadKeys.count * page.payload.count)
+        XCTAssertEqual(count(.crew), JourneyLogForm.crewKeys.compactMap { $0 }.count * page.crew.count)
+        XCTAssertEqual(count(.immigration), 3)
+        XCTAssertEqual(count(.remarks), 3)
+    }
+
+    func testPrintedCellsAreMarkedAsSuch() throws {
+        let (_, sheet) = try layout()
+        let flight = sheet.fields.first { $0.table == .leg && $0.row == 0 && $0.key == "flight" }
+        XCTAssertEqual(flight?.printed, true, "the document arrived with it")
+
+        let atd = sheet.fields.first { $0.table == .leg && $0.row == 0 && $0.key == "atd" }
+        XCTAssertEqual(atd?.printed, false, "an actual is for the crew")
+        XCTAssertEqual(atd?.time, true)
+
+        // The third leg arrived blank, so even its date is a box to be written in.
+        let blankDate = sheet.fields.first { $0.table == .leg && $0.row == 2 && $0.key == "date" }
+        XCTAssertEqual(blankDate?.printed, false)
+    }
+
+    func testCellsSitInsideTheirColumn() throws {
+        let (_, sheet) = try layout()
+        let lw = JourneyLogForm.ruleWidth
+        for field in sheet.fields where field.table == .leg {
+            guard let c = JourneyLogForm.legKeys.firstIndex(of: field.key) else { continue }
+            XCTAssertEqual(field.x, JourneyLogForm.legX[c] + lw, accuracy: 0.001)
+            XCTAssertEqual(field.width, JourneyLogForm.legX[c + 1] - JourneyLogForm.legX[c] - lw * 2,
+                           accuracy: 0.001)
+        }
+    }
+
+    func testTheSheetGrowsWithTheDocument() throws {
+        let (doc, small) = try layout()
+
+        var bigger = doc
+        bigger.pages[0].legs.append([:])
+        bigger.pages[0].crew.append([:])
+        let large = JourneyLogLayout.build(document: bigger, page: 0)
+
+        XCTAssertGreaterThan(large.contentHeight, small.contentHeight,
+                             "an extra leg and an extra crew member push the sheet down")
+        XCTAssertEqual(large.contentHeight - small.contentHeight,
+                       JourneyLogForm.rowHeight * 2, accuracy: 0.001)
+    }
+
+    func testEverythingFitsOnTheSheet() throws {
+        let (_, sheet) = try layout()
+        for field in sheet.fields {
+            XCTAssertGreaterThanOrEqual(field.x, 0)
+            XCTAssertLessThanOrEqual(field.x + field.width, JourneyLogForm.pageWidth)
+        }
+        XCTAssertLessThanOrEqual(sheet.contentHeight, JourneyLogForm.pageHeight)
+    }
+
+    func testTheCaptainsRowCarriesTheDuplicators() throws {
+        let (_, sheet) = try layout()
+        XCTAssertEqual(sheet.duplicators.count, JourneyLogForm.crewDuplicable.count)
+        XCTAssertTrue(sheet.duplicators.allSatisfy { $0.from == 0 }, "the CP row")
+    }
+
+    func testNoFieldOverlapsAnother() throws {
+        let (_, sheet) = try layout()
+        let boxes = sheet.fields.map { ($0.x, $0.y, $0.x + $0.width, $0.y + $0.height) }
+        for i in 0..<boxes.count {
+            for j in (i + 1)..<boxes.count {
+                let a = boxes[i], b = boxes[j]
+                let overlaps = a.0 < b.2 - 0.01 && b.0 < a.2 - 0.01
+                    && a.1 < b.3 - 0.01 && b.1 < a.3 - 0.01
+                XCTAssertFalse(overlaps, "two cells share the same paper: \(a) and \(b)")
+            }
+        }
+    }
+}

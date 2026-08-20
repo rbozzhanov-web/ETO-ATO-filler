@@ -16,7 +16,8 @@ struct WaypointCard: View {
     private let space = "waypoints"
 
     var body: some View {
-        Card(step: "4", title: "Actuals by waypoint") {
+        VStack(alignment: .leading, spacing: 14) {
+            Rectangle().fill(palette.line).frame(height: 1).padding(.top, 2)
             stats
             toolbar
             if !model.overdueFuelChecks.isEmpty { fuelBanner }

@@ -49,6 +49,21 @@ struct TakeoffCard: View {
                     }
                     .buttonStyle(FilledButtonStyle())
                     .padding(.bottom, 4)
+
+                    // The time you need in order to fill the box, next to the box — laid
+                    // out like it, label above and figure below, and ticking from the
+                    // moment the plan loads. Gold, so it is never taken for a time read
+                    // off the plan.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("UTC now").font(.system(size: 12)).foregroundStyle(palette.dim)
+                        Text(model.clock)
+                            .font(.mono(24, weight: .bold))
+                            .monospacedDigit()
+                            .foregroundStyle(palette.gold)
+                            .padding(.vertical, 12)
+                    }
+
+                    Spacer(minLength: 0)
                 }
 
                 if let times = model.plan?.times {
@@ -56,6 +71,11 @@ struct TakeoffCard: View {
                 }
                 if let banner = model.calcBanner {
                     BannerView(banner: banner)
+                }
+
+                // The table opens underneath rather than in a card of its own.
+                if model.takeoff != nil {
+                    WaypointCard()
                 }
             }
         }

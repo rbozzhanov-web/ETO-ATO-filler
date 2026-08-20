@@ -40,6 +40,11 @@ public struct JourneyLogDocument: Codable, Equatable {
 
     public enum Table: String, Codable {
         case leg, fuel, payload, crew
+        /// The items across the top of the sheet, which belong to the page rather than to
+        /// any row. Addressed as row 0 so that every cell on the form has the same shape.
+        case head
+        /// The ruled lines under the crew table, addressed by their index.
+        case immigration, remarks
     }
 
     public var pages: [JourneyLogPage] = []
@@ -75,6 +80,8 @@ public struct JourneyLogDocument: Codable, Equatable {
         case .fuel:    return page.fuel
         case .payload: return page.payload
         case .crew:    return page.crew
+        // The heading and the ruled lines are not row tables; they are reached directly.
+        case .head, .immigration, .remarks: return []
         }
     }
 
@@ -86,29 +93,81 @@ public struct JourneyLogDocument: Codable, Equatable {
         case .fuel:    body(&pages[page].fuel)
         case .payload: body(&pages[page].payload)
         case .crew:    body(&pages[page].crew)
+        case .head, .immigration, .remarks: break
+        }
+    }
+
+    /// The heading items, which are the page's own rather than any row's.
+    private static func head(_ page: JourneyLogPage, _ key: String) -> String {
+        switch key {
+        case "operator": return page.operatorName
+        case "stamp":    return page.stamp
+        case "docno":    return page.docNumber
+        case "captain":  return page.captain
+        case "cat":      return page.cat
+        case "lt":       return page.lt
+        default:         return ""
+        }
+    }
+
+    private static func setHead(_ page: inout JourneyLogPage, _ key: String, _ text: String) {
+        switch key {
+        case "operator": page.operatorName = text
+        case "stamp":    page.stamp = text
+        case "docno":    page.docNumber = text
+        case "captain":  page.captain = text
+        case "cat":      page.cat = text
+        case "lt":       page.lt = text
+        default:         break
         }
     }
 
     public func value(page: Int, table: Table, row: Int, key: String) -> String {
         guard pages.indices.contains(page) else { return "" }
-        let table = rows(pages[page], table)
-        guard table.indices.contains(row) else { return "" }
-        return table[row][key] ?? ""
+        switch table {
+        case .head:
+            return Self.head(pages[page], key)
+        case .immigration:
+            return pages[page].immigration.indices.contains(row) ? pages[page].immigration[row] : ""
+        case .remarks:
+            return pages[page].remarks.indices.contains(row) ? pages[page].remarks[row] : ""
+        default:
+            let table = rows(pages[page], table)
+            guard table.indices.contains(row) else { return "" }
+            return table[row][key] ?? ""
+        }
     }
 
     /// What the document itself came printed with, which is shown differently from what has
     /// been typed — it is a record, not an offer.
     public func printed(page: Int, table: Table, row: Int, key: String) -> Bool {
         guard source.indices.contains(page) else { return false }
-        let table = rows(source[page], table)
-        guard table.indices.contains(row) else { return false }
-        return !(table[row][key] ?? "").isEmpty
+        switch table {
+        case .head, .immigration, .remarks:
+            // The heading is editable even where the document filled it in, and the ruled
+            // lines below the crew table always arrive blank.
+            return false
+        default:
+            let table = rows(source[page], table)
+            guard table.indices.contains(row) else { return false }
+            return !(table[row][key] ?? "").isEmpty
+        }
     }
 
     public mutating func set(_ text: String, page: Int, table: Table, row: Int, key: String) {
-        withRows(page, table) { rows in
-            guard rows.indices.contains(row) else { return }
-            rows[row][key] = text
+        guard pages.indices.contains(page) else { return }
+        switch table {
+        case .head:
+            Self.setHead(&pages[page], key, text)
+        case .immigration:
+            if pages[page].immigration.indices.contains(row) { pages[page].immigration[row] = text }
+        case .remarks:
+            if pages[page].remarks.indices.contains(row) { pages[page].remarks[row] = text }
+        default:
+            withRows(page, table) { rows in
+                guard rows.indices.contains(row) else { return }
+                rows[row][key] = text
+            }
         }
         // Writing in a derived cell stops it deriving; clearing it hands it back.
         if table == .leg, key == "blk" || key == "flt" {

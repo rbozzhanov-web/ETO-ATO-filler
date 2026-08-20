@@ -6,7 +6,7 @@ struct AltimeterCard: View {
     @Environment(\.palette) private var palette
 
     var body: some View {
-        Card(step: "5", title: "Altimeter cross-checks") {
+        Card(step: "4", title: "Altimeter cross-checks") {
             Disclosure(text: "Hourly comparison of ALTM1 / STBY / ALTM2, printed next to the "
                        + "waypoint reached at each full hour after takeoff.")
 
