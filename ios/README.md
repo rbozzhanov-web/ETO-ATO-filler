@@ -2,11 +2,18 @@
 
 [![iOS app](https://github.com/rbozzhanov-web/ETO-ATO-filler/actions/workflows/ios.yml/badge.svg)](https://github.com/rbozzhanov-web/ETO-ATO-filler/actions/workflows/ios.yml)
 
-A Swift rewrite of the web app in the repository root. Same document, same arithmetic, same
-print colours; a real app instead of a page in Safari.
+A Swift rewrite of the web apps in the repository root, both of them in one app:
 
-Nothing here replaces the PWA — it is still in the root and still works. The two read the
-same flight plans and write the same overlay.
+- **OFP Companion** — the operational flight plan worked in flight: times, fuel, weather,
+  NOTAMs, charts and checks, written back over the document it came from.
+- **Journey Log** — the log form, read from the PDF it arrives as and filled in on screen.
+
+Each screen keeps the button that crosses to the other in the same corner, exactly as the
+two web pages do. Same documents, same arithmetic, same print colours; a real app instead of
+a page in Safari.
+
+Nothing here replaces the PWA — it is still in the root and still works. Ported from web
+release 24.
 
 ---
 
@@ -16,18 +23,19 @@ same flight plans and write the same overlay.
 ios/
   OFPCompanion.xcodeproj     the app project — open this
   OFPCompanion/              the SwiftUI layer
-    AppModel.swift             all app state in one object
+    AppModel.swift             all companion state in one object
     Theme.swift                the two palettes, carried over from the CSS
     Views/                     one file per card, plus the chart viewer and the guide
+    JourneyLog/                the log's model, its sheet, and its printer
     Support/                   the alert tone and the chart image decoder
   OFPCompanion-Info.plist    only the keys Xcode cannot generate
   OFPKit/                    everything that reads and writes the document
     Sources/OFPKit/
-      PDF/                     inflate, lexer, document, text extraction, incremental writer
-      Domain/                  the OFP parsers — waypoints, fields, weather, charts
-      Logic/                   time, progress, checks, the overlay
+      PDF/                     inflate, lexer, document, fonts, text extraction, writer
+      Domain/                  the parsers — waypoints, fields, weather, charts, the log
+      Logic/                   time, progress, checks, the overlay, the sheet layout
       State/                   what is saved between launches
-    Tests/OFPKitTests/         95 tests, and the scripts that build their fixtures
+    Tests/OFPKitTests/         124 tests, and the scripts that build their fixtures
 ```
 
 The split is the point. **OFPKit has no dependency on UIKit, SwiftUI or Core Graphics**, so
@@ -108,22 +116,25 @@ Inside Xcode the same tests run under **Product → Test** once the package is o
 
 ## State of the work
 
-**It builds, and the tests pass.** Every push runs the whole thing on a macOS runner: 95
+**It builds, and the tests pass.** Every push runs the whole thing on a macOS runner: 124
 OFPKit tests, then the app compiled against the real SDK, then an archive. The badge above
 is that pipeline.
 
-The 95 tests cover inflate against zlib at every level, the PDF engine end to end, all the
-OFP parsers, the flight arithmetic and the overlay — including a test that the saved file is
-byte-identical to the original for its whole original length.
+The tests cover inflate against zlib at every level, the PDF engine end to end, all the
+parsers, the flight arithmetic and the overlay — including a test that the saved plan is
+byte-identical to the original for its whole original length, and one that walks every cell
+of the Journey Log sheet and asserts none overlaps another.
 
 **What has not happened is anyone using it.** It has never been run on a real iPad against a
 real flight plan. Compiling proves the types line up, not that a column is read off the right
 place or that a card is legible in daylight. That part is still ahead.
 
-The tests run against a synthetic flight plan built by
-`OFPKit/Tests/OFPKitTests/Fixtures/make_ofp.py`, which reproduces the structure the parser
-keys on: Courier text at fixed coordinates, the four-dot ETO column with its ATO row, dotted
-blanks, a flight plan split across a page break, weather pages, and both chart encodings.
+The tests run against synthetic documents built by the scripts in
+`OFPKit/Tests/OFPKitTests/Fixtures/`. `make_ofp.py` reproduces what the plan parser keys on:
+Courier text at fixed coordinates, the four-dot ETO column with its ATO row, dotted blanks, a
+flight plan split across a page break, weather pages, and both chart encodings.
+`make_journeylog.py` does the same for the log, down to the Type0 font and its ToUnicode map,
+because reading that document any other way gives mojibake.
 Real packages are operational documents and are not in the repository, so **the first thing
 worth doing is loading a real plan and checking the waypoint count against the paper.**
 
@@ -146,6 +157,8 @@ something:
 | Surviving eviction | IndexedDB + localStorage | files in Application Support |
 | Pasting a PDF | desktop only, impossible on iPad | dropped entirely — it never worked there |
 | Charts | decoded to a canvas | decoded to a `CGImage`, off the main thread |
+| The Journey Log on paper | the browser's print dialogue | drawn to a PDF for the share sheet |
+| Crossing between the two | a link to the other page | a screen swap, state kept on both sides |
 | Updates | new version on next launch | through the App Store or a re-install |
 
 The alert tone sits on the **ambient** audio category, which means the silent switch still
@@ -174,6 +187,16 @@ at, which is a lower level than PDFKit offers.
 
 So the engine is a deliberate port of the browser one, quirk for quirk, and the tests assert
 the properties that matter rather than the implementation.
+
+The Journey Log needed the one thing the plan never did: fonts. It is set in Calibri embedded
+as a Type0 font, where two bytes address a glyph and only the font's `ToUnicode` map says
+which character that glyph was. It also puts every cell of the form in its own text block,
+which is what lets the form be read without implementing any glyph metrics — the position of
+a cell is the position of its block.
+
+Its sheet is drawn rather than overlaid, because the document arrives as a blank. Screen and
+printer read one layout, described once in `Logic/JourneyLogLayout.swift`: they have to agree
+to the point, or what the crew typed lands somewhere else on the paper.
 
 Two bugs turned up in the writing, both on damaged input: a corrupt Huffman code indexed the
 symbol table backwards and trapped, and a truncated stream could decode to a silently short

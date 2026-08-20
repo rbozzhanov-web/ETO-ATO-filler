@@ -5,11 +5,12 @@ No network access after installation, nothing is uploaded anywhere.
 
 Requires iPadOS 16.4 or newer (`DecompressionStream` is needed to inflate PDF streams).
 
-> **There is also a native app.** `ios/` holds a Swift rewrite of everything below — the same
-> document, the same arithmetic, the same print colours, built as a real iPadOS/iOS app
-> rather than a page in Safari. It installs from Xcode instead of from a web address, and it
-> can have a plan opened straight into it from Files or Mail. See [`ios/README.md`](ios/README.md).
-> This web version is not going anywhere; the two read the same plans and write the same overlay.
+> **There is also a native app.** `ios/` holds a Swift rewrite of both pages — the companion
+> and the Journey Log — in one iPadOS/iOS app, with the same arithmetic and the same print
+> colours. It installs from a release or from Xcode rather than from a web address, and a
+> document can be opened straight into it from Files or Mail. See
+> [`ios/README.md`](ios/README.md). This web version is not going anywhere; the two read the
+> same documents and write the same overlay.
 
 ---
 
