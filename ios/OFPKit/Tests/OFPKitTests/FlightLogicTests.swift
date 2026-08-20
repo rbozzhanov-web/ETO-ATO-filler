@@ -236,7 +236,64 @@ final class FlightComputerTests: XCTestCase {
         let c = computer()                          // three hours
         let checks = c.fuelChecks(offset: 0)
         XCTAssertEqual(checks.map(\.mark), [30, 60, 90, 120, 150])
+        // With nothing entered, a check is due as the plan has it: the last waypoint of
+        // the window, which at fifteen-minute legs lands exactly on the half hour.
         XCTAssertEqual(checks.map(\.due), [150, 180, 210, 240, 270])
+    }
+
+    func testPassingTimePrefersTheReportedTime() {
+        var c = computer()                          // WPT2 planned 0230
+        let wpt2 = c.rows[2]
+        XCTAssertEqual(c.passingTime(wpt2, offset: 0), 150, "as planned, 0230")
+        XCTAssertEqual(c.passingTime(wpt2, offset: 6), 156, "carried by the offset")
+
+        c.actuals[2] = Actual(ato: "0234")
+        XCTAssertEqual(c.passingTime(wpt2, offset: 6), 2 * 60 + 34,
+                       "its own ATO wins over any estimate")
+    }
+
+    func testCheckFallsDueWhenItsWaypointIsPassed() {
+        var c = computer()
+        // The check sits on the last waypoint of its window, and falls due as that
+        // waypoint is passed — not on a half-hour grid drawn at takeoff.
+        for check in c.fuelChecks(offset: 0) {
+            let point = c.fuelPoint(check, offset: 0)
+            XCTAssertEqual(check.due, c.passingTime(point!, offset: 0))
+        }
+
+        // Report the waypoint the first check sits on as four minutes late, and the check
+        // moves with it.
+        let first = c.fuelChecks(offset: 0)[0]
+        let point = c.fuelPoint(first, offset: 0)!
+        XCTAssertEqual(point.name, "WPT2")
+        c.actuals[point.index] = Actual(ato: "0234")
+
+        // That entry also puts the flight four minutes down, which slides WPT2 out of the
+        // first window — so the check it now sits on is the one that covers it.
+        let offset = c.currentOffset()
+        XCTAssertEqual(offset, 4)
+        let covering = c.fuelChecks(offset: offset)
+            .first { c.fuelBox($0, offset: offset).contains(where: { $0.index == point.index }) }
+        XCTAssertNotNil(covering)
+        XCTAssertEqual(c.fuelPoint(covering!, offset: offset)?.name, "WPT3")
+    }
+
+    func testUnreportedWaypointsCarryTheOffset() {
+        var c = computer()
+        // Only WPT1 is reported, six minutes down. Every later waypoint has no ATO of its
+        // own, so its passing time is the plan carried by that six minutes.
+        c.actuals[1] = Actual(ato: "0221")
+        let offset = c.currentOffset()
+        XCTAssertEqual(offset, 6)
+
+        let first = c.fuelChecks(offset: offset)[0]
+        let point = c.fuelPoint(first, offset: offset)!
+        XCTAssertEqual(point.name, "WPT1")
+        XCTAssertEqual(first.due, 2 * 60 + 21, "its own ATO, which is what was reported")
+
+        let second = c.fuelChecks(offset: offset)[1]
+        let later = c.fuelPoint(second, offset: offset)!
+        XCTAssertEqual(second.due, later.t + 6, "unreported, so the plan plus six")
     }
 
     func testWindowIsSatisfiedByAnyFuelInIt() {

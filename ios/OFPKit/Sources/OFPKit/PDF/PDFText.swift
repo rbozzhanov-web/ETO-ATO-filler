@@ -122,3 +122,82 @@ public enum PDFText {
         return out
     }
 }
+
+/// One whole text block, positioned by the matrix that opened it.
+public struct PDFBlockItem {
+    public let text: String
+    public let x: Double
+    public let y: Double
+    public let size: Double
+}
+
+public extension PDFText {
+
+    /// Text a block at a time, rather than a run at a time.
+    ///
+    /// The Journey Log puts every cell of the form in its own `BT … ET` block, positioned by
+    /// its own `Tm`. Read that way the form needs no glyph widths at all — the position of a
+    /// cell is the position of its block — which is what makes a document set in an embedded
+    /// font readable without implementing its metrics.
+    static func blockItems(in content: [UInt8], fonts: [String: PDFFont]) -> [PDFBlockItem] {
+        var lx = PDFLexer(content, at: 0)
+        var stack = [PDFObject]()
+        var out = [PDFBlockItem]()
+
+        var font: PDFFont?
+        var current: (x: Double, y: Double, size: Double, text: String)?
+
+        func flush() {
+            if let c = current, !c.text.trimmingCharacters(in: .whitespaces).isEmpty {
+                out.append(PDFBlockItem(text: c.text, x: c.x, y: c.y, size: c.size))
+            }
+            current = nil
+        }
+
+        while true {
+            guard let object = lx.object() else { break }
+            if case .endMarker = object { continue }
+
+            guard case .op(let op) = object else {
+                stack.append(object)
+                continue
+            }
+
+            switch op {
+            case "BT":
+                flush()
+                font = nil
+            case "ET":
+                flush()
+            case "Tf":
+                // The operands are the resource name and the size, so the name is the one
+                // before last.
+                let name = stack.count >= 2 ? stack[stack.count - 2].nameValue : nil
+                font = name.flatMap { fonts[$0] }
+            case "Tm":
+                let v = stack.suffix(6).compactMap { $0.numberValue }
+                if v.count == 6 {
+                    flush()
+                    let size = abs(v[0]) != 0 ? abs(v[0]) : abs(v[1])
+                    current = (x: v[4], y: v[5], size: size, text: "")
+                }
+            case "Tj", "'", "\"":
+                if current != nil, let bytes = stack.last?.stringBytes {
+                    current?.text += (font?.decode(bytes) ?? Latin1.string(bytes))
+                }
+            case "TJ":
+                if current != nil, let array = stack.last?.arrayValue {
+                    for element in array {
+                        guard let bytes = element.stringBytes else { continue }
+                        current?.text += (font?.decode(bytes) ?? Latin1.string(bytes))
+                    }
+                }
+            default:
+                break
+            }
+            stack.removeAll(keepingCapacity: true)
+        }
+        flush()
+        return out
+    }
+}

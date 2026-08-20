@@ -178,6 +178,16 @@ public struct FlightComputer {
         rows.filter { $0.section == 1 && !isSkipped($0.index) }
     }
 
+    /// When a waypoint is actually passed: its own ATO once that has been entered,
+    /// otherwise the plan's time carried by however far the flight is running from it.
+    public func passingTime(_ row: PlannedRow, offset: Int) -> Int {
+        if let entry = actuals[row.index], !entry.ato.isEmpty,
+           let actual = TimeMath.parseTime(entry.ato) {
+            return actual
+        }
+        return row.t + offset
+    }
+
     /// The half-hour windows the company rule asks for. Only past the end of the flight is
     /// a window dropped: the rule runs on the clock, so a direct that empties a window does
     /// not excuse its check.
@@ -188,9 +198,15 @@ public struct FlightComputer {
         var out: [FuelCheck] = []
         var mark = 30
         while total - mark >= 30 {
-            let check = FuelCheck(mark: mark, from: mark - 30, to: mark, due: takeoff + mark)
-            if !fuelBox(check, offset: offset).isEmpty { out.append(check) }
-            mark += 30
+            defer { mark += 30 }
+            let window = FuelCheck(mark: mark, from: mark - 30, to: mark, due: 0)
+            let box = fuelBox(window, offset: offset)
+            guard let point = box.last else { continue }
+            // A check falls due when the aeroplane actually passes the waypoint it sits on,
+            // so the time follows the ATOs as they are entered rather than standing on a
+            // half-hour grid drawn at takeoff.
+            out.append(FuelCheck(mark: mark, from: mark - 30, to: mark,
+                                 due: passingTime(point, offset: offset)))
         }
         return out
     }
