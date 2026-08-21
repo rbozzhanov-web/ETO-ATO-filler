@@ -121,6 +121,9 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 .addtbl{font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
 .addtbl td{white-space:normal;vertical-align:top;padding:6px 8px}
 .addtbl th{white-space:nowrap}
+#addHelpCode{display:block;width:100%;margin:8px 0;padding:10px;border:1px solid var(--line);
+  border-radius:8px;background:var(--panel2);color:var(--dim);resize:vertical;
+  font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}
 #addPasteBox{display:block;width:100%;margin:12px 0 0;min-height:110px;padding:10px;
   border:1px dashed var(--line);border-radius:8px;background:var(--panel2);color:var(--txt);
   font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
@@ -516,6 +519,7 @@ td.diff{text-align:right;font-weight:700}
       <button type="button" class="ghost sm" id="addOpen">Open report</button>
       <button type="button" class="ghost sm" id="addPaste">Paste report</button>
       <button type="button" class="ghost sm" id="addAddr">Address</button>
+      <button type="button" class="ghost sm" id="addHelp">Helper</button>
       <span class="sep"></span>
       <span class="saved" id="addMeta"></span>
     </div>
@@ -527,6 +531,15 @@ td.diff{text-align:right;font-weight:700}
       <div style="padding-bottom:5px"><button type="button" class="ghost sm" id="addForget">Forget</button></div>
     </div>
     <div class="msg" id="m8"></div>
+    <div class="hide" id="addHelper">
+      <p class="disc">Save this once as a bookmark on the iPad. Then, with the report open in
+        Safari and signed in, choose that bookmark: it reads the table on the page you are
+        already looking at and hands it straight back here — no copying.</p>
+      <textarea id="addHelpCode" readonly rows="3"></textarea>
+      <p class="disc">Safari → Bookmarks → Edit → pick any bookmark → replace its address with
+        the text above and name it <b>ADD/CDD → OFP</b>. It only ever reads the page you run it
+        on and sends nothing anywhere.</p>
+    </div>
     <div id="addOut"></div>
   </div>
 
@@ -562,15 +575,17 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 25</h3>
+        <h3>New in version 26</h3>
         <ul>
-          <li>A <b>Deferred defects</b> card shows the ADD/CDD entries for the tail in the loaded
-              plan. <b>Open report</b> hands the report to Safari, which asks for your password;
-              copy it there and <b>Paste report</b> reads it back here, keeping only the rows for
-              your aeroplane. The address is pasted once and kept on this iPad.</li>
-          <li>This is the one card that needs a signal. What you paste stays on the device and is
-              never sent anywhere; once pasted it is there with the radios off, like everything
-              else.</li>
+          <li>The defects list can come across on its own. Press <b>Helper</b> once and save what
+              it shows as a bookmark on this iPad. Then sign in to the report in Safari as usual
+              and choose that bookmark: it reads the table on the page you are already looking at
+              and hands the rows straight back here, with no copying.</li>
+          <li>It works because it runs inside the report's own page, where reading the table is
+              allowed — this app still cannot fetch that server itself. Nothing is sent anywhere:
+              the rows travel in the part of the address that never reaches a server, and it is
+              wiped as soon as they are read.</li>
+          <li><b>Paste report</b> still works if you would rather copy by hand.</li>
         </ul>
       </div>
 
@@ -735,7 +750,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 25 &nbsp;·&nbsp; published 16 Aug 2026 13:40 UTC</span></p>
+      <span class="build">Version 26 &nbsp;·&nbsp; published 16 Aug 2026 15:10 UTC</span></p>
 
     </div>
   </div>
@@ -1396,6 +1411,7 @@ async function loadBuffer(name, size, buf, resumed){
     $('#c5').classList.remove('hide');
     if (planReg()) $('#cAdd').classList.remove('hide');
     renderAdd();
+    applyPendingAdd();
     if (st && st.etd){
       $('#calc').click();
       msg('#m1', resumed
@@ -1651,6 +1667,66 @@ $('#addOpen').onclick = () => {
   const a = document.createElement('a');
   a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
   document.body.appendChild(a); a.click(); a.remove();
+};
+
+/* ---- the helper that runs on the report's own page ----
+   A page may not read another origin's document, which is why this app cannot
+   fetch the report itself. A bookmarklet is not subject to that: it runs *inside*
+   the report's page, with the crew's own session, so reading the table there is
+   ordinary same-origin work. It then hands the rows back in the URL fragment,
+   which never leaves the device — fragments are not sent to any server.
+   So: sign in as usual, tap the bookmark, and the list is here. */
+function helperCode(){
+  const back = location.origin + location.pathname;
+  // Kept to one line and deliberately small: this has to be pasted into a
+  // bookmark's address field by hand.
+  const src = `(function(){
+var t=null,n=0;
+document.querySelectorAll('table').forEach(function(x){if(x.rows.length>n){n=x.rows.length;t=x}});
+if(!t){alert('No table on this page.');return}
+var s=[].map.call(t.rows,function(r){
+return [].map.call(r.cells,function(c){return c.textContent.replace(/\\s+/g,' ').trim()}).join('\\t')
+}).join('\\n');
+if(s.length>60000)s=s.slice(0,60000);
+location.href='${back}#addcdd='+encodeURIComponent(s);
+})()`.replace(/\n/g, '');
+  return 'javascript:' + src;
+}
+
+// The fragment stays on the device; it is stripped as soon as it is read so a
+// screenshot or a shared link cannot carry the report with it.
+function addFromHash(){
+  const m = /^#addcdd=([\s\S]*)$/.exec(location.hash || '');
+  if (!m) return;
+  let tsv = '';
+  try { tsv = decodeURIComponent(m[1]); } catch(e){ tsv = m[1]; }
+  history.replaceState(null, '', location.pathname + location.search);
+  if (!tsv.trim()) return;
+  pendingAdd = tsv;
+  applyPendingAdd();
+}
+// The helper arrives as a fresh page load and the plan comes back from storage a
+// moment later, so the rows wait for the tail rather than being thrown away.
+let pendingAdd = null;
+function applyPendingAdd(){
+  if (!pendingAdd || !planReg()) return;
+  const tsv = pendingAdd; pendingAdd = null;
+  // Tab-separated rows from the helper, rebuilt as a table so the column logic
+  // that reads a pasted grid is the same code and not a second copy of it.
+  const esc2 = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const html = '<table>' + tsv.split('\n').map(line =>
+    '<tr>' + line.split('\t').map(c => '<td>' + esc2(c) + '</td>').join('') + '</tr>').join('') + '</table>';
+  takeAddCdd(html, tsv);
+}
+addEventListener('hashchange', addFromHash);
+
+$('#addHelp').onclick = () => {
+  const box = $('#addHelper');
+  box.classList.toggle('hide');
+  if (!box.classList.contains('hide')){
+    $('#addHelpCode').value = helperCode();
+    $('#addHelpCode').select();
+  }
 };
 
 $('#addPaste').onclick = async () => {
@@ -2974,6 +3050,8 @@ async function resumeSession(){
   await loadBuffer(rec.name, rec.size, rec.buf, true);
 }
 resumeSession();
+// Read before the plan is back: applyPendingAdd holds it until there is a tail.
+addFromHash();
 
 /* ================= PDF generation ================= */
 function build(){

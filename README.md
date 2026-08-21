@@ -248,7 +248,24 @@ cross-origin permission, and its permission check answers "unauthorised" to the 
 credential-free probe, so Safari abandons the request before it leaves the iPad. That is a setting
 on the company server, not something the app can work around.
 
-So the report comes across on the clipboard:
+### The helper — no copying
+
+Press **Helper** and save what it shows as a bookmark on the iPad. Then sign in to the report in
+Safari as usual and choose that bookmark: it reads the table on the page you are already looking
+at and hands the rows straight back to the companion, filtered to your aeroplane.
+
+It works for the same reason the app's own fetch cannot: the bookmark runs **inside the report's
+page**, where reading that table is ordinary same-origin work, with your own session and no extra
+privileges. The rows travel back in the part of the address after the `#`, which browsers never
+send to any server, and the companion wipes it the moment it has read it — so it cannot survive in
+a screenshot or a shared link.
+
+To install it: Safari → Bookmarks → Edit → pick any bookmark → replace its address with the text
+the Helper button shows, and name it something like `ADD/CDD → OFP`.
+
+### Or by hand
+
+If you would rather copy it yourself:
 
 1. **Open report** hands the address to Safari, where the password prompt is allowed and your saved
    credentials apply.
