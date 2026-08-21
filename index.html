@@ -115,6 +115,17 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 .wxrole{font-weight:400;letter-spacing:0;text-transform:none}
 .ntms{max-height:min(52vh,480px);overflow:auto;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain}
+/* The defects list borrows the NOTAM box's scrolling and the table's type; it is a
+   grid pasted from elsewhere, so the columns are whatever the report had. */
+.addbox{background:var(--panel2);border:1px solid var(--line);border-radius:8px}
+.addtbl{font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
+.addtbl td{white-space:normal;vertical-align:top;padding:6px 8px}
+.addtbl th{white-space:nowrap}
+#addPasteBox{display:block;width:100%;margin:12px 0 0;min-height:110px;padding:10px;
+  border:1px dashed var(--line);border-radius:8px;background:var(--panel2);color:var(--txt);
+  font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
+#addUrl{width:100%}
+#cAdd .grow{flex:1 1 260px}
 .ntm{padding:12px;border-bottom:1px solid var(--line2)}
 .ntm:last-child{border-bottom:0}
 .ntm .id{font:700 12px/1.4 ui-monospace,Menlo,monospace;color:var(--acc)}
@@ -495,6 +506,30 @@ td.diff{text-align:right;font-weight:700}
     <div id="wxOut"></div>
   </div>
 
+  <div class="card hide" id="cAdd">
+    <div class="step"><i>ADD</i> Deferred defects <em class="wxrole" id="addReg"></em></div>
+    <!-- The one card that needs a signal. Everything else here works with the radios
+         off; the report lives on the company server and asks for a password. -->
+    <p class="disc">Fetched from the company server, which asks for your password. What you paste
+      stays on this iPad — it is never sent anywhere.</p>
+    <div class="row">
+      <button type="button" class="ghost sm" id="addOpen">Open report</button>
+      <button type="button" class="ghost sm" id="addPaste">Paste report</button>
+      <button type="button" class="ghost sm" id="addAddr">Address</button>
+      <span class="sep"></span>
+      <span class="saved" id="addMeta"></span>
+    </div>
+    <div class="row hide" id="addSet">
+      <div class="grow"><label for="addUrl">Report address</label>
+        <input type="text" id="addUrl" placeholder="https://…" autocomplete="off"
+               autocorrect="off" spellcheck="false"></div>
+      <div style="padding-bottom:5px"><button type="button" class="ghost sm" id="addSave">Save</button></div>
+      <div style="padding-bottom:5px"><button type="button" class="ghost sm" id="addForget">Forget</button></div>
+    </div>
+    <div class="msg" id="m8"></div>
+    <div id="addOut"></div>
+  </div>
+
   <div class="card hide" id="c8">
     <div class="step"><i>MAP</i> Wind components &amp; weather charts</div>
     <p class="disc" id="chartInfo"></p>
@@ -527,15 +562,15 @@ td.diff{text-align:right;font-weight:700}
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
       <div class="new">
-        <h3>New in version 24</h3>
+        <h3>New in version 25</h3>
         <ul>
-          <li>A fuel check falls due when you actually pass the waypoint it sits on — that
-              waypoint's own ATO once you have entered one, the plan's time carried by however
-              far the flight is running from it until then. The figure follows the actuals as
-              they go in, instead of standing on a half-hour grid drawn at takeoff.</li>
-          <li>The page is left exactly where you stop it. A resting scroll is no longer pulled
-              onto the nearest card — that was the last of three attempts to help the scrolling
-              along, and it went the way of the other two.</li>
+          <li>A <b>Deferred defects</b> card shows the ADD/CDD entries for the tail in the loaded
+              plan. <b>Open report</b> hands the report to Safari, which asks for your password;
+              copy it there and <b>Paste report</b> reads it back here, keeping only the rows for
+              your aeroplane. The address is pasted once and kept on this iPad.</li>
+          <li>This is the one card that needs a signal. What you paste stays on the device and is
+              never sent anywhere; once pasted it is there with the radios off, like everything
+              else.</li>
         </ul>
       </div>
 
@@ -700,7 +735,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 24 &nbsp;·&nbsp; published 16 Aug 2026 11:05 UTC</span></p>
+      <span class="build">Version 25 &nbsp;·&nbsp; published 16 Aug 2026 13:40 UTC</span></p>
 
     </div>
   </div>
@@ -1326,7 +1361,8 @@ async function loadBuffer(name, size, buf, resumed){
   $('#fname').textContent = name + '  ·  ' + (size / 1048576).toFixed(1) + ' MB';
   hide('#m1'); hide('#m3');
   $('#c2').classList.remove('hide');
-  for (const c of ['#c3','#c4','#c5','#c6','#c7','#c8']) $(c).classList.add('hide');
+  for (const c of ['#c3','#c4','#c5','#c6','#c7','#c8','#cAdd']) $(c).classList.add('hide');
+  ADD = null;
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
@@ -1353,10 +1389,13 @@ async function loadBuffer(name, size, buf, resumed){
       alerted.clear(); for (const m of st.alerted || []) alerted.add(m);
       if (st.alarm !== undefined) $('#altAlert').checked = st.alarm;
       DCT.marks = Array.isArray(st.dct) ? st.dct : []; syncDct();
+      ADD = st.add && Array.isArray(st.add.rows) ? st.add : null;
     }
     renderFields();
     if (FIELDS.length) $('#c4').classList.remove('hide');
     $('#c5').classList.remove('hide');
+    if (planReg()) $('#cAdd').classList.remove('hide');
+    renderAdd();
     if (st && st.etd){
       $('#calc').click();
       msg('#m1', resumed
@@ -1462,6 +1501,191 @@ function renderWx(){
   document.querySelectorAll('#wxOut .ntms').forEach(scrollHint);
 }
 $('#wxApt').onchange = renderWx;
+
+/* ================= deferred defects (ADD/CDD) =================
+   The report lives on the company server behind a password, and that server sends
+   no Access-Control-Allow-Origin — its CORS preflight answers 401, which a browser
+   sends without credentials by specification, so Safari abandons an app-initiated
+   fetch before it leaves the iPad. Measured, not assumed. The report therefore
+   crosses on the clipboard: Open report hands it to Safari, where the password
+   prompt is allowed; copy it there; Paste report reads it here.
+   Nothing is uploaded and nothing is fetched by this page. */
+let ADD = null;                                   // { at, reg, headers, rows, read, cols }
+const ADDR_KEY = 'etofill:addcdd';
+
+// The tail the plan is filed for. REG/ sits in the ICAO flight plan, which is
+// already parsed and kept whole.
+function planReg(){
+  const m = ICAO && /\bREG\/([A-Z0-9-]{3,8})/.exec(ICAO.oneLine || '');
+  return m ? m[1].toUpperCase() : null;
+}
+const bare = s => (s || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+const sameTail = (a, b) => !!bare(a) && bare(a) === bare(b);
+// EIKEA must find EI-KEA and vice versa, without matching it inside a longer word.
+const tailRe = reg => new RegExp('(^|[^A-Z0-9])' + bare(reg).split('').join('-?')
+                               + '([^A-Z0-9]|$)', 'i');
+
+/* ---- the address, kept on this device only ----
+   The repository is public and the report URL carries a subscription id, a user id
+   and internal server names, so it is never committed. https only: a stored
+   javascript: address would run in this page's own origin when opened. */
+const addrGet = () => { try { return localStorage.getItem(ADDR_KEY) || ''; } catch(e){ return ''; } };
+function addrSet(v){
+  let u;
+  try { u = new URL(v.trim()); } catch(e){ return 'That is not a web address.'; }
+  if (u.protocol !== 'https:') return 'Only https addresses are accepted — ' + u.protocol + ' is not.';
+  try { localStorage.setItem(ADDR_KEY, u.href); } catch(e){ return 'This device will not store it.'; }
+  return null;
+}
+
+/* ---- reading the report ----
+   A MicroStrategy grid puts real HTML on the clipboard, so that is preferred: the
+   columns survive and the tail can be matched in its own column rather than
+   anywhere in the line. Plain text is the fallback. */
+const REG_SHAPE = /^[A-Z]{1,2}-?[A-Z0-9]{3,5}$/i;
+const REG_HEAD = /^(a\/?c|a\/?c\s*reg\.?|aircraft|ac\s*reg\.?|reg\.?|registration|tail|fleet)$/i;
+
+function tableRows(html){
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  let best = [];
+  for (const t of doc.querySelectorAll('table')){
+    const rows = [...t.rows]
+      .map(r => [...r.cells].map(c => c.textContent.replace(/\s+/g, ' ').trim()))
+      .filter(r => r.some(c => c));
+    if (rows.length > best.length) best = rows;
+  }
+  return best;
+}
+
+// Which column holds the tail: by header name first, and failing that by the
+// column whose cells most often look like a registration. Reports are not all
+// laid out alike and this one has never been seen from here.
+function regColumn(rows){
+  for (let r = 0; r < Math.min(4, rows.length); r++){
+    const i = rows[r].findIndex(c => REG_HEAD.test(c));
+    if (i >= 0) return { col: i, head: r };
+  }
+  const width = Math.max(0, ...rows.map(r => r.length));
+  let col = -1, hits = 0;
+  for (let c = 0; c < width; c++){
+    const n = rows.filter(r => r[c] && REG_SHAPE.test(r[c])).length;
+    if (n > hits){ hits = n; col = c; }
+  }
+  return hits >= 2 ? { col, head: -1 } : null;
+}
+
+function readAddCdd(html, text, reg){
+  const rows = html ? tableRows(html) : [];
+  if (rows.length){
+    const pick = regColumn(rows);
+    const headers = pick && pick.head >= 0 ? rows[pick.head] : [];
+    const body = rows.filter((r, i) => i !== (pick ? pick.head : -1));
+    const kept = pick ? body.filter(r => sameTail(r[pick.col], reg)) : [];
+    return { headers, rows: kept, read: body.length,
+             cols: headers.filter(Boolean).slice(0, 8) };
+  }
+  const lines = (text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const re = tailRe(reg);
+  return { headers: [], rows: lines.filter(l => re.test(l)).map(l => [l]),
+           read: lines.length, cols: [] };
+}
+
+function renderAdd(){
+  const reg = planReg();
+  $('#addReg').textContent = reg || '';
+  const out = $('#addOut'), meta = $('#addMeta');
+  if (!ADD){ out.innerHTML = ''; meta.textContent = ''; return; }
+  meta.textContent = 'read ' + fmt(ADD.at) + 'Z';
+  if (!ADD.rows.length){
+    // Say what was actually seen, so one photograph from the aircraft is enough to
+    // finish the job — the real report has never been readable from here.
+    out.innerHTML = '<p class="disc">Nothing for <b>' + esc(ADD.reg || '—') + '</b> in what was pasted. '
+      + 'Read ' + ADD.read + ' row' + (ADD.read === 1 ? '' : 's')
+      + (ADD.cols.length ? '; columns seen: ' + esc(ADD.cols.join(', ')) : '; no column headings found')
+      + '.</p>';
+    return;
+  }
+  const head = ADD.headers.length
+    ? '<thead><tr>' + ADD.headers.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead>' : '';
+  const body = ADD.rows.map(r => '<tr>' + r.map(c => '<td>' + esc(c) + '</td>').join('') + '</tr>').join('');
+  out.innerHTML = '<div class="scrollwrap"><div class="ntms addbox"><table class="addtbl">'
+                + head + '<tbody>' + body + '</tbody></table></div></div>';
+  meta.textContent += '  ·  ' + ADD.rows.length + ' item' + (ADD.rows.length === 1 ? '' : 's');
+  scrollHint(out.querySelector('.addbox'));
+}
+
+function takeAddCdd(html, text){
+  const reg = planReg();
+  if (!reg){ msg('#m8', 'No REG/ in this flight plan, so there is no tail to match against.', 'warn'); return; }
+  if (!(html || text)){ msg('#m8', 'Nothing was pasted.', 'warn'); return; }
+  ADD = Object.assign({ at: nowUtc(), reg }, readAddCdd(html, text, reg));
+  hide('#m8');
+  renderAdd();
+  save();
+}
+
+$('#addAddr').onclick = () => {
+  const box = $('#addSet');
+  box.classList.toggle('hide');
+  if (!box.classList.contains('hide')){ $('#addUrl').value = addrGet(); $('#addUrl').focus(); }
+};
+$('#addSave').onclick = () => {
+  const err = addrSet($('#addUrl').value);
+  if (err) return msg('#m8', err, 'err');
+  $('#addSet').classList.add('hide');
+  msg('#m8', 'Address saved on this iPad.', 'ok');
+};
+$('#addForget').onclick = () => {
+  try { localStorage.removeItem(ADDR_KEY); } catch(e){}
+  $('#addUrl').value = '';
+  msg('#m8', 'Address forgotten.', 'ok');
+};
+$('#addOpen').onclick = () => {
+  const u = addrGet();
+  if (!u){
+    $('#addSet').classList.remove('hide'); $('#addUrl').focus();
+    return msg('#m8', 'Paste the report address once and it is kept on this iPad.', 'warn');
+  }
+  // A real anchor, so a home-screen app hands the report to Safari and keeps
+  // running with the plan loaded rather than navigating away from it.
+  const a = document.createElement('a');
+  a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
+  document.body.appendChild(a); a.click(); a.remove();
+};
+
+$('#addPaste').onclick = async () => {
+  if (navigator.clipboard && navigator.clipboard.read){
+    try {
+      const items = await navigator.clipboard.read();
+      let html = '', text = '';
+      for (const it of items){
+        if (!html && it.types.includes('text/html')) html = await (await it.getType('text/html')).text();
+        if (!text && it.types.includes('text/plain')) text = await (await it.getType('text/plain')).text();
+      }
+      if (html || text) return takeAddCdd(html, text);
+    } catch(e){ /* denied or unsupported — fall through to the box */ }
+  }
+  $('#addSet').classList.add('hide');
+  msg('#m8', 'Paste the report into the box below.', 'warn');
+  showAddBox();
+};
+
+// iOS gives a page no clipboard of its own worth relying on, so the paste lands in
+// a box the crew pastes into — the same answer the PDF button reached.
+function showAddBox(){
+  if ($('#addPasteBox')) return $('#addPasteBox').focus();
+  const ta = document.createElement('textarea');
+  ta.id = 'addPasteBox'; ta.placeholder = 'Paste here';
+  ta.addEventListener('paste', e => {
+    const d = e.clipboardData;
+    if (!d) return;
+    e.preventDefault();
+    takeAddCdd(d.getData('text/html'), d.getData('text/plain'));
+    ta.remove();
+  });
+  $('#addOut').before(ta);
+  ta.focus();
+}
 
 /* ================= chart viewer =================
    Decoding a 1800x1451 bitmap is not free, so it happens when the crew asks for
@@ -2677,7 +2901,8 @@ function writeState(){
   try {
     localStorage.setItem(KEY, JSON.stringify({
       etd: $('#etd').value, alt: $('#alt').checked, act: ACT, txt: TXT, alt2: ALT,
-      alerted: [...alerted], alarm: $('#altAlert').checked, dct: DCT.marks, at: nowUtc() }));
+      alerted: [...alerted], alarm: $('#altAlert').checked, dct: DCT.marks,
+      add: ADD, at: nowUtc() }));
     const d = new Date();
     $('#saved').textContent = 'saved ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
   } catch(e){ $('#saved').textContent = 'storage unavailable'; }
@@ -2872,7 +3097,8 @@ $('#reset').onclick = () => {
   showIcao(null); showOfp(null); showFigs(null); showWx(null); showCharts(null); openCharts(false);
   $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
   $('#fname').textContent = ''; $('#saved').textContent = '';
-  for (const c of ['#c2','#c3','#c4','#c5','#c6','#c7','#c8']) $(c).classList.add('hide');
+  ADD = null; renderAdd(); hide('#m8'); $('#addSet').classList.add('hide');
+  for (const c of ['#c2','#c3','#c4','#c5','#c6','#c7','#c8','#cAdd']) $(c).classList.add('hide');
   $('#fpl').className = 'hint hide';
   hide('#m1'); hide('#m2'); hide('#m3');
 };
