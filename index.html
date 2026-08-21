@@ -115,20 +115,6 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 .wxrole{font-weight:400;letter-spacing:0;text-transform:none}
 .ntms{max-height:min(52vh,480px);overflow:auto;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain}
-/* The defects list borrows the NOTAM box's scrolling and the table's type; it is a
-   grid pasted from elsewhere, so the columns are whatever the report had. */
-.addbox{background:var(--panel2);border:1px solid var(--line);border-radius:8px}
-.addtbl{font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
-.addtbl td{white-space:normal;vertical-align:top;padding:6px 8px}
-.addtbl th{white-space:nowrap}
-#addHelpCode{display:block;width:100%;margin:8px 0;padding:10px;border:1px solid var(--line);
-  border-radius:8px;background:var(--panel2);color:var(--dim);resize:vertical;
-  font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}
-#addPasteBox{display:block;width:100%;margin:12px 0 0;min-height:110px;padding:10px;
-  border:1px dashed var(--line);border-radius:8px;background:var(--panel2);color:var(--txt);
-  font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
-#addUrl{width:100%}
-#cAdd .grow{flex:1 1 260px}
 .ntm{padding:12px;border-bottom:1px solid var(--line2)}
 .ntm:last-child{border-bottom:0}
 .ntm .id{font:700 12px/1.4 ui-monospace,Menlo,monospace;color:var(--acc)}
@@ -509,40 +495,6 @@ td.diff{text-align:right;font-weight:700}
     <div id="wxOut"></div>
   </div>
 
-  <div class="card hide" id="cAdd">
-    <div class="step"><i>ADD</i> Deferred defects <em class="wxrole" id="addReg"></em></div>
-    <!-- The one card that needs a signal. Everything else here works with the radios
-         off; the report lives on the company server and asks for a password. -->
-    <p class="disc">Fetched from the company server, which asks for your password. What you paste
-      stays on this iPad — it is never sent anywhere.</p>
-    <div class="row">
-      <button type="button" class="ghost sm" id="addOpen">Open report</button>
-      <button type="button" class="ghost sm" id="addPaste">Paste report</button>
-      <button type="button" class="ghost sm" id="addAddr">Address</button>
-      <button type="button" class="ghost sm" id="addHelp">Helper</button>
-      <span class="sep"></span>
-      <span class="saved" id="addMeta"></span>
-    </div>
-    <div class="row hide" id="addSet">
-      <div class="grow"><label for="addUrl">Report address</label>
-        <input type="text" id="addUrl" placeholder="https://…" autocomplete="off"
-               autocorrect="off" spellcheck="false"></div>
-      <div style="padding-bottom:5px"><button type="button" class="ghost sm" id="addSave">Save</button></div>
-      <div style="padding-bottom:5px"><button type="button" class="ghost sm" id="addForget">Forget</button></div>
-    </div>
-    <div class="msg" id="m8"></div>
-    <div class="hide" id="addHelper">
-      <p class="disc">Save this once as a bookmark on the iPad. Then, with the report open in
-        Safari and signed in, choose that bookmark: it reads the table on the page you are
-        already looking at and hands it straight back here — no copying.</p>
-      <textarea id="addHelpCode" readonly rows="3"></textarea>
-      <p class="disc">Safari → Bookmarks → Edit → pick any bookmark → replace its address with
-        the text above and name it <b>ADD/CDD → OFP</b>. It only ever reads the page you run it
-        on and sends nothing anywhere.</p>
-    </div>
-    <div id="addOut"></div>
-  </div>
-
   <div class="card hide" id="c8">
     <div class="step"><i>MAP</i> Wind components &amp; weather charts</div>
     <p class="disc" id="chartInfo"></p>
@@ -574,150 +526,93 @@ td.diff{text-align:right;font-weight:700}
       <!-- Release convention: mark what changed with class="new" and strip the
            previous release's marks in the same commit, so the rules always point
            at this version's changes and nothing older. -->
-      <div class="new">
-        <h3>New in version 26</h3>
-        <ul>
-          <li>The defects list can come across on its own. Press <b>Helper</b> once and save what
-              it shows as a bookmark on this iPad. Then sign in to the report in Safari as usual
-              and choose that bookmark: it reads the table on the page you are already looking at
-              and hands the rows straight back here, with no copying.</li>
-          <li>It works because it runs inside the report's own page, where reading the table is
-              allowed — this app still cannot fetch that server itself. Nothing is sent anywhere:
-              the rows travel in the part of the address that never reaches a server, and it is
-              wiped as soon as they are read.</li>
-          <li><b>Paste report</b> still works if you would rather copy by hand.</li>
-        </ul>
-      </div>
+
+      <h3>Install on the home screen</h3>
+      <p>Do this once: it then runs offline, looks like a normal app, and saving works properly.</p>
+      <ol>
+        <li>Open this page in <b>Safari</b> — Chrome cannot add to the home screen.</li>
+        <li>Tap <b>Share</b> → <b>Add to Home Screen</b> → <b>Add</b>.</li>
+        <li>Launch from the new icon. Try it once in airplane mode.</li>
+      </ol>
+      <div class="tip">Opening the PDF straight from the Files app puts iPadOS into a preview mode
+      where saving and the share sheet may not work — the home screen icon avoids that.</div>
 
       <h3>Quick start</h3>
       <ol>
-        <li><b>Load</b> the flight plan PDF. The ICAO flight plan is pulled out and shown
-            under the box. When it is printed across a page break it is stitched back into
-            one text, page headers removed, and <b>Copy</b> gives it as a single line.</li>
-        <li><b>Document fields</b> — ATIS, ATC CLRNC, altimeter settings, PIC BLOCK.
-            Free-text boxes also use the empty space to the right of the blank and the
-            spare line under it, so there is far more room than the dots suggest. The
-            counter shows what is left, and text wraps between lines on a space.
-            <b>PIC BLOCK</b> carries the planned block fuel at the right of the box, greyed and
-            named — <b>PLANNED BLKF (29647)</b> — straight off the same line of the form. It
-            stays there as you type, so the two figures can be compared, and it is never
-            written into the document.</li>
-        <li><b>Takeoff time</b> in UTC, four digits. Every calculation follows from it.</li>
-        <li><b>Actuals</b> — ATO and remaining fuel per waypoint. The grey hint in each box is
-            the calculated value, so you only type where reality differed. Enter moves on.</li>
+        <li><b>Load</b> the flight plan PDF. The ICAO flight plan appears under the box,
+            reassembled across page breaks; <b>Copy</b> gives it as one line.</li>
+        <li><b>Document fields</b> — ATIS, ATC CLRNC, altimeter settings, PIC BLOCK. Free text
+            uses the space around the dots, with a counter for what's left. PIC BLOCK shows the
+            planned block fuel greyed alongside, for reference only — never written into the
+            document.</li>
+        <li><b>Takeoff time</b>, UTC, four digits — everything else follows from it.</li>
+        <li><b>Actuals</b> — ATO and remaining fuel per waypoint. Enter moves to the next field.</li>
         <li><b>Altimeter cross-checks</b> — one row per hour of flight.</li>
-        <li><b>Save PDF</b> — the share sheet offers Save to Files, AirDrop, Print, ForeFlight.</li>
-        <li><b>Weather &amp; NOTAMs</b> — pick an aerodrome to read the METAR, TAF and NOTAMs
-            that came with this package.</li>
-        <li><b>Charts</b> — page through the wind components and the significant weather
-            sheets on their own.</li>
+        <li><b>Save PDF</b> — Save to Files, AirDrop, Print, or ForeFlight.</li>
+        <li><b>Weather &amp; NOTAMs</b> and <b>Charts</b> — read straight out of the loaded
+            package.</li>
       </ol>
-      <div class="tip">The ETD button under the time box inserts the off-block time from the plan.
-      Takeoff is normally later, so treat it as a starting point.</div>
-
-      <h3>Put it on the iPad home screen</h3>
-      <p>Worth doing once: it then runs offline, looks like a normal app, and saving works properly.</p>
-      <ol>
-        <li>Open this page in <b>Safari</b>. Chrome cannot add to the home screen.</li>
-        <li>Tap the <b>Share</b> button in the toolbar.</li>
-        <li>Scroll down and choose <b>Add to Home Screen</b>, then <b>Add</b>.</li>
-        <li>Launch it from the new icon. Try it once in airplane mode to confirm it works offline.</li>
-      </ol>
-      <div class="tip">Opening the file directly from the Files app puts iPadOS into a preview mode
-      where saving and the share sheet may not work. The home screen icon avoids that.</div>
+      <div class="tip">The ETD button fills in the off-block time from the plan — takeoff is
+      normally later, so check it.</div>
 
       <h3>Altimeter cross-checks</h3>
-      <p>Company rules require an hourly comparison recorded in the plan. The app finds the waypoint
-      on each full hour after takeoff and prints your reading on the blank line under it, so the time
-      is read from the ETO and ATO just above.</p>
-      <p>Rows watch the clock in UTC: amber when a check is close, red once it is overdue, with a
-      short tone the first time. Saving with checks still missing asks for confirmation.</p>
+      <p>Company rule: an hourly comparison. The app finds the waypoint on each full hour after
+      takeoff and prints your reading on the line under it. A row turns amber as it nears, red
+      once overdue, with a short tone the first time. Saving with checks missing asks for
+      confirmation.</p>
 
       <h3>Fuel checks</h3>
-      <p>Company rule: a fuel check on overflying a waypoint, or at least every
-      30 minutes. This is watched on the waypoint card itself, because the record it needs — the
-      fuel column — is already there.</p>
-      <p>One figure among the others carries it: the time the next check is due,
-      amber as it approaches and red once it has passed unrecorded, with a warning above the
-      table. The fuel box of the waypoint the check falls on — the last one before the
-      half-hour mark — is ringed, so it is plain where the reading goes. A figure entered at any
-      point inside that half hour still counts; only the ring is that precise. Enter it and the
-      ring, the warning and the colour all clear. Saving with a check overdue asks for confirmation.</p>
+      <p>Company rule: a fuel check on overflying a waypoint, or at least every 30 minutes. The
+      next due time shows above the table — amber as it nears, red once overdue — and the fuel
+      box it belongs to is ringed. A figure entered anywhere inside that half hour clears it.
+      Saving with a check overdue asks for confirmation.</p>
 
       <h3>Following the flight</h3>
-      <p>The waypoint table watches the clock in UTC. Points already behind you fade back, the
-      last one passed is shaded, and the one you are running to is highlighted with a bar down
-      its left edge.</p>
-      <p>The table brings that row to its middle as the flight moves on. Only the
-      table scrolls — the page stays where you left it. It holds still while a box in the table
-      has focus, and for twenty seconds after you scroll it by hand, so it never moves under
-      your finger while you are typing.</p>
-      <p>The highlight follows the plan rather than your typing, so it stays right even when the
-      actuals are a few points behind.</p>
+      <p>The table tracks the clock: passed points fade back, the last one is shaded, and the
+      one you're running to is highlighted and kept centred. It holds still while a box has
+      focus, and for twenty seconds after you scroll by hand. The highlight follows your
+      <b>ATO</b> entries rather than the clock, so it stays right even when actuals run a few
+      points behind.</p>
 
       <h3>Direct to a waypoint</h3>
-      <p>Cleared direct, and the route being flown no longer matches the form.
-      Press <b>Direct to…</b> and tap the waypoint you are going to. The waypoints cut out stay
-      where they are, struck through and faded — the order has to keep matching the paper form,
-      because that is where the ATOs are written — and the target is marked <b>DCT</b>. The
-      highlight then steps over the skipped ones.</p>
-      <p>Nothing about this reaches the document, and no ETO is rewritten: it only
-      moves the highlight. The chip in the toolbar undoes it, and each direct remembers exactly
-      which waypoints it cut out, so undoing one leaves any other alone.</p>
-      <p>The highlight also follows your <b>ATO</b> entries. The most recent one
-      sets how far the flight is running from the plan, and every later waypoint is judged
-      against that — shown next to the waypoint as, for example, <b>-12 on plan</b>.</p>
+      <p>Press <b>Direct to…</b> and tap the waypoint you're cleared to. Skipped waypoints stay
+      where they are, struck through and faded — the order still has to match the paper form —
+      and the target is marked <b>DCT</b>. Nothing reaches the document and no ETO is rewritten;
+      only the highlight moves. The toolbar chip undoes it, and each direct remembers just the
+      waypoints it cut out.</p>
 
       <h3>Weather and NOTAMs</h3>
-      <p>Everything on the card is read out of the loaded package itself — the METAR, TAF and
-      NOTAM pages that came with the flight plan. Nothing is fetched from the network and no
-      account or key is needed.</p>
-      <p>The dropdown holds three groups: <b>this flight</b> — departure, destination, alternate
-      and en-route alternate; <b>areas along the route</b> — the FIRs the plan crosses; and
-      <b>other aerodromes</b> the package happens to carry. Pick one and you get its METAR and
-      TAF as printed, then each NOTAM with its number, validity and subject, then the company
-      NOTAMs. Long NOTAM lists scroll inside the card.</p>
-      <p>They are as old as the document. Re-brief from the current source before acting on
-      anything here.</p>
-
-      <h3>Getting the plan in</h3>
-      <p>Tap the box and pick the file. On the iPad you can also <b>drag the PDF
-      out of Files</b> onto the page — put Files alongside in Split View or Slide Over, press
-      and hold the plan, and drop it on the box.</p>
-      <p>On a computer the plan can be pasted as well, with <b>Paste a PDF</b> or
-      straight into the page. That button is not shown on the iPad: Safari does not hand a PDF
-      to a web page at all, so it could never do anything there.</p>
-
-      <h3>Updates</h3>
-      <p>The app updates itself; the icon never needs removing and adding again. Open it once
-      with a connection and, if no plan is loaded, it comes straight back on the new version.
-      If you are already working on a document it only says a new version is ready and waits
-      for the next launch, so nothing you have entered moves while you are using it.</p>
-      <p>The page itself is fetched fresh whenever there is a connection, so a new version is
-      picked up on the next launch. If the network does not answer within a couple of seconds
-      the app starts from its cache instead, and a slow link never delays it.</p>
-      <p>Offline it does not update at all — the version you leave the ground with is the
-      version you fly with.</p>
+      <p>Read entirely out of the loaded package — no network, no account, no key. The dropdown
+      groups aerodromes as <b>this flight</b>, <b>areas along the route</b> and <b>other
+      aerodromes</b>. Each gives METAR and TAF as printed, then NOTAMs with their number,
+      validity and subject, then company NOTAMs. Reports are exactly as old as the document —
+      re-brief from the current source before acting on them.</p>
 
       <h3>Wind components and weather charts</h3>
-      <p>The package carries a handful of full-page pictures — the wind components,
-      tropopause and MORA profile along the route, and the significant weather charts with
-      the route drawn on them. <b>Open charts</b> puts them in a viewer of their own so you
-      can page through those pages without hunting for them in the PDF.</p>
-      <p>Arrow keys or the Prev and Next buttons move between charts, <b>Zoom</b> switches
-      between fitting the whole sheet on screen and full size with scrolling, and Escape
-      closes. Each chart is decoded the first time you open it and stays ready afterwards.</p>
+      <p><b>Open charts</b> pages through the wind components, tropopause/MORA profile and
+      significant weather charts on their own. Arrow keys or Prev/Next move between them,
+      <b>Zoom</b> toggles full size with scrolling, Escape closes.</p>
+
+      <h3>Getting the plan in</h3>
+      <p>Tap the box, or drag the PDF out of Files — put it alongside in Split View or Slide
+      Over, press and hold the plan, and drop it on the box. On a computer it can also be
+      pasted; not on iPad, since Safari never hands a PDF to a web page.</p>
 
       <h3>If iPadOS closes the app</h3>
-      <p>iPadOS drops background apps when it needs memory. The plan and everything typed into
-      it are kept on the device, so opening the app again brings the same document back with
-      the takeoff time, the actuals and the altimeter readings already in place, and the header
-      shows which OFP it is. Checks already announced do not sound a second time.</p>
-      <p><b>Reset</b> is what clears it and returns to an empty drop zone.</p>
+      <p>The plan and everything entered are kept on the device, so opening the app again
+      restores it — takeoff time, actuals, altimeter readings and which OFP it is. Checks
+      already announced don't sound again. <b>Reset</b> clears it and returns to an empty drop
+      zone.</p>
+
+      <h3>Updates</h3>
+      <p>The app updates itself — the icon never needs removing and re-adding. With no plan
+      loaded it comes back on the new version on next launch; with one open it waits until you
+      close it, so nothing moves while you're using it. Offline it never updates: the version
+      you leave the ground with is the version you fly with.</p>
 
       <h3>Print colours</h3>
-      <p>Fixed, so every document comes out the same. Samples below are shown on white,
-      exactly as they print:</p>
+      <p>Fixed, so every document comes out the same. Samples below are shown on white, exactly
+      as they print:</p>
       <table>
         <tr><th>Item</th><th>On paper</th></tr>
         <tr><td>ETO</td><td><span class="paper"><b style="color:#0033cc">0210</b></span></td></tr>
@@ -735,13 +630,12 @@ td.diff{text-align:right;font-weight:700}
       <h3>Good to know</h3>
       <ul>
         <li>Only Air Astana computerized flight plans are supported.</li>
-        <li>Entries are saved on the device as you type and come back when you reload the same plan.
-            Reset clears them.</li>
+        <li>Entries save automatically and come back when you reload the same plan; Reset clears
+            them.</li>
         <li>Nothing leaves the iPad and no connection is ever needed.</li>
-        <li>The route ID, request number and release time sit under the title in the header, so
-            the document on screen can be checked against the one you were given.</li>
-        <li>The sun and moon buttons in the header switch the screen theme; the choice is
-            remembered. Print colours never change.</li>
+        <li>Route ID, request number and release time sit under the title in the header, so the
+            plan on screen can be checked against the one you were given.</li>
+        <li>The sun and moon buttons switch the screen theme; print colours never change.</li>
         <li>A warning about ET and T/T means the plan's own columns disagree — check those
             waypoints by hand.</li>
       </ul>
@@ -1376,8 +1270,7 @@ async function loadBuffer(name, size, buf, resumed){
   $('#fname').textContent = name + '  ·  ' + (size / 1048576).toFixed(1) + ' MB';
   hide('#m1'); hide('#m3');
   $('#c2').classList.remove('hide');
-  for (const c of ['#c3','#c4','#c5','#c6','#c7','#c8','#cAdd']) $(c).classList.add('hide');
-  ADD = null;
+  for (const c of ['#c3','#c4','#c5','#c6','#c7','#c8']) $(c).classList.add('hide');
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
@@ -1404,14 +1297,10 @@ async function loadBuffer(name, size, buf, resumed){
       alerted.clear(); for (const m of st.alerted || []) alerted.add(m);
       if (st.alarm !== undefined) $('#altAlert').checked = st.alarm;
       DCT.marks = Array.isArray(st.dct) ? st.dct : []; syncDct();
-      ADD = st.add && Array.isArray(st.add.rows) ? st.add : null;
     }
     renderFields();
     if (FIELDS.length) $('#c4').classList.remove('hide');
     $('#c5').classList.remove('hide');
-    if (planReg()) $('#cAdd').classList.remove('hide');
-    renderAdd();
-    applyPendingAdd();
     if (st && st.etd){
       $('#calc').click();
       msg('#m1', resumed
@@ -1517,251 +1406,6 @@ function renderWx(){
   document.querySelectorAll('#wxOut .ntms').forEach(scrollHint);
 }
 $('#wxApt').onchange = renderWx;
-
-/* ================= deferred defects (ADD/CDD) =================
-   The report lives on the company server behind a password, and that server sends
-   no Access-Control-Allow-Origin — its CORS preflight answers 401, which a browser
-   sends without credentials by specification, so Safari abandons an app-initiated
-   fetch before it leaves the iPad. Measured, not assumed. The report therefore
-   crosses on the clipboard: Open report hands it to Safari, where the password
-   prompt is allowed; copy it there; Paste report reads it here.
-   Nothing is uploaded and nothing is fetched by this page. */
-let ADD = null;                                   // { at, reg, headers, rows, read, cols }
-const ADDR_KEY = 'etofill:addcdd';
-
-// The tail the plan is filed for. REG/ sits in the ICAO flight plan, which is
-// already parsed and kept whole.
-function planReg(){
-  const m = ICAO && /\bREG\/([A-Z0-9-]{3,8})/.exec(ICAO.oneLine || '');
-  return m ? m[1].toUpperCase() : null;
-}
-const bare = s => (s || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
-const sameTail = (a, b) => !!bare(a) && bare(a) === bare(b);
-// EIKEA must find EI-KEA and vice versa, without matching it inside a longer word.
-const tailRe = reg => new RegExp('(^|[^A-Z0-9])' + bare(reg).split('').join('-?')
-                               + '([^A-Z0-9]|$)', 'i');
-
-/* ---- the address, kept on this device only ----
-   The repository is public and the report URL carries a subscription id, a user id
-   and internal server names, so it is never committed. https only: a stored
-   javascript: address would run in this page's own origin when opened. */
-const addrGet = () => { try { return localStorage.getItem(ADDR_KEY) || ''; } catch(e){ return ''; } };
-function addrSet(v){
-  let u;
-  try { u = new URL(v.trim()); } catch(e){ return 'That is not a web address.'; }
-  if (u.protocol !== 'https:') return 'Only https addresses are accepted — ' + u.protocol + ' is not.';
-  try { localStorage.setItem(ADDR_KEY, u.href); } catch(e){ return 'This device will not store it.'; }
-  return null;
-}
-
-/* ---- reading the report ----
-   A MicroStrategy grid puts real HTML on the clipboard, so that is preferred: the
-   columns survive and the tail can be matched in its own column rather than
-   anywhere in the line. Plain text is the fallback. */
-const REG_SHAPE = /^[A-Z]{1,2}-?[A-Z0-9]{3,5}$/i;
-const REG_HEAD = /^(a\/?c|a\/?c\s*reg\.?|aircraft|ac\s*reg\.?|reg\.?|registration|tail|fleet)$/i;
-
-function tableRows(html){
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  let best = [];
-  for (const t of doc.querySelectorAll('table')){
-    const rows = [...t.rows]
-      .map(r => [...r.cells].map(c => c.textContent.replace(/\s+/g, ' ').trim()))
-      .filter(r => r.some(c => c));
-    if (rows.length > best.length) best = rows;
-  }
-  return best;
-}
-
-// Which column holds the tail: by header name first, and failing that by the
-// column whose cells most often look like a registration. Reports are not all
-// laid out alike and this one has never been seen from here.
-function regColumn(rows){
-  for (let r = 0; r < Math.min(4, rows.length); r++){
-    const i = rows[r].findIndex(c => REG_HEAD.test(c));
-    if (i >= 0) return { col: i, head: r };
-  }
-  const width = Math.max(0, ...rows.map(r => r.length));
-  let col = -1, hits = 0;
-  for (let c = 0; c < width; c++){
-    const n = rows.filter(r => r[c] && REG_SHAPE.test(r[c])).length;
-    if (n > hits){ hits = n; col = c; }
-  }
-  return hits >= 2 ? { col, head: -1 } : null;
-}
-
-function readAddCdd(html, text, reg){
-  const rows = html ? tableRows(html) : [];
-  if (rows.length){
-    const pick = regColumn(rows);
-    const headers = pick && pick.head >= 0 ? rows[pick.head] : [];
-    const body = rows.filter((r, i) => i !== (pick ? pick.head : -1));
-    const kept = pick ? body.filter(r => sameTail(r[pick.col], reg)) : [];
-    return { headers, rows: kept, read: body.length,
-             cols: headers.filter(Boolean).slice(0, 8) };
-  }
-  const lines = (text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  const re = tailRe(reg);
-  return { headers: [], rows: lines.filter(l => re.test(l)).map(l => [l]),
-           read: lines.length, cols: [] };
-}
-
-function renderAdd(){
-  const reg = planReg();
-  $('#addReg').textContent = reg || '';
-  const out = $('#addOut'), meta = $('#addMeta');
-  if (!ADD){ out.innerHTML = ''; meta.textContent = ''; return; }
-  meta.textContent = 'read ' + fmt(ADD.at) + 'Z';
-  if (!ADD.rows.length){
-    // Say what was actually seen, so one photograph from the aircraft is enough to
-    // finish the job — the real report has never been readable from here.
-    out.innerHTML = '<p class="disc">Nothing for <b>' + esc(ADD.reg || '—') + '</b> in what was pasted. '
-      + 'Read ' + ADD.read + ' row' + (ADD.read === 1 ? '' : 's')
-      + (ADD.cols.length ? '; columns seen: ' + esc(ADD.cols.join(', ')) : '; no column headings found')
-      + '.</p>';
-    return;
-  }
-  const head = ADD.headers.length
-    ? '<thead><tr>' + ADD.headers.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead>' : '';
-  const body = ADD.rows.map(r => '<tr>' + r.map(c => '<td>' + esc(c) + '</td>').join('') + '</tr>').join('');
-  out.innerHTML = '<div class="scrollwrap"><div class="ntms addbox"><table class="addtbl">'
-                + head + '<tbody>' + body + '</tbody></table></div></div>';
-  meta.textContent += '  ·  ' + ADD.rows.length + ' item' + (ADD.rows.length === 1 ? '' : 's');
-  scrollHint(out.querySelector('.addbox'));
-}
-
-function takeAddCdd(html, text){
-  const reg = planReg();
-  if (!reg){ msg('#m8', 'No REG/ in this flight plan, so there is no tail to match against.', 'warn'); return; }
-  if (!(html || text)){ msg('#m8', 'Nothing was pasted.', 'warn'); return; }
-  ADD = Object.assign({ at: nowUtc(), reg }, readAddCdd(html, text, reg));
-  hide('#m8');
-  renderAdd();
-  save();
-}
-
-$('#addAddr').onclick = () => {
-  const box = $('#addSet');
-  box.classList.toggle('hide');
-  if (!box.classList.contains('hide')){ $('#addUrl').value = addrGet(); $('#addUrl').focus(); }
-};
-$('#addSave').onclick = () => {
-  const err = addrSet($('#addUrl').value);
-  if (err) return msg('#m8', err, 'err');
-  $('#addSet').classList.add('hide');
-  msg('#m8', 'Address saved on this iPad.', 'ok');
-};
-$('#addForget').onclick = () => {
-  try { localStorage.removeItem(ADDR_KEY); } catch(e){}
-  $('#addUrl').value = '';
-  msg('#m8', 'Address forgotten.', 'ok');
-};
-$('#addOpen').onclick = () => {
-  const u = addrGet();
-  if (!u){
-    $('#addSet').classList.remove('hide'); $('#addUrl').focus();
-    return msg('#m8', 'Paste the report address once and it is kept on this iPad.', 'warn');
-  }
-  // A real anchor, so a home-screen app hands the report to Safari and keeps
-  // running with the plan loaded rather than navigating away from it.
-  const a = document.createElement('a');
-  a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
-  document.body.appendChild(a); a.click(); a.remove();
-};
-
-/* ---- the helper that runs on the report's own page ----
-   A page may not read another origin's document, which is why this app cannot
-   fetch the report itself. A bookmarklet is not subject to that: it runs *inside*
-   the report's page, with the crew's own session, so reading the table there is
-   ordinary same-origin work. It then hands the rows back in the URL fragment,
-   which never leaves the device — fragments are not sent to any server.
-   So: sign in as usual, tap the bookmark, and the list is here. */
-function helperCode(){
-  const back = location.origin + location.pathname;
-  // Kept to one line and deliberately small: this has to be pasted into a
-  // bookmark's address field by hand.
-  const src = `(function(){
-var t=null,n=0;
-document.querySelectorAll('table').forEach(function(x){if(x.rows.length>n){n=x.rows.length;t=x}});
-if(!t){alert('No table on this page.');return}
-var s=[].map.call(t.rows,function(r){
-return [].map.call(r.cells,function(c){return c.textContent.replace(/\\s+/g,' ').trim()}).join('\\t')
-}).join('\\n');
-if(s.length>60000)s=s.slice(0,60000);
-location.href='${back}#addcdd='+encodeURIComponent(s);
-})()`.replace(/\n/g, '');
-  return 'javascript:' + src;
-}
-
-// The fragment stays on the device; it is stripped as soon as it is read so a
-// screenshot or a shared link cannot carry the report with it.
-function addFromHash(){
-  const m = /^#addcdd=([\s\S]*)$/.exec(location.hash || '');
-  if (!m) return;
-  let tsv = '';
-  try { tsv = decodeURIComponent(m[1]); } catch(e){ tsv = m[1]; }
-  history.replaceState(null, '', location.pathname + location.search);
-  if (!tsv.trim()) return;
-  pendingAdd = tsv;
-  applyPendingAdd();
-}
-// The helper arrives as a fresh page load and the plan comes back from storage a
-// moment later, so the rows wait for the tail rather than being thrown away.
-let pendingAdd = null;
-function applyPendingAdd(){
-  if (!pendingAdd || !planReg()) return;
-  const tsv = pendingAdd; pendingAdd = null;
-  // Tab-separated rows from the helper, rebuilt as a table so the column logic
-  // that reads a pasted grid is the same code and not a second copy of it.
-  const esc2 = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  const html = '<table>' + tsv.split('\n').map(line =>
-    '<tr>' + line.split('\t').map(c => '<td>' + esc2(c) + '</td>').join('') + '</tr>').join('') + '</table>';
-  takeAddCdd(html, tsv);
-}
-addEventListener('hashchange', addFromHash);
-
-$('#addHelp').onclick = () => {
-  const box = $('#addHelper');
-  box.classList.toggle('hide');
-  if (!box.classList.contains('hide')){
-    $('#addHelpCode').value = helperCode();
-    $('#addHelpCode').select();
-  }
-};
-
-$('#addPaste').onclick = async () => {
-  if (navigator.clipboard && navigator.clipboard.read){
-    try {
-      const items = await navigator.clipboard.read();
-      let html = '', text = '';
-      for (const it of items){
-        if (!html && it.types.includes('text/html')) html = await (await it.getType('text/html')).text();
-        if (!text && it.types.includes('text/plain')) text = await (await it.getType('text/plain')).text();
-      }
-      if (html || text) return takeAddCdd(html, text);
-    } catch(e){ /* denied or unsupported — fall through to the box */ }
-  }
-  $('#addSet').classList.add('hide');
-  msg('#m8', 'Paste the report into the box below.', 'warn');
-  showAddBox();
-};
-
-// iOS gives a page no clipboard of its own worth relying on, so the paste lands in
-// a box the crew pastes into — the same answer the PDF button reached.
-function showAddBox(){
-  if ($('#addPasteBox')) return $('#addPasteBox').focus();
-  const ta = document.createElement('textarea');
-  ta.id = 'addPasteBox'; ta.placeholder = 'Paste here';
-  ta.addEventListener('paste', e => {
-    const d = e.clipboardData;
-    if (!d) return;
-    e.preventDefault();
-    takeAddCdd(d.getData('text/html'), d.getData('text/plain'));
-    ta.remove();
-  });
-  $('#addOut').before(ta);
-  ta.focus();
-}
 
 /* ================= chart viewer =================
    Decoding a 1800x1451 bitmap is not free, so it happens when the crew asks for
@@ -2978,7 +2622,7 @@ function writeState(){
     localStorage.setItem(KEY, JSON.stringify({
       etd: $('#etd').value, alt: $('#alt').checked, act: ACT, txt: TXT, alt2: ALT,
       alerted: [...alerted], alarm: $('#altAlert').checked, dct: DCT.marks,
-      add: ADD, at: nowUtc() }));
+      at: nowUtc() }));
     const d = new Date();
     $('#saved').textContent = 'saved ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
   } catch(e){ $('#saved').textContent = 'storage unavailable'; }
@@ -3050,8 +2694,6 @@ async function resumeSession(){
   await loadBuffer(rec.name, rec.size, rec.buf, true);
 }
 resumeSession();
-// Read before the plan is back: applyPendingAdd holds it until there is a tail.
-addFromHash();
 
 /* ================= PDF generation ================= */
 function build(){
@@ -3175,8 +2817,7 @@ $('#reset').onclick = () => {
   showIcao(null); showOfp(null); showFigs(null); showWx(null); showCharts(null); openCharts(false);
   $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
   $('#fname').textContent = ''; $('#saved').textContent = '';
-  ADD = null; renderAdd(); hide('#m8'); $('#addSet').classList.add('hide');
-  for (const c of ['#c2','#c3','#c4','#c5','#c6','#c7','#c8','#cAdd']) $(c).classList.add('hide');
+  for (const c of ['#c2','#c3','#c4','#c5','#c6','#c7','#c8']) $(c).classList.add('hide');
   $('#fpl').className = 'hint hide';
   hide('#m1'); hide('#m2'); hide('#m3');
 };

@@ -1,9 +1,8 @@
 # OFP Companion — installing on iPad
 
 The app is fully self-contained: the PDF is parsed and written on the device.
-Nothing is uploaded anywhere, and after installation nothing is fetched either —
-with one exception, the deferred-defects card, which is described at the bottom and
-needs a signal to reach the company server. Everything else flies with the radios off.
+Nothing is uploaded anywhere, and after installation nothing is fetched either.
+Everything flies with the radios off.
 
 Requires iPadOS 16.4 or newer (`DecompressionStream` is needed to inflate PDF streams).
 
@@ -236,53 +235,6 @@ The strip is solid in the box's own background colour for its full depth before 
 the content, so no half-clipped line of text shows in it or under the arrow. The two arrows are
 one shape: the upper one is the lower one turned through 180°, rather than two characters left
 to whatever the device's fallback font makes of each.
-
-## Deferred defects (ADD/CDD)
-
-The last card lists the ADD/CDD entries for the tail the plan is filed for — the `REG/` in the
-ICAO flight plan, read straight out of the package.
-
-**This is the one part of the app that needs a signal.** The report lives on the company server
-behind a password, and that server does not let a web page read it directly: it sends no
-cross-origin permission, and its permission check answers "unauthorised" to the browser's
-credential-free probe, so Safari abandons the request before it leaves the iPad. That is a setting
-on the company server, not something the app can work around.
-
-### The helper — no copying
-
-Press **Helper** and save what it shows as a bookmark on the iPad. Then sign in to the report in
-Safari as usual and choose that bookmark: it reads the table on the page you are already looking
-at and hands the rows straight back to the companion, filtered to your aeroplane.
-
-It works for the same reason the app's own fetch cannot: the bookmark runs **inside the report's
-page**, where reading that table is ordinary same-origin work, with your own session and no extra
-privileges. The rows travel back in the part of the address after the `#`, which browsers never
-send to any server, and the companion wipes it the moment it has read it — so it cannot survive in
-a screenshot or a shared link.
-
-To install it: Safari → Bookmarks → Edit → pick any bookmark → replace its address with the text
-the Helper button shows, and name it something like `ADD/CDD → OFP`.
-
-### Or by hand
-
-If you would rather copy it yourself:
-
-1. **Open report** hands the address to Safari, where the password prompt is allowed and your saved
-   credentials apply.
-2. Select all and copy.
-3. **Paste report** back in the companion. Only the rows for your aeroplane are kept — the tail is
-   matched with or without its hyphen, so `EI-KEA` and `EIKEA` are the same aircraft.
-
-Press **Address** to paste the report address the first time. It is kept on that iPad alone and is
-never committed to this repository, which is public and would otherwise publish the subscription
-and user identifiers the link carries. Only `https` addresses are accepted.
-
-Nothing is uploaded and nothing is fetched by the page. What you paste stays on the device, is
-saved with the rest of the flight's data, and is there afterwards with the radios off.
-
-If the list comes up empty, the card says what it did read — the tail it was looking for, how many
-rows it saw and the column headings it found — which is enough to tell what the report's layout is
-and adjust for it.
 
 ## Wind components and weather charts
 
