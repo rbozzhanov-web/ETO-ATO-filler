@@ -156,6 +156,18 @@ input:focus{outline:none;border-color:var(--acc)}
 .chk input{width:20px;height:20px;accent-color:var(--acc);flex:0 0 auto}
 .chkrow{display:flex;align-items:center;gap:12px;padding-bottom:12px}
 .chkrow .chk{padding-bottom:0}
+/* A sliding switch for an on/off preference, next to .chk's box for one you're
+   picking off a list — the two read differently because they mean differently. */
+.switch{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--txt);cursor:pointer}
+.switch input{position:absolute;width:1px;height:1px;opacity:0}
+.switch .trk{position:relative;flex:0 0 auto;width:42px;height:25px;border-radius:13px;
+  background:var(--line);transition:background .15s ease}
+.switch .trk::after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.35);
+  transition:transform .15s ease}
+.switch input:checked + .trk{background:var(--acc)}
+.switch input:checked + .trk::after{transform:translateX(17px)}
+.switch input:focus-visible + .trk{box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 35%,transparent)}
 .hint{margin-top:14px;font-size:13px;color:var(--dim);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .hint b{color:var(--txt);font-family:ui-monospace,Menlo,monospace}
 .pill{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:7px 14px;
@@ -512,9 +524,14 @@ td.diff{text-align:right;font-weight:700}
     <p class="disc">Read out of this flight plan package — nothing is fetched from the network.</p>
     <div class="row">
       <div><label for="wxApt">Aerodrome</label><select id="wxApt"></select></div>
-      <label class="chk"><input type="checkbox" id="wxHi" checked>
-        Highlight what applies now</label>
       <span class="saved" id="wxMeta"></span>
+    </div>
+    <!-- A row of its own, the way the altimeter alert gets one: the aerodrome row
+         above is label-over-input and bottom-aligned, and a switch dropped into
+         that flow never sits level with either. -->
+    <div class="chkrow">
+      <label class="switch"><input type="checkbox" id="wxHi" checked><span class="trk"></span>
+        Highlight what applies now</label>
     </div>
     <div id="wxOut"></div>
   </div>
@@ -680,7 +697,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 30.1 &nbsp;·&nbsp; published 22 Aug 2026 05:00 UTC</span></p>
+      <span class="build">Version 30.2 &nbsp;·&nbsp; published 22 Aug 2026 06:00 UTC</span></p>
 
     </div>
   </div>
