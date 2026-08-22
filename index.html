@@ -123,6 +123,13 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
   text-transform:uppercase;color:var(--gold)}
 .ntm p{margin:5px 0 0;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
   white-space:pre-wrap;word-break:break-word}
+/* The TAF change group and the NOTAM the flight actually meets, picked out the same
+   way the live table row is — a tint of the accent, not a print colour, since nothing
+   about what either says has changed. */
+mark.tafnow{background:color-mix(in srgb,var(--acc) 22%,transparent);color:inherit;
+  border-radius:4px;box-shadow:0 0 0 1px color-mix(in srgb,var(--acc) 40%,transparent)}
+.ntm.now{background:color-mix(in srgb,var(--acc) 8%,transparent);
+  box-shadow:inset 3px 0 0 var(--acc)}
 
 .row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
 label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px}
@@ -581,12 +588,15 @@ td.diff{text-align:right;font-weight:700}
       only the highlight moves. The toolbar chip undoes it, and each direct remembers just the
       waypoints it cut out.</p>
 
-      <h3>Weather and NOTAMs</h3>
+      <h3 class="new">Weather and NOTAMs</h3>
       <p>Read entirely out of the loaded package — no network, no account, no key. The dropdown
       groups aerodromes as <b>this flight</b>, <b>areas along the route</b> and <b>other
       aerodromes</b>. Each gives METAR and TAF as printed, then NOTAMs with their number,
       validity and subject, then company NOTAMs. Reports are exactly as old as the document —
       re-brief from the current source before acting on them.</p>
+      <p class="new">The TAF change group and any NOTAM the flight actually meets are picked out
+      — departure at ETD, destination and alternates at ETA, the en-route alternate at the
+      flight's midpoint. A plan carrying no date of flight gets no highlight.</p>
 
       <h3>Wind components and weather charts</h3>
       <p><b>Open charts</b> pages through the wind components, tropopause/MORA profile and
@@ -644,7 +654,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 26 &nbsp;·&nbsp; published 16 Aug 2026 15:10 UTC</span></p>
+      <span class="build">Version 27 &nbsp;·&nbsp; published 22 Aug 2026 00:00 UTC</span></p>
 
     </div>
   </div>
@@ -1362,6 +1372,143 @@ const spaced = s => s.replace(/^(METAR|SPECI|TAF)([A-Z]{4}\s)/, '$1 $2');
 
 const GROUPS = [['flight', 'This flight'], ['fir', 'Areas along the route'], ['other', 'Other aerodromes']];
 
+/* ---- when the flight is at each aerodrome ----
+   FPL's own ETD/STD and ETA/STA, against the plan's DOF, are the only clock this app
+   has for this. Without a DOF the day is a guess, and a guessed day is worse than
+   none — so an undated plan gets no highlighting at all, the same way it gets no
+   countdown. */
+function flightWindow(){
+  const dof = ICAO && ICAO.oneLine.match(/\bDOF\/(\d{6})\b/);
+  const dep = FPL ? parseTime(FPL.ETD || FPL.STD) : null;
+  if (!dof || dep === null) return null;
+  const d = dof[1];
+  const depMs = Date.UTC(2000 + +d.slice(0, 2), +d.slice(2, 4) - 1, +d.slice(4, 6)) + dep * 60000;
+  const arr = FPL ? parseTime(FPL.ETA || FPL.STA) : null;
+  const arrMs = arr === null ? null : depMs + norm(arr - dep) * 60000;
+  return { depMs, arrMs, midMs: arrMs === null ? null : depMs + (arrMs - depMs) / 2 };
+}
+// Departure is read at ETD, destination and every alternate at ETA (a diversion is
+// flown close to the arrival it replaces), the en-route alternate at the flight's
+// midpoint — the plan gives no better instant for a stop that is only ever a
+// contingency. An area along the route, or an aerodrome named for no role of its
+// own, gets no instant this app can defend, so it stays unhighlighted rather than
+// guessed.
+function wxTarget(a, win){
+  if (!win) return null;
+  if (a.role === 'departure' && win.depMs != null) return { ms: win.depMs, label: 'ETD' };
+  if ((a.role === 'destination' || a.role === 'alternate') && win.arrMs != null)
+    return { ms: win.arrMs, label: 'ETA' };
+  if (a.role === 'en-route alternate' && win.midMs != null) return { ms: win.midMs, label: 'mid' };
+  return null;
+}
+const hhmmZ = ms => { const d = new Date(ms);
+  return String(d.getUTCHours()).padStart(2, '0') + String(d.getUTCMinutes()).padStart(2, '0') + 'Z'; };
+
+/* ---- TAF change-group highlighting ----
+   A TAF's own change groups — FM, BECMG, TEMPO, PROB30/PROB40 — carry a day-of-month
+   and an hour (FM also a minute) but never a month or year, so each is only ever
+   resolved against an instant already known to fall within a day or two of it: the
+   flight's own clock, never the device's. ICAO Annex 3's own rules for how each group
+   supersedes or overlays the one before it: FM replaces everything before it outright
+   and holds until the next FM or BECMG; BECMG is a gradual change occupying its own
+   window, in force afterwards until superseded; TEMPO and PROB30/PROB40 are
+   fluctuations or probabilities superimposed on whichever of those is in force, valid
+   only for the window printed on their own line. */
+const RE_TAF_HDR = /\bTAF(?:\s+(?:AMD|COR))?\s+[A-Z]{4}\s+\d{6}Z\s+(\d{2})(\d{2})\/(\d{2})(\d{2})/;
+const RE_CHG = /\b(FM(\d{2})(\d{2})(\d{2})|BECMG|TEMPO|PROB(?:30|40))\b/g;
+const RE_WIN = /(\d{2})(\d{2})\/(\d{2})(\d{2})/;
+
+// A day-of-month and hour (and, for FM, a minute) with no month of its own, resolved
+// to whichever of the month before, the anchor's own month, or the month after puts it
+// nearest the anchor — the flight is never sixty days from the plan it flew on.
+function resolveDH(d, h, mi, anchorMs){
+  const day = h === 24 ? d + 1 : d, hour = h === 24 ? 0 : h;
+  const anchor = new Date(anchorMs);
+  let best = null, bestDiff = Infinity;
+  for (const dm of [-1, 0, 1]){
+    const t = Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + dm, day, hour, mi);
+    const diff = Math.abs(t - anchorMs);
+    if (diff < bestDiff){ bestDiff = diff; best = t; }
+  }
+  return best;
+}
+
+// Splits one TAF report into its change groups and marks which ones the flight
+// actually flies into at `atMs`: the base group (the header's own conditions, or the
+// FM/BECMG that has superseded them) in force at that instant, plus any TEMPO/PROB
+// window that also covers it.
+function tafChunks(text, atMs){
+  const hdr = text.match(RE_TAF_HDR);
+  if (!hdr || atMs == null) return null;
+  const validFrom = resolveDH(+hdr[1], +hdr[2], 0, atMs);
+  const validTo = resolveDH(+hdr[3], +hdr[4], 0, atMs);
+
+  RE_CHG.lastIndex = 0;
+  const toks = [];
+  let m;
+  while ((m = RE_CHG.exec(text))){
+    const isFm = m[1].startsWith('FM');
+    const tok = { index: m.index, base: isFm || m[1] === 'BECMG', from: null, to: null };
+    if (isFm) tok.from = resolveDH(+m[2], +m[3], +m[4], atMs);
+    else {
+      const w = text.slice(m.index, m.index + 40).match(RE_WIN);
+      if (w){ tok.from = resolveDH(+w[1], +w[2], 0, atMs); tok.to = resolveDH(+w[3], +w[4], 0, atMs); }
+    }
+    toks.push(tok);
+  }
+
+  const chunks = [{ text: text.slice(0, toks.length ? toks[0].index : text.length),
+                    base: true, from: validFrom, to: null }];
+  toks.forEach((t, i) => {
+    const end = i + 1 < toks.length ? toks[i + 1].index : text.length;
+    chunks.push({ text: text.slice(t.index, end), base: t.base,
+                  from: t.from ?? validFrom, to: t.to });
+  });
+
+  // Base groups chain from the tail: each is in force until the next base group's own
+  // start, or the TAF's end. A TEMPO/PROB keeps the window printed on its own line —
+  // it does not split the base group it sits in.
+  let nextBase = validTo;
+  for (let i = chunks.length - 1; i >= 0; i--){
+    const c = chunks[i];
+    if (c.base){ c.to = nextBase; nextBase = c.from; }
+  }
+  for (const c of chunks) c.active = c.from != null && c.to != null && atMs >= c.from && atMs < c.to;
+  return chunks;
+}
+
+/* ---- NOTAM validity highlighting ----
+   Picked out the same way as the TAF change group above, and for the same reason: a
+   NOTAM in force when the flight is actually at that aerodrome is worth a glance
+   before the rest of the list. The day-and-month here is unambiguous — only the year
+   is not, so it is resolved to whichever of the year before, the anchor's own year, or
+   the year after lands nearest, which also carries a validity spanning a year-end the
+   right way (27DEC in one year through, say, 03JAN in the next). */
+const MON3 = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11 };
+const RE_NOTAM_DATE = /^(\d{2})([A-Z]{3})(\d{2})(\d{2})$/;
+function resolveNotamDate(s, anchorMs){
+  const m = s && s.match(RE_NOTAM_DATE);
+  if (!m || !(m[2] in MON3)) return null;
+  const day = +m[1], mon = MON3[m[2]], hh = +m[3], mi = +m[4];
+  const anchor = new Date(anchorMs);
+  let best = null, bestDiff = Infinity;
+  for (const dy of [-1, 0, 1]){
+    const t = Date.UTC(anchor.getUTCFullYear() + dy, mon, day, hh, mi);
+    const diff = Math.abs(t - anchorMs);
+    if (diff < bestDiff){ bestDiff = diff; best = t; }
+  }
+  return best;
+}
+// PERM has no end to resolve; WIE and UFN carry no date of their own either — already
+// in effect, or in effect until told otherwise. A validity this app cannot parse gets
+// no highlight, the same as an aerodrome with no defensible instant.
+function notamActive(n, atMs){
+  if (atMs == null) return false;
+  const from = n.from === 'WIE' || n.from === 'UFN' ? -Infinity : resolveNotamDate(n.from, atMs);
+  const to = n.to === 'PERM' || n.to === 'UFN' ? Infinity : resolveNotamDate(n.to, atMs);
+  return from != null && to != null && atMs >= from && atMs < to;
+}
+
 function showWx(w){
   WX = w && w.airports.length ? w : null;
   const card = $('#c7'), sel = $('#wxApt');
@@ -1384,22 +1531,37 @@ function renderWx(){
   $('#wxMeta').textContent = [[a.metar.length, 'METAR'], [a.taf.length, 'TAF'],
                               [a.notams.length, 'NOTAM'], [a.co.length, 'COMPANY']]
     .filter(([n]) => n).map(([n, s]) => n + ' ' + s).join('  ·  ');
+  const tgt = wxTarget(a, flightWindow());
+  const tgtNote = tgt && (tgt.label === 'mid' ? `flight's midpoint · ${hhmmZ(tgt.ms)}`
+                                              : `at ${tgt.label} · ${hhmmZ(tgt.ms)}`);
   // A busy aerodrome carries eighty-odd NOTAMs; they scroll inside the card
   // rather than pushing everything else off the screen.
   const block = (title, body, scroll) =>
     `<div class="fplbox"><div class="fplhead"><span>${title}</span></div>` +
     (scroll ? `<div class="scrollwrap"><div class="ntms">${body}</div></div>` : body) + '</div>';
   const pre = arr => `<pre>${arr.map(t => esc(spaced(t))).join('\n\n')}</pre>`;
-  const item = n =>
-    `<div class="ntm"><span class="id">${esc(n.id)}</span>` +
-    (n.from ? `<span class="val">${esc(stamp(n.from))} → ${esc(stamp(n.to || '?'))}` +
-              `${n.est ? ' EST' : ''}</span>` : '') +
-    (n.subject ? `<span class="subj">${esc(n.subject)}</span>` : '') +
-    `<p>${esc(n.text)}</p></div>`;
+  // The change group the flight actually flies into, picked out in place — nothing
+  // about what the TAF says has changed, so this is a tint, never a rewrite.
+  const tafPre = arr => `<pre>${arr.map(t => {
+    const disp = spaced(t), chunks = tgt && tafChunks(disp, tgt.ms);
+    return chunks
+      ? chunks.map(c => c.active ? `<mark class="tafnow">${esc(c.text)}</mark>` : esc(c.text)).join('')
+      : esc(disp);
+  }).join('\n\n')}</pre>`;
+  const item = n => {
+    const now = tgt && notamActive(n, tgt.ms);
+    return `<div class="ntm${now ? ' now' : ''}"><span class="id">${esc(n.id)}</span>` +
+      (n.from ? `<span class="val">${esc(stamp(n.from))} → ${esc(stamp(n.to || '?'))}` +
+                `${n.est ? ' EST' : ''}</span>` : '') +
+      (n.subject ? `<span class="subj">${esc(n.subject)}</span>` : '') +
+      `<p>${esc(n.text)}</p></div>`;
+  };
   let html = '';
   if (a.metar.length) html += block('METAR', pre(a.metar));
-  if (a.taf.length)   html += block('TAF', pre(a.taf));
-  if (a.notams.length) html += block(`NOTAM <em class="wxrole">${a.notams.length} items</em>`,
+  if (a.taf.length)   html += block('TAF' + (tgtNote ? ` <em class="wxrole">${esc(tgtNote)}</em>` : ''),
+                                     tafPre(a.taf));
+  if (a.notams.length) html += block(`NOTAM <em class="wxrole">${a.notams.length} items`
+                                     + `${tgtNote ? ' · ' + esc(tgtNote) : ''}</em>`,
                                      a.notams.map(item).join(''), true);
   if (a.co.length) html += block('Company NOTAMs', a.co.map(item).join(''), true);
   $('#wxOut').innerHTML = html || '<p class="disc">Nothing recorded for this aerodrome.</p>';

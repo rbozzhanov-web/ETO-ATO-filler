@@ -219,6 +219,18 @@ gives 4 / 6 / 36.
 Both the per-aerodrome weather pages and the raw bulletin at the back are read, so aerodromes
 listed there as "NO METAR REPORTS FOUND" still get their reports.
 
+**The TAF group and the NOTAMs the flight actually meets are picked out.** The departure's own
+TAF is read for ETD, the destination's and every alternate's for ETA, the en-route alternate's
+for the flight's midpoint — a diversion has no better instant to be judged against. FM, BECMG,
+TEMPO and PROB30/PROB40 are resolved the way the form prints them: FM replaces the forecast
+outright and holds until the next change; BECMG's new conditions stand from the end of its
+window until superseded; TEMPO and PROB30/PROB40 are highlighted only for the window printed on
+their own line, alongside whichever of those governs at that moment. NOTAMs get the same
+treatment against the same instant: one in force when the flight is actually there is ringed in
+the list rather than left to be found by reading all of them. An aerodrome named for no role of
+its own, or a plan carrying no date of flight, gets no highlight — there is no instant here worth
+guessing at.
+
 Everything is read out of the PDF on the device. There is no network request, no account and
 no key — the card works in airplane mode like the rest of the app. The reports are therefore
 exactly as old as the document: re-brief from the current source before acting on them.
