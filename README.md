@@ -231,6 +231,13 @@ the list rather than left to be found by reading all of them. An aerodrome named
 its own, or a plan carrying no date of flight, gets no highlight — there is no instant here worth
 guessing at.
 
+**NOTAMs about the runway or the whole aerodrome are marked in red, the taxiway in amber** — the
+same muted status colours a fuel check already turns on falling due and going overdue, not a
+traffic light. Read off the NOTAM's own words, not off a code the package doesn't carry: a closed
+aerodrome counts as the runway, since that is what closes it, and a NOTAM naming both the runway
+and the taxiway is coloured for the runway. Neither mark reorders the list — a coloured NOTAM sits
+exactly where it was, so the order still matches the numbers next to it.
+
 Everything is read out of the PDF on the device. There is no network request, no account and
 no key — the card works in airplane mode like the rest of the app. The reports are therefore
 exactly as old as the document: re-brief from the current source before acting on them.
