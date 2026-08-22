@@ -680,7 +680,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 30 &nbsp;·&nbsp; published 22 Aug 2026 04:00 UTC</span></p>
+      <span class="build">Version 30.1 &nbsp;·&nbsp; published 22 Aug 2026 05:00 UTC</span></p>
 
     </div>
   </div>
@@ -1548,12 +1548,18 @@ function notamActive(n, atMs){
 
 /* ---- what a NOTAM is about ----
    Read off its own subject and text, not off any code the plan doesn't carry: these
-   packages print NOTAMs as free text, not the ICAO Q-line. The whole aerodrome shut
-   outranks the runway — it is the more limiting of the two, and gets its own,
-   louder mark rather than sharing the runway's; a NOTAM naming both the runway and
-   the taxiway is coloured for the runway. */
-const RE_NTM_RWY  = /\bRUNWAY\b|\bRWY\b/;
-const RE_NTM_TWY  = /\bTAXIWAY\b|\bTWY\b/;
+   packages print NOTAMs as free text, not the ICAO Q-line that would otherwise
+   classify them — Doc 8126's own Q-code marks the aerodrome FA, the runway MR, the
+   taxiway MT, and CLSD as the condition LC, but that line never survives into the
+   briefing. What does survive is Doc 8400's own abbreviations for the same three
+   things — RWY, TWY, AD — so matching on those reads a NOTAM the way its Q-line
+   would have, plural included: a NOTAM naming more than one runway or taxiway
+   prints RWYS or TWYS. The whole aerodrome shut outranks the runway — it is the
+   more limiting of the two, and gets its own, louder mark rather than sharing the
+   runway's; a NOTAM naming both the runway and the taxiway is coloured for the
+   runway. */
+const RE_NTM_RWY  = /\bRUNWAYS?\b|\bRWYS?\b/;
+const RE_NTM_TWY  = /\bTAXIWAYS?\b|\bTWYS?\b/;
 const RE_NTM_CLSD = /\b(?:AD|AERODROME|ARPT|AIRPORT)\s+CLOSED\b|\b(?:AD|AERODROME|ARPT)\s+CLSD\b/;
 function notamHazard(n){
   const t = `${n.subject || ''} ${n.text || ''}`.toUpperCase();

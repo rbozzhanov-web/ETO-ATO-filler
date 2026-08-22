@@ -233,8 +233,11 @@ guessing at.
 
 **NOTAMs about the runway are marked in red, the taxiway in amber** — the same muted status
 colours a fuel check already turns on falling due and going overdue, not a traffic light. Read
-off the NOTAM's own words, not off a code the package doesn't carry, and a NOTAM naming both the
-runway and the taxiway is coloured for the runway.
+off the NOTAM's own words, not off a code the package doesn't carry: these packages print NOTAMs
+as free text, not the ICAO Q-line that would otherwise classify them (Doc 8126's own Q-code marks
+the aerodrome FA, the runway MR, the taxiway MT), so the app matches Doc 8400's own abbreviations
+for the same three things instead — RWY, TWY, AD, plural included. A NOTAM naming both the runway
+and the taxiway is coloured for the runway.
 
 **The whole aerodrome closed outranks both.** It gets the one saturated fill on the card — the
 same red as the Reset button — since it is the more limiting of the two and is worth catching
