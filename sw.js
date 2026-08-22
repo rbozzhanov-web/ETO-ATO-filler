@@ -1,6 +1,6 @@
 /* OFP Companion — offline cache. Two apps, one page each:
    index.html is the OFP companion, journey-log.html the Journey Log form. */
-const V = 'eto-filler-v42';
+const V = 'eto-filler-v44';
 const FILES = ['./', './index.html', './journey-log.html',
                './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const PAGES = ['./index.html', './journey-log.html'];

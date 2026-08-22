@@ -123,13 +123,28 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
   text-transform:uppercase;color:var(--gold)}
 .ntm p{margin:5px 0 0;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
   white-space:pre-wrap;word-break:break-word}
-/* The TAF change group and the NOTAM the flight actually meets, picked out the same
-   way the live table row is — a tint of the accent, not a print colour, since nothing
-   about what either says has changed. */
+/* The TAF change group the flight actually meets, picked out the same way the live
+   table row is — a tint of the accent, not a print colour, since nothing about what
+   it says has changed. */
 mark.tafnow{background:color-mix(in srgb,var(--acc) 22%,transparent);color:inherit;
   border-radius:4px;box-shadow:0 0 0 1px color-mix(in srgb,var(--acc) 40%,transparent)}
-.ntm.now{background:color-mix(in srgb,var(--acc) 8%,transparent);
-  box-shadow:inset 3px 0 0 var(--acc)}
+/* A NOTAM carries up to two independent marks — what it's about, on the left, and
+   whether the flight is in it right now, on the right — so both survive together
+   rather than one overwriting the other. Each sets only its own half through a custom
+   property; --err and --warn are the same muted status colours a fuel check already
+   turns on falling due and going overdue, not a traffic light's saturated red/amber. */
+.ntm{box-shadow:var(--hz-shadow, none), var(--now-shadow, none)}
+.ntm.now{--now-shadow:inset -3px 0 0 var(--acc)}
+.ntm.rwy{--hz-shadow:inset 3px 0 0 var(--err);background:color-mix(in srgb,var(--err) 8%,transparent)}
+.ntm.rwy .id{color:var(--err)}
+.ntm.twy{--hz-shadow:inset 3px 0 0 var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent)}
+.ntm.twy .id{color:var(--warn)}
+/* The whole aerodrome shut is the one NOTAM worth a solid fill rather than a tint — the
+   same saturated red already reserved for the one destructive button on the page, so
+   it reads the same way that does: not routine. */
+.ntm.closed{background:var(--dangerbtn);color:#fff}
+.ntm.closed .id,.ntm.closed .val,.ntm.closed .subj{color:#fff}
+.ntm.closed .val{opacity:.85}
 
 .row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
 label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px}
@@ -588,15 +603,21 @@ td.diff{text-align:right;font-weight:700}
       only the highlight moves. The toolbar chip undoes it, and each direct remembers just the
       waypoints it cut out.</p>
 
-      <h3 class="new">Weather and NOTAMs</h3>
+      <h3>Weather and NOTAMs</h3>
       <p>Read entirely out of the loaded package — no network, no account, no key. The dropdown
       groups aerodromes as <b>this flight</b>, <b>areas along the route</b> and <b>other
       aerodromes</b>. Each gives METAR and TAF as printed, then NOTAMs with their number,
       validity and subject, then company NOTAMs. Reports are exactly as old as the document —
       re-brief from the current source before acting on them.</p>
-      <p class="new">The TAF change group and any NOTAM the flight actually meets are picked out
-      — departure at ETD, destination and alternates at ETA, the en-route alternate at the
-      flight's midpoint. A plan carrying no date of flight gets no highlight.</p>
+      <p>The TAF change group and any NOTAM the flight actually meets are picked out — departure
+      at ETD, destination and alternates at ETA, the en-route alternate at the flight's midpoint.
+      A plan carrying no date of flight gets no highlight.</p>
+      <p>A NOTAM about the runway is marked red, the taxiway amber — read off its own words,
+      muted the way a fuel check already is, never a traffic light. Naming both marks it for the
+      runway. The list itself never reorders.</p>
+      <p class="new">The whole aerodrome closed outranks both: it gets the one saturated fill on
+      the card, the same red as <b>Reset</b>, since it is worth catching before the rest of the
+      list is even read.</p>
 
       <h3>Wind components and weather charts</h3>
       <p><b>Open charts</b> pages through the wind components, tropopause/MORA profile and
@@ -654,7 +675,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 27 &nbsp;·&nbsp; published 22 Aug 2026 00:00 UTC</span></p>
+      <span class="build">Version 29 &nbsp;·&nbsp; published 22 Aug 2026 03:00 UTC</span></p>
 
     </div>
   </div>
@@ -1509,6 +1530,23 @@ function notamActive(n, atMs){
   return from != null && to != null && atMs >= from && atMs < to;
 }
 
+/* ---- what a NOTAM is about ----
+   Read off its own subject and text, not off any code the plan doesn't carry: these
+   packages print NOTAMs as free text, not the ICAO Q-line. The whole aerodrome shut
+   outranks the runway — it is the more limiting of the two, and gets its own,
+   louder mark rather than sharing the runway's; a NOTAM naming both the runway and
+   the taxiway is coloured for the runway. */
+const RE_NTM_RWY  = /\bRUNWAY\b|\bRWY\b/;
+const RE_NTM_TWY  = /\bTAXIWAY\b|\bTWY\b/;
+const RE_NTM_CLSD = /\b(?:AD|AERODROME|ARPT|AIRPORT)\s+CLOSED\b|\b(?:AD|AERODROME|ARPT)\s+CLSD\b/;
+function notamHazard(n){
+  const t = `${n.subject || ''} ${n.text || ''}`.toUpperCase();
+  if (RE_NTM_CLSD.test(t)) return 'closed';
+  if (RE_NTM_RWY.test(t)) return 'rwy';
+  if (RE_NTM_TWY.test(t)) return 'twy';
+  return null;
+}
+
 function showWx(w){
   WX = w && w.airports.length ? w : null;
   const card = $('#c7'), sel = $('#wxApt');
@@ -1550,7 +1588,9 @@ function renderWx(){
   }).join('\n\n')}</pre>`;
   const item = n => {
     const now = tgt && notamActive(n, tgt.ms);
-    return `<div class="ntm${now ? ' now' : ''}"><span class="id">${esc(n.id)}</span>` +
+    const hz = notamHazard(n);
+    const cls = ['ntm', hz, now ? 'now' : ''].filter(Boolean).join(' ');
+    return `<div class="${cls}"><span class="id">${esc(n.id)}</span>` +
       (n.from ? `<span class="val">${esc(stamp(n.from))} → ${esc(stamp(n.to || '?'))}` +
                 `${n.est ? ' EST' : ''}</span>` : '') +
       (n.subject ? `<span class="subj">${esc(n.subject)}</span>` : '') +
