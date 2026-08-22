@@ -241,6 +241,11 @@ same red as the Reset button — since it is the more limiting of the two and is
 before the rest of the list is even read. Neither mark reorders the list — a coloured NOTAM sits
 exactly where it was, so the order still matches the numbers next to it.
 
+**Highlight what applies now**, beside the aerodrome dropdown, turns all of the above off at
+once — the TAF tint, the "flight is in it" NOTAM ring, and the red/amber hazard colours — for
+a crew that would rather read the reports plain. It is a device preference, not a per-plan one:
+it stays as left however many plans get loaded after it, the same way the theme does.
+
 Everything is read out of the PDF on the device. There is no network request, no account and
 no key — the card works in airplane mode like the rest of the app. The reports are therefore
 exactly as old as the document: re-brief from the current source before acting on them.
