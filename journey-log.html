@@ -175,19 +175,19 @@ html[data-theme=light]{--npbg:#d1d3d9; --npkey:#fff; --npkeypress:#b9bbc1; --npd
   box-shadow:0 -1px 0 var(--npline); transform:translateY(100%);
   transition:transform .22s cubic-bezier(.32,.72,0,1); pointer-events:none}
 .numpad.show{transform:translateY(0); pointer-events:auto}
-.numpad-bar{display:flex; justify-content:flex-end; align-items:center; padding:4px 10px}
+.numpad-bar{display:flex; justify-content:space-between; align-items:center; padding:4px 10px}
 .numpad-bar button{background:none; border:0; color:var(--acc); font-size:17px;
   font-weight:600; padding:8px 6px; min-height:0; border-radius:6px}
-.numpad-nav{display:flex; align-items:center; gap:2px}
-/* Previous sits beside the field's own action key, the way the pair reads on the
-   system's own form toolbar — grouped, since they walk the same run of boxes in
-   opposite directions. Greyed out and inert rather than removed when there is
-   nothing behind the field, exactly as that toolbar's own arrow does, so the row
-   never reflows depending on which field is focused. */
-.numpad-nav .np-prev{padding:8px; color:var(--dim)}
-.numpad-nav .np-prev:disabled{opacity:.3}
-.numpad-nav .np-prev svg{width:19px; height:19px; display:block; fill:none;
-  stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+/* Opposite Done rather than beside it — a labelled key reads as a destination in
+   its own right, not a modifier on the field's own action, and the top-left
+   corner is where a "back" control is looked for first. Greyed out and inert
+   rather than removed when there is nothing behind the field, exactly as a
+   system form toolbar's own arrow does, so the bar never reflows depending on
+   which field is focused. */
+.np-prev{display:flex; align-items:center; gap:3px}
+.np-prev svg{width:18px; height:18px; display:block; fill:none;
+  stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+.np-prev:disabled{color:var(--dim); opacity:.5}
 /* The dismiss key sits beside the grid itself, bottom right, the way the iPad's
    own keyboard-down key sits beside its own last row rather than up with Next
    and Previous — the two are grouped and centred as one unit so the dismiss key
@@ -319,12 +319,11 @@ body:not(.loaded) #print,body:not(.loaded) #reset,body:not(.loaded) #remove{disp
 
 <div class="numpad" id="numpad" aria-hidden="true">
   <div class="numpad-bar">
-    <div class="numpad-nav">
-      <button type="button" id="numpadPrev" class="np-prev" aria-label="Previous field" disabled>
-        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
-      </button>
-      <button type="button" id="numpadDone">Done</button>
-    </div>
+    <button type="button" id="numpadPrev" class="np-prev" disabled>
+      <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      <span>Previous</span>
+    </button>
+    <button type="button" id="numpadDone">Done</button>
   </div>
   <div class="numpad-body">
     <div class="numpad-grid">
