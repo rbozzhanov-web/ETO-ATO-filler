@@ -374,7 +374,9 @@ all — and it goes down in blue, apart from the legs that came printed.
   in the leg table and in Duty time, Night duty and Alwd. time alike. DUTY is
   left alone, being a code rather than a clock.
 - **Digits-only boxes open the app's own numeric keypad**, the same one the OFP
-  companion uses and not Safari's — times, fuel and payload figures alike.
+  companion uses and not Safari's — times, fuel and payload figures alike. A box
+  filled this way still gets its colon the moment it stops being edited, same as
+  one filled by hand.
 - **Blk and Flt work themselves out** — Blk from ATD and ATA, Flt from TKOF and
   TDWN, past midnight included. They are set like every other entry, since that
   is what they are. Write your own figure in and the box is yours from then on;

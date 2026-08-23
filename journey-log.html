@@ -950,6 +950,18 @@ const numpad = document.getElementById('numpad');
 let NP_LASTPTR = null, NP_TABBING = false;
 document.addEventListener('pointerdown', e => { NP_LASTPTR = e.target; }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Tab') NP_TABBING = true; }, true);
+// Setting .value from script, unlike real typing, never sets a field's own
+// dirty flag — so blurring it afterwards raises no native change event, only
+// the input events dispatched below. This page's own HH:MM formatting is keyed
+// off change, not input, and would otherwise never run for a box filled from
+// this keypad. NP_DIRTY tracks that a flush is owed, and npFlushChange fires
+// the change event by hand at the moment the field actually stops being
+// edited — see its callers in npShow/npHide.
+let NP_DIRTY = false;
+function npFlushChange(){
+  if (NP_TARGET && NP_DIRTY) NP_TARGET.dispatchEvent(new Event('change', { bubbles: true }));
+  NP_DIRTY = false;
+}
 function npInsert(ch){
   const el = NP_TARGET;
   if (!el) return;
@@ -957,6 +969,7 @@ function npInsert(ch){
   el.value = el.value.slice(0, start) + ch + el.value.slice(end);
   el.setSelectionRange(start + ch.length, start + ch.length);
   el.dispatchEvent(new Event('input', { bubbles: true }));
+  NP_DIRTY = true;
 }
 function npDelete(){
   const el = NP_TARGET;
@@ -966,6 +979,7 @@ function npDelete(){
   el.value = el.value.slice(0, from) + el.value.slice(end);
   el.setSelectionRange(from, from);
   el.dispatchEvent(new Event('input', { bubbles: true }));
+  NP_DIRTY = true;
 }
 const NP_LABEL = { next: 'Next', go: 'Go', done: 'Done', previous: 'Previous', search: 'Search', send: 'Send' };
 // The page's own tab-order array already carries this: Shift+Enter on the first
@@ -973,6 +987,7 @@ const NP_LABEL = { next: 'Next', go: 'Go', done: 'Done', previous: 'Previous', s
 // steps within it.
 function npHasPrev(el){ return inputs.indexOf(el) > 0; }
 function npShow(el){
+  npFlushChange();
   NP_TARGET = el;
   document.getElementById('numpadDoneLabel').textContent = NP_LABEL[el.enterKeyHint] || 'Done';
   document.getElementById('numpadPrev').disabled = !npHasPrev(el);
@@ -982,6 +997,7 @@ function npShow(el){
   setTimeout(() => { if (NP_TARGET === el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60);
 }
 function npHide(){
+  npFlushChange();
   NP_TARGET = null;
   numpad.classList.remove('show');
   document.body.classList.remove('numpad-open');

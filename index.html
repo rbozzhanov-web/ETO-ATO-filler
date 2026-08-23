@@ -746,7 +746,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 34.4 &nbsp;·&nbsp; published 23 Aug 2026 14:00 UTC</span></p>
+      <span class="build">Version 34.5 &nbsp;·&nbsp; published 23 Aug 2026 14:25 UTC</span></p>
 
     </div>
   </div>
@@ -1258,6 +1258,18 @@ const numpad = $('#numpad');
 let NP_LASTPTR = null, NP_TABBING = false;
 document.addEventListener('pointerdown', e => { NP_LASTPTR = e.target; }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Tab') NP_TABBING = true; }, true);
+// Setting .value from script, unlike real typing, never sets a field's own
+// dirty flag — so blurring it afterwards raises no native change event, only
+// the input events dispatched below. Journey Log's HH:MM formatting (and
+// anything else keyed off change rather than input) would otherwise never run
+// for a box filled from this keypad. NP_DIRTY tracks that a flush is owed, and
+// npFlushChange fires the change event by hand at the moment the field
+// actually stops being edited — see its callers in npShow/npHide.
+let NP_DIRTY = false;
+function npFlushChange(){
+  if (NP_TARGET && NP_DIRTY) NP_TARGET.dispatchEvent(new Event('change', { bubbles: true }));
+  NP_DIRTY = false;
+}
 function npInsert(ch){
   const el = NP_TARGET;
   if (!el) return;
@@ -1265,6 +1277,7 @@ function npInsert(ch){
   el.value = el.value.slice(0, start) + ch + el.value.slice(end);
   el.setSelectionRange(start + ch.length, start + ch.length);
   el.dispatchEvent(new Event('input', { bubbles: true }));
+  NP_DIRTY = true;
 }
 function npDelete(){
   const el = NP_TARGET;
@@ -1274,6 +1287,7 @@ function npDelete(){
   el.value = el.value.slice(0, from) + el.value.slice(end);
   el.setSelectionRange(from, from);
   el.dispatchEvent(new Event('input', { bubbles: true }));
+  NP_DIRTY = true;
 }
 // The action key's own label follows enterkeyhint, the same way the system
 // keyboard's would have: Next on a field that has one to jump to, Go on the
@@ -1292,6 +1306,7 @@ function npHasPrev(el){
   return m ? +m[1] > 0 : false;
 }
 function npShow(el){
+  npFlushChange();
   NP_TARGET = el;
   $('#numpadDoneLabel').textContent = NP_LABEL[el.enterKeyHint] || 'Done';
   $('#numpadPrev').disabled = !npHasPrev(el);
@@ -1301,6 +1316,7 @@ function npShow(el){
   setTimeout(() => { if (NP_TARGET === el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60);
 }
 function npHide(){
+  npFlushChange();
   NP_TARGET = null;
   numpad.classList.remove('show');
   document.body.classList.remove('numpad-open');
