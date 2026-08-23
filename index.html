@@ -598,6 +598,8 @@ td.diff{text-align:right;font-weight:700}
       next due time shows above the table — amber as it nears, red once overdue — and the fuel
       box it belongs to is ringed. A figure entered anywhere inside that half hour clears it.
       Saving with a check overdue asks for confirmation.</p>
+      <p class="new">A figure entered early restarts the thirty minutes from that moment, rather
+      than leaving the next one due on the old half-hour mark.</p>
 
       <h3>Following the flight</h3>
       <p>The table tracks the clock: passed points fade back, the last one is shaded, and the
@@ -628,7 +630,7 @@ td.diff{text-align:right;font-weight:700}
       <p>The whole aerodrome closed outranks both: it gets the one saturated fill on the card,
       the same red as <b>Reset</b>, since it is worth catching before the rest of the list is
       even read.</p>
-      <p class="new"><b>Highlight what applies now</b>, beside the aerodrome dropdown, turns all
+      <p><b>Highlight what applies now</b>, beside the aerodrome dropdown, turns all
       three off at once for a crew that would rather read the reports plain. It is a device
       preference, kept the same way the theme is — set once, left as it is after that.</p>
 
@@ -688,7 +690,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 30.3 &nbsp;·&nbsp; published 22 Aug 2026 07:00 UTC</span></p>
+      <span class="build">Version 31 &nbsp;·&nbsp; published 22 Aug 2026 08:00 UTC</span></p>
 
     </div>
   </div>
@@ -2608,19 +2610,28 @@ const atTime = (p, off) => {
 function fuelChecks(off){
   const main = flown();
   if (!main.length) return [];
+  const at = p => p.cum + off;
   const total = main[main.length - 1].cum + off, out = [];
-  for (let mark = 30; total - mark >= 30; mark += 30){
-    const c = { mark, from: mark - 30, to: mark };
+  // Each window starts where the last one actually ended — not on a grid fixed to
+  // takeoff. A figure entered before its window's own thirty minutes are up is a
+  // check made early, and the next thirty minutes run from there: without this the
+  // grid stays put regardless, and a check made five minutes into a window still
+  // leaves the next one due on the old mark, up to fifty-five minutes later.
+  for (let anchor = 0; anchor + 30 <= total; ){
+    const c = { from: anchor, to: anchor + 30 };
     // Only past the end of the flight is a window dropped. The half-hour rule runs
     // on the clock, so a direct that empties a window does not excuse its check —
     // fuelBox hands it the next waypoint actually overflown instead.
     const box = fuelBox(c, off);
-    if (!box.length) continue;
+    if (!box.length) break;
+    c.mark = c.to;
     // The check falls due when the aeroplane actually passes the waypoint it sits
     // on, so the time follows the ATOs as they are entered rather than standing on
     // a half-hour grid drawn at takeoff.
     c.due = atTime(box[box.length - 1], off);
     out.push(c);
+    const early = box.filter(p => (ACT[p.i] || {}).fuel).sort((a, b) => at(a) - at(b))[0];
+    anchor = early ? at(early) : c.to;
   }
   return out;
 }

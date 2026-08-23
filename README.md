@@ -139,6 +139,10 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    plan. A direct that cuts out everything in a half-hour does not cancel that check —
    it is written on the next waypoint overflown instead. Only past the end of the
    flight is a window dropped.
+   A figure entered early — before its own thirty minutes are up — starts the next
+   thirty from there rather than leaving the next window due on the old half-hour
+   mark: overfly a waypoint and record fuel on it, and the clock the company rule
+   actually means restarts at that moment, the same as it would on paper.
 4. Record the hourly altimeter cross-checks. The app works out which waypoint
    falls on each full hour after takeoff and lists one row per hour; enter
    ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly
