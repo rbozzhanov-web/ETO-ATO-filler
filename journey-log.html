@@ -939,6 +939,17 @@ function field(parent, x0, x1, y, h, opt){
    is focused. */
 let NP_TARGET = null;
 const numpad = document.getElementById('numpad');
+// Whether a field focusing is something the crew actually did, not the page
+// rebuilding its own inputs mid-load: PDF parsing recreates dozens of them, and
+// on a real device — never caught by this session's own headless testing — one
+// of those rebuilds can leave the browser's own focus sitting on whichever is
+// now first in tab order, popping the keypad open over an empty drop zone. A
+// tap records its own target here first; a focusin the keypad did itself
+// (Previous/Next, or tapping straight across from one numeric field to
+// another) is already covered by the pad being open already.
+let NP_LASTPTR = null, NP_TABBING = false;
+document.addEventListener('pointerdown', e => { NP_LASTPTR = e.target; }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Tab') NP_TABBING = true; }, true);
 function npInsert(ch){
   const el = NP_TARGET;
   if (!el) return;
@@ -996,7 +1007,10 @@ document.getElementById('numpadPrev').addEventListener('pointerdown', e => {
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
 });
 document.addEventListener('focusin', e => {
-  if (e.target.matches && e.target.matches('.numkey')) npShow(e.target);
+  const tabbed = NP_TABBING; NP_TABBING = false;
+  if (e.target.matches && e.target.matches('.numkey')){
+    if (NP_TARGET || e.target === NP_LASTPTR || tabbed) npShow(e.target);
+  }
   else if (NP_TARGET) npHide();
 });
 document.addEventListener('focusout', e => {

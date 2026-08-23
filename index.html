@@ -640,7 +640,7 @@ td.diff{text-align:right;font-weight:700}
       <p>It dismisses the way a system keyboard does, too: the iPad's own dismiss key, pinned to
       the keypad's own bottom-right corner, always just closes it, and so does a tap outside it
       or a real scroll.</p>
-      <p class="new">Mirrored opposite it, top left, <b>Previous</b> steps back the same run
+      <p>Mirrored opposite it, top left, <b>Previous</b> steps back the same run
       of boxes — greyed out on the first one, since there is nowhere behind it to go.</p>
 
       <h3>Altimeter cross-checks</h3>
@@ -746,7 +746,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 34.3 &nbsp;·&nbsp; published 23 Aug 2026 13:35 UTC</span></p>
+      <span class="build">Version 34.4 &nbsp;·&nbsp; published 23 Aug 2026 14:00 UTC</span></p>
 
     </div>
   </div>
@@ -1247,6 +1247,17 @@ const hide = el => { $(el).className = 'msg'; };
    behaviour rather than a page doing something unusual. */
 let NP_TARGET = null;
 const numpad = $('#numpad');
+// Whether a field focusing is something the crew actually did, not the page
+// rebuilding its own inputs mid-load: PDF parsing recreates dozens of them, and
+// on a real device — never caught by this session's own headless testing — one
+// of those rebuilds can leave the browser's own focus sitting on whichever is
+// now first in tab order, popping the keypad open over an empty drop zone. A
+// tap records its own target here first; a focusin the keypad did itself
+// (Previous/Next, or tapping straight across from one numeric field to
+// another) is already covered by the pad being open already.
+let NP_LASTPTR = null, NP_TABBING = false;
+document.addEventListener('pointerdown', e => { NP_LASTPTR = e.target; }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Tab') NP_TABBING = true; }, true);
 function npInsert(ch){
   const el = NP_TARGET;
   if (!el) return;
@@ -1321,7 +1332,10 @@ $('#numpadPrev').addEventListener('pointerdown', e => {
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
 });
 document.addEventListener('focusin', e => {
-  if (e.target.matches && e.target.matches('.numkey')) npShow(e.target);
+  const tabbed = NP_TABBING; NP_TABBING = false;
+  if (e.target.matches && e.target.matches('.numkey')){
+    if (NP_TARGET || e.target === NP_LASTPTR || tabbed) npShow(e.target);
+  }
   else if (NP_TARGET) npHide();
 });
 // Blurring to nothing at all — a field's own handler calling only .blur(), the
