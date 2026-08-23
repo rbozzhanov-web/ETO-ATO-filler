@@ -939,22 +939,15 @@ function field(parent, x0, x1, y, h, opt){
    is focused. */
 let NP_TARGET = null;
 const numpad = document.getElementById('numpad');
-// Whether a field focusing is something the crew actually did, not the page
-// rebuilding its own inputs mid-load: PDF parsing recreates dozens of them, and
-// on a real device — never caught by this session's own headless testing — one
-// of those rebuilds can leave the browser's own focus sitting on whichever is
-// now first in tab order, popping the keypad open over an empty drop zone. A
-// tap records its own target here first; a focusin the keypad did itself
-// (Previous/Next, or tapping straight across from one numeric field to
-// another) is already covered by the pad being open already. With a hardware
-// keyboard attached, Safari moves the focus itself on Tab and, iPad's own
-// addition, the plain Up/Down arrows — never Left/Right, which move the
-// cursor inside the field instead of leaving it.
-let NP_LASTPTR = null, NP_NAVKEY = false;
-document.addEventListener('pointerdown', e => { NP_LASTPTR = e.target; }, true);
-document.addEventListener('keydown', e => {
-  if (e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp') NP_NAVKEY = true;
-}, true);
+// A field gaining focus opens the keypad by default — a tap, Tab, a hardware
+// keyboard's own Up/Down between fields, even Safari's own native field-
+// navigation chevrons in a text field's accessory bar, none of which raise an
+// event this page can see happening first. This page has no autofocus call of
+// its own to suppress — no plan is ever loaded straight into a box the way the
+// companion's takeoff time is — but the one-shot flag stays here so the two
+// pages' keypads keep reading as one implementation, ready if that changes.
+let NP_SUPPRESS_NEXT = false;
+function npSuppressNext(){ NP_SUPPRESS_NEXT = true; }
 // Setting .value from script, unlike real typing, never sets a field's own
 // dirty flag — so blurring it afterwards raises no native change event, only
 // the input events dispatched below. This page's own HH:MM formatting is keyed
@@ -1028,9 +1021,9 @@ document.getElementById('numpadPrev').addEventListener('pointerdown', e => {
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
 });
 document.addEventListener('focusin', e => {
-  const navkey = NP_NAVKEY; NP_NAVKEY = false;
+  const suppress = NP_SUPPRESS_NEXT; NP_SUPPRESS_NEXT = false;
   if (e.target.matches && e.target.matches('.numkey')){
-    if (NP_TARGET || e.target === NP_LASTPTR || navkey) npShow(e.target);
+    if (!suppress) npShow(e.target);
   }
   else if (NP_TARGET) npHide();
 });

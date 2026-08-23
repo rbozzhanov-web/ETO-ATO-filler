@@ -167,10 +167,11 @@ moves — so filling a column works exactly as it did with the system keyboard r
 opposite it, top left, **Previous** steps back the same way Shift+Return already does with a
 keyboard attached; greyed out on the first box of a run, since there is nowhere behind it to go.
 
-It only ever opens for a field the crew actually tapped or navigated into with a keyboard —
-Tab, or a hardware keyboard's own Up/Down between fields — since parsing a plan rebuilds
-dozens of these boxes at once, and a focus the rebuild itself leaves sitting on one of them is
-left alone.
+It opens for any field that gains focus, the way the system keyboard would — a tap, Tab, a
+hardware keyboard's own Up/Down between fields, even Safari's own field-navigation chevrons in
+a text box's own toolbar, which never raise anything this page could watch for. The one
+exception is the takeoff time getting the focus a fresh plan hands it automatically, so typing
+can start at once: the keypad stays down for that one box until it is actually tapped.
 
 It dismisses the way a system keyboard does too, since `inputmode="none"` keeps the real one
 from ever appearing to dismiss on its own: the iPad's own dismiss key, pinned to the keypad's
