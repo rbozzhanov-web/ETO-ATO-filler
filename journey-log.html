@@ -175,9 +175,15 @@ html[data-theme=light]{--npbg:#d1d3d9; --npkey:#fff; --npkeypress:#b9bbc1; --npd
   box-shadow:0 -1px 0 var(--npline); transform:translateY(100%);
   transition:transform .22s cubic-bezier(.32,.72,0,1); pointer-events:none}
 .numpad.show{transform:translateY(0); pointer-events:auto}
-.numpad-bar{display:flex; justify-content:flex-end; padding:4px 10px}
+.numpad-bar{display:flex; justify-content:space-between; align-items:center; padding:4px 10px}
 .numpad-bar button{background:none; border:0; color:var(--acc); font-size:17px;
   font-weight:600; padding:8px 6px; min-height:0; border-radius:6px}
+/* The dismiss icon is its own key, separate from the field's own Next/Go/Done —
+   that one advances or calculates; this one only ever closes, the way the iPad's
+   own keyboard-down key in the corner of its accessory bar does. */
+.numpad-bar .np-hide{padding:6px; color:var(--dim)}
+.numpad-bar .np-hide svg{width:20px; height:20px; display:block; fill:none;
+  stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
 .numpad-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
   max-width:420px; margin:0 auto; padding:0 8px calc(8px + env(safe-area-inset-bottom))}
 .numpad-grid button{background:var(--npkey); color:var(--nptxt); border:0; border-radius:8px;
@@ -297,7 +303,12 @@ body:not(.loaded) #print,body:not(.loaded) #reset,body:not(.loaded) #remove{disp
 <div id="stage"></div>
 
 <div class="numpad" id="numpad" aria-hidden="true">
-  <div class="numpad-bar"><button type="button" id="numpadDone">Done</button></div>
+  <div class="numpad-bar">
+    <button type="button" id="numpadHide" class="np-hide" aria-label="Hide keyboard">
+      <svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg>
+    </button>
+    <button type="button" id="numpadDone">Done</button>
+  </div>
   <div class="numpad-grid">
     <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
     <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
@@ -948,6 +959,34 @@ document.addEventListener('focusout', e => {
     if (!a || !a.matches || !a.matches('.numkey')) npHide();
   }, 0);
 });
+// Closes on its own, unconditionally — unlike the action key, which plays
+// whatever the field's own Enter handler does and may only move on to the next
+// box. inputmode="none" keeps Safari's keyboard from ever appearing, so none of
+// its own dismiss gestures come with it; both this key and the two listeners
+// below stand in for those.
+function npHideForce(){
+  const el = NP_TARGET;
+  npHide();
+  if (el) el.blur();
+}
+document.getElementById('numpadHide').addEventListener('pointerdown', e => { e.preventDefault(); npHideForce(); });
+// A tap anywhere outside the field and the keypad itself dismisses it, the way
+// tapping elsewhere on the page dismisses the system keyboard.
+document.addEventListener('pointerdown', e => {
+  if (!NP_TARGET || e.target === NP_TARGET || numpad.contains(e.target)) return;
+  npHideForce();
+});
+// A real scroll — one following an actual touch or wheel gesture, not the
+// keypad's own scrollIntoView bringing the field above it into view, and not the
+// sheet's own pinch-zoom pan — dismisses it too, the way scrolling the content
+// behind the system keyboard does.
+let NP_GESTURE = false;
+addEventListener('touchmove', () => { NP_GESTURE = true; }, { passive: true });
+addEventListener('wheel', () => { NP_GESTURE = true; }, { passive: true });
+document.addEventListener('scroll', () => {
+  if (NP_GESTURE && NP_TARGET) npHideForce();
+  NP_GESTURE = false;
+}, { passive: true, capture: true });
 
 /* The underlined items across the top of the page size themselves to their
    text, exactly as the printed ones do. */

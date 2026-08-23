@@ -165,6 +165,12 @@ same slide. The key in the corner plays whatever that field's own Return key wou
 **Next** across a run of boxes, **Go** on the takeoff time, **Done** wherever nothing moves —
 so filling a column works exactly as it did with the system keyboard raised.
 
+It dismisses the way a system keyboard does too, since `inputmode="none"` keeps the real one
+from ever appearing to dismiss on its own: a chevron in the corner of the keypad closes it
+outright, whatever the field's own Return key would otherwise have done; a tap anywhere
+outside both the field and the keypad closes it as well, and so does a real scroll — one
+actually dragged or wheeled, never the keypad's own scroll bringing the field up above it.
+
 The page scrolls plainly. Three attempts to help it along have been made and all three
 withdrawn — CSS scroll snapping, then a pull onto the nearest card once your scroll came to
 rest, then page-by-page turning. Each was flown with and each got in the way, so where you
