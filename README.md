@@ -167,6 +167,10 @@ moves — so filling a column works exactly as it did with the system keyboard r
 opposite it, top left, **Previous** steps back the same way Shift+Return already does with a
 keyboard attached; greyed out on the first box of a run, since there is nowhere behind it to go.
 
+It only ever opens for a field the crew actually tapped or tabbed into — parsing a plan rebuilds
+dozens of these boxes at once, and a focus the rebuild itself leaves sitting on one of them,
+rather than a tap or Tab landing on it, is left alone.
+
 It dismisses the way a system keyboard does too, since `inputmode="none"` keeps the real one
 from ever appearing to dismiss on its own: the iPad's own dismiss key, pinned to the keypad's
 own bottom-right corner rather than up in the bar with Next and Previous, closes it outright,
@@ -370,7 +374,9 @@ all — and it goes down in blue, apart from the legs that came printed.
   in the leg table and in Duty time, Night duty and Alwd. time alike. DUTY is
   left alone, being a code rather than a clock.
 - **Digits-only boxes open the app's own numeric keypad**, the same one the OFP
-  companion uses and not Safari's — times, fuel and payload figures alike.
+  companion uses and not Safari's — times, fuel and payload figures alike. A box
+  filled this way still gets its colon the moment it stops being edited, same as
+  one filled by hand.
 - **Blk and Flt work themselves out** — Blk from ATD and ATA, Flt from TKOF and
   TDWN, past midnight included. They are set like every other entry, since that
   is what they are. Write your own figure in and the box is yours from then on;
