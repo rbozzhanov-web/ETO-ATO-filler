@@ -168,10 +168,11 @@ so filling a column works exactly as it did with the system keyboard raised. Bes
 attached; greyed out on the first box of a run, since there is nowhere behind it to go.
 
 It dismisses the way a system keyboard does too, since `inputmode="none"` keeps the real one
-from ever appearing to dismiss on its own: a chevron in the corner of the keypad closes it
-outright, whatever the field's own Return key would otherwise have done; a tap anywhere
-outside both the field and the keypad closes it as well, and so does a real scroll — one
-actually dragged or wheeled, never the keypad's own scroll bringing the field up above it.
+from ever appearing to dismiss on its own: the iPad's own dismiss key, bottom right beside the
+keypad's own last row rather than up with Next and Previous, closes it outright, whatever the
+field's own Return key would otherwise have done; a tap anywhere outside both the field and the
+keypad closes it as well, and so does a real scroll — one actually dragged or wheeled, never the
+keypad's own scroll bringing the field up above it.
 
 The page scrolls plainly. Three attempts to help it along have been made and all three
 withdrawn — CSS scroll snapping, then a pull onto the nearest card once your scroll came to
