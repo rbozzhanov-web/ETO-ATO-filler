@@ -746,7 +746,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 34.5 &nbsp;·&nbsp; published 23 Aug 2026 14:25 UTC</span></p>
+      <span class="build">Version 34.6 &nbsp;·&nbsp; published 23 Aug 2026 14:45 UTC</span></p>
 
     </div>
   </div>
@@ -1254,10 +1254,15 @@ const numpad = $('#numpad');
 // now first in tab order, popping the keypad open over an empty drop zone. A
 // tap records its own target here first; a focusin the keypad did itself
 // (Previous/Next, or tapping straight across from one numeric field to
-// another) is already covered by the pad being open already.
-let NP_LASTPTR = null, NP_TABBING = false;
+// another) is already covered by the pad being open already. With a hardware
+// keyboard attached, Safari moves the focus itself on Tab and, iPad's own
+// addition, the plain Up/Down arrows — never Left/Right, which move the
+// cursor inside the field instead of leaving it.
+let NP_LASTPTR = null, NP_NAVKEY = false;
 document.addEventListener('pointerdown', e => { NP_LASTPTR = e.target; }, true);
-document.addEventListener('keydown', e => { if (e.key === 'Tab') NP_TABBING = true; }, true);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp') NP_NAVKEY = true;
+}, true);
 // Setting .value from script, unlike real typing, never sets a field's own
 // dirty flag — so blurring it afterwards raises no native change event, only
 // the input events dispatched below. Journey Log's HH:MM formatting (and
@@ -1348,9 +1353,9 @@ $('#numpadPrev').addEventListener('pointerdown', e => {
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
 });
 document.addEventListener('focusin', e => {
-  const tabbed = NP_TABBING; NP_TABBING = false;
+  const navkey = NP_NAVKEY; NP_NAVKEY = false;
   if (e.target.matches && e.target.matches('.numkey')){
-    if (NP_TARGET || e.target === NP_LASTPTR || tabbed) npShow(e.target);
+    if (NP_TARGET || e.target === NP_LASTPTR || navkey) npShow(e.target);
   }
   else if (NP_TARGET) npHide();
 });
