@@ -178,32 +178,30 @@ html[data-theme=light]{--npbg:#d1d3d9; --npkey:#fff; --npkeypress:#b9bbc1; --npd
 .numpad-bar{display:flex; justify-content:space-between; align-items:center; padding:4px 10px}
 .numpad-bar button{background:none; border:0; color:var(--acc); font-size:17px;
   font-weight:600; padding:8px 6px; min-height:0; border-radius:6px}
-/* Opposite Done rather than beside it — a labelled key reads as a destination in
-   its own right, not a modifier on the field's own action, and the top-left
-   corner is where a "back" control is looked for first. Greyed out and inert
-   rather than removed when there is nothing behind the field, exactly as a
-   system form toolbar's own arrow does, so the bar never reflows depending on
-   which field is focused. */
-.np-prev{display:flex; align-items:center; gap:3px}
-.np-prev svg{width:18px; height:18px; display:block; fill:none;
+/* Previous, top left, and the field's own action key, top right, are the same
+   control mirrored — a chevron pointing back before the one's label, a chevron
+   pointing on after the other's, rather than one carrying an icon the other
+   doesn't. Previous is greyed out and inert rather than removed when there is
+   nothing behind the field, exactly as a system form toolbar's own arrow does,
+   so the bar never reflows depending on which field is focused. */
+.np-prev,.np-next{display:flex; align-items:center; gap:3px}
+.np-prev svg,.np-next svg{width:18px; height:18px; display:block; fill:none;
   stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
 .np-prev:disabled{color:var(--dim); opacity:.5}
-/* The dismiss key sits beside the grid itself, bottom right, the way the iPad's
-   own keyboard-down key sits beside its own last row rather than up with Next
-   and Previous — the two are grouped and centred as one unit so the dismiss key
-   reads as part of the keyboard, not a toolbar control floating away from it. */
-.numpad-body{display:flex; align-items:flex-end; justify-content:center; gap:10px;
-  padding:0 8px calc(8px + env(safe-area-inset-bottom))}
+.numpad-body{padding:0 8px calc(8px + env(safe-area-inset-bottom))}
 .numpad-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
-  width:100%; max-width:420px}
+  width:100%; max-width:420px; margin:0 auto}
 .numpad-grid button{background:var(--npkey); color:var(--nptxt); border:0; border-radius:8px;
   font:400 26px/1 -apple-system,BlinkMacSystemFont,sans-serif; min-height:56px;
   box-shadow:0 1px 0 var(--npshadow)}
 .numpad-grid button:active{background:var(--npkeypress)}
 .numpad-grid .np-del{font-size:19px; background:var(--npdel)}
 .numpad-grid .np-empty{background:none; box-shadow:none; pointer-events:none}
-.np-hide{flex:0 0 auto; width:44px; height:44px; margin-bottom:6px; background:none;
-  border:0; border-radius:8px; color:var(--dim)}
+/* Pinned to the keyboard's own corner — not the grid's, which is centred and
+   often narrower than the bar — the way the iPad's own dismiss key sits at the
+   actual bottom-right edge regardless of how wide the number pad itself is. */
+.np-hide{position:absolute; right:14px; bottom:calc(14px + env(safe-area-inset-bottom));
+  width:44px; height:44px; background:none; border:0; border-radius:8px; color:var(--dim)}
 .np-hide svg{width:24px; height:24px; display:block; margin:0 auto; fill:none;
   stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round}
 .np-hide:active{background:color-mix(in srgb, var(--dim) 16%, transparent)}
@@ -323,7 +321,10 @@ body:not(.loaded) #print,body:not(.loaded) #reset,body:not(.loaded) #remove{disp
       <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
       <span>Previous</span>
     </button>
-    <button type="button" id="numpadDone">Done</button>
+    <button type="button" id="numpadDone" class="np-next">
+      <span id="numpadDoneLabel">Done</span>
+      <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
   </div>
   <div class="numpad-body">
     <div class="numpad-grid">
@@ -334,21 +335,21 @@ body:not(.loaded) #print,body:not(.loaded) #reset,body:not(.loaded) #remove{disp
       <button type="button" data-k="0">0</button>
       <button type="button" class="np-del" data-k="del" aria-label="Delete">&#9003;</button>
     </div>
-    <!-- The iPad's own dismiss key sits here — bottom right of the keyboard
-         itself, beside its last row, not up in the accessory bar with Next and
-         Previous. Its glyph is the system's own: a keyboard outline with the
-         chevron tucked under it, not a bare arrow. -->
-    <button type="button" id="numpadHide" class="np-hide" aria-label="Hide keyboard">
-      <svg viewBox="0 0 24 24">
-        <rect x="2.5" y="4.5" width="19" height="11" rx="2.2"/>
-        <line x1="6" y1="7.6" x2="6" y2="7.6"/><line x1="9" y1="7.6" x2="9" y2="7.6"/>
-        <line x1="12" y1="7.6" x2="12" y2="7.6"/><line x1="15" y1="7.6" x2="15" y2="7.6"/>
-        <line x1="18" y1="7.6" x2="18" y2="7.6"/>
-        <line x1="6" y1="11.9" x2="17.2" y2="11.9"/>
-        <path d="M9.3 19.5l2.7 2 2.7-2"/>
-      </svg>
-    </button>
   </div>
+  <!-- The iPad's own dismiss key sits here — pinned to the keyboard's own
+       bottom-right corner, not up in the accessory bar with Next and Previous.
+       Its glyph is the system's own: a keyboard outline with the chevron
+       tucked under it, not a bare arrow. -->
+  <button type="button" id="numpadHide" class="np-hide" aria-label="Hide keyboard">
+    <svg viewBox="0 0 24 24">
+      <rect x="2.5" y="4.5" width="19" height="11" rx="2.2"/>
+      <line x1="6" y1="7.6" x2="6" y2="7.6"/><line x1="9" y1="7.6" x2="9" y2="7.6"/>
+      <line x1="12" y1="7.6" x2="12" y2="7.6"/><line x1="15" y1="7.6" x2="15" y2="7.6"/>
+      <line x1="18" y1="7.6" x2="18" y2="7.6"/>
+      <line x1="6" y1="11.9" x2="17.2" y2="11.9"/>
+      <path d="M9.3 19.5l2.7 2 2.7-2"/>
+    </svg>
+  </button>
 </div>
 
 <script>
@@ -962,7 +963,7 @@ const NP_LABEL = { next: 'Next', go: 'Go', done: 'Done', previous: 'Previous', s
 function npHasPrev(el){ return inputs.indexOf(el) > 0; }
 function npShow(el){
   NP_TARGET = el;
-  document.getElementById('numpadDone').textContent = NP_LABEL[el.enterKeyHint] || 'Done';
+  document.getElementById('numpadDoneLabel').textContent = NP_LABEL[el.enterKeyHint] || 'Done';
   document.getElementById('numpadPrev').disabled = !npHasPrev(el);
   numpad.classList.add('show');
   document.body.style.setProperty('--numpad-h', numpad.offsetHeight + 'px');

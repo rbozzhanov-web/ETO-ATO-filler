@@ -161,16 +161,16 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 Every digits-only box — takeoff time, ATO and fuel, the altimeter readings, ALTM/STBY/QNH,
 PIC BLOCK — opens the app's own numeric keypad instead of Safari's, docked to the bottom the
 way a system keyboard is and built to match it: the same 3×4 layout, the same weight, the
-same slide. The key in the top-right corner plays whatever that field's own Return key would
+same slide. Top right, a chevron and a label play whatever that field's own Return key would
 have — **Next** across a run of boxes, **Go** on the takeoff time, **Done** wherever nothing
-moves — so filling a column works exactly as it did with the system keyboard raised. Opposite
-it, top left, a labelled **Previous** steps back the same way Shift+Return already does with a
+moves — so filling a column works exactly as it did with the system keyboard raised. Mirrored
+opposite it, top left, **Previous** steps back the same way Shift+Return already does with a
 keyboard attached; greyed out on the first box of a run, since there is nowhere behind it to go.
 
 It dismisses the way a system keyboard does too, since `inputmode="none"` keeps the real one
-from ever appearing to dismiss on its own: the iPad's own dismiss key, bottom right beside the
-keypad's own last row rather than up in the bar with Next and Previous, closes it outright, whatever the
-field's own Return key would otherwise have done; a tap anywhere outside both the field and the
+from ever appearing to dismiss on its own: the iPad's own dismiss key, pinned to the keypad's
+own bottom-right corner rather than up in the bar with Next and Previous, closes it outright,
+whatever the field's own Return key would otherwise have done; a tap anywhere outside both the field and the
 keypad closes it as well, and so does a real scroll — one actually dragged or wheeled, never the
 keypad's own scroll bringing the field up above it.
 
