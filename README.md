@@ -161,9 +161,18 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 Every digits-only box — takeoff time, ATO and fuel, the altimeter readings, ALTM/STBY/QNH,
 PIC BLOCK — opens the app's own numeric keypad instead of Safari's, docked to the bottom the
 way a system keyboard is and built to match it: the same 3×4 layout, the same weight, the
-same slide. The key in the corner plays whatever that field's own Return key would have —
-**Next** across a run of boxes, **Go** on the takeoff time, **Done** wherever nothing moves —
-so filling a column works exactly as it did with the system keyboard raised.
+same slide. Top right, a chevron and a label play whatever that field's own Return key would
+have — **Next** across a run of boxes, **Go** on the takeoff time, **Done** wherever nothing
+moves — so filling a column works exactly as it did with the system keyboard raised. Mirrored
+opposite it, top left, **Previous** steps back the same way Shift+Return already does with a
+keyboard attached; greyed out on the first box of a run, since there is nowhere behind it to go.
+
+It dismisses the way a system keyboard does too, since `inputmode="none"` keeps the real one
+from ever appearing to dismiss on its own: the iPad's own dismiss key, pinned to the keypad's
+own bottom-right corner rather than up in the bar with Next and Previous, closes it outright,
+whatever the field's own Return key would otherwise have done; a tap anywhere outside both the field and the
+keypad closes it as well, and so does a real scroll — one actually dragged or wheeled, never the
+keypad's own scroll bringing the field up above it.
 
 The page scrolls plainly. Three attempts to help it along have been made and all three
 withdrawn — CSS scroll snapping, then a pull onto the nearest card once your scroll came to
@@ -372,7 +381,8 @@ all — and it goes down in blue, apart from the legs that came printed.
   crew member below. Correct anyone afterwards and only that row changes.
 - **The return key steps to the next box**, in reading order across the page —
   the one key the on-screen keyboard offers for it. With a keyboard attached,
-  Shift+Return goes back and Tab does the same as Return.
+  Shift+Return goes back and Tab does the same as Return. The numeric keypad's own
+  **Previous** arrow plays Shift+Return the same way, greyed out on the first box.
 - Fill-in boxes take capitals, as the form is written.
 - The captain's signature has no box. It goes on the paper by hand, so the
   space under it is left clear.
