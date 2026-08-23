@@ -167,11 +167,16 @@ input.l{text-align:left; padding-left:2pt}
    inputmode="none" so Safari never raises the system keyboard for it, and this bar
    stands in for it — same layout, weight and dock-and-slide as the companion's own,
    since one switch already serves both pages and this is the other thing that does. */
-:root{--npbg:#1c1c1e; --npkey:#3a3a3c; --npkeypress:#57585a; --npdel:#57585a; --nptxt:#fff;
-  --npline:#000; --npshadow:rgba(0,0,0,.6)}
-html[data-theme=light]{--npbg:#d1d3d9; --npkey:#fff; --npkeypress:#b9bbc1; --npdel:#b9bbc1;
-  --nptxt:#000; --npline:#b9bbc1; --npshadow:rgba(0,0,0,.28)}
+/* Current iOS keyboards are frosted glass, not a flat panel — content keeps
+   moving dimly behind them. backdrop-filter carries that; the colours behind
+   it are the same ones the flat version used, just no longer fully opaque. */
+:root{--npbg:rgba(28,28,30,.86); --npkey:rgba(60,60,62,.92); --npkeypress:#68686b;
+  --npdel:rgba(88,89,91,.92); --nptxt:#fff; --npline:rgba(255,255,255,.08); --npshadow:rgba(0,0,0,.6)}
+html[data-theme=light]{--npbg:rgba(216,218,223,.82); --npkey:rgba(255,255,255,.92);
+  --npkeypress:#c6c8cd; --npdel:rgba(198,200,205,.92); --nptxt:#000; --npline:rgba(0,0,0,.08);
+  --npshadow:rgba(0,0,0,.22)}
 .numpad{position:fixed; left:0; right:0; bottom:0; z-index:80; background:var(--npbg);
+  backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%);
   box-shadow:0 -1px 0 var(--npline); transform:translateY(100%);
   transition:transform .22s cubic-bezier(.32,.72,0,1); pointer-events:none}
 .numpad.show{transform:translateY(0); pointer-events:auto}
@@ -195,7 +200,9 @@ html[data-theme=light]{--npbg:#d1d3d9; --npkey:#fff; --npkeypress:#b9bbc1; --npd
   font:400 26px/1 -apple-system,BlinkMacSystemFont,sans-serif; min-height:56px;
   box-shadow:0 1px 0 var(--npshadow)}
 .numpad-grid button:active{background:var(--npkeypress)}
-.numpad-grid .np-del{font-size:19px; background:var(--npdel)}
+.numpad-grid .np-del{background:var(--npdel)}
+.numpad-grid .np-del svg{width:24px; height:24px; display:block; margin:0 auto; fill:none;
+  stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
 .numpad-grid .np-empty{background:none; box-shadow:none; pointer-events:none}
 /* Pinned to the keyboard's own corner — not the grid's, which is centred and
    often narrower than the bar — the way the iPad's own dismiss key sits at the
@@ -333,7 +340,10 @@ body:not(.loaded) #print,body:not(.loaded) #reset,body:not(.loaded) #remove{disp
       <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
       <button type="button" class="np-empty" tabindex="-1" aria-hidden="true"></button>
       <button type="button" data-k="0">0</button>
-      <button type="button" class="np-del" data-k="del" aria-label="Delete">&#9003;</button>
+      <button type="button" class="np-del" data-k="del" aria-label="Delete">
+        <svg viewBox="0 0 24 24"><path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7 6-7z"/>
+          <path d="M12.2 10l5 5m0-5l-5 5"/></svg>
+      </button>
     </div>
   </div>
   <!-- The iPad's own dismiss key sits here — pinned to the keyboard's own
@@ -939,22 +949,15 @@ function field(parent, x0, x1, y, h, opt){
    is focused. */
 let NP_TARGET = null;
 const numpad = document.getElementById('numpad');
-// Whether a field focusing is something the crew actually did, not the page
-// rebuilding its own inputs mid-load: PDF parsing recreates dozens of them, and
-// on a real device — never caught by this session's own headless testing — one
-// of those rebuilds can leave the browser's own focus sitting on whichever is
-// now first in tab order, popping the keypad open over an empty drop zone. A
-// tap records its own target here first; a focusin the keypad did itself
-// (Previous/Next, or tapping straight across from one numeric field to
-// another) is already covered by the pad being open already. With a hardware
-// keyboard attached, Safari moves the focus itself on Tab and, iPad's own
-// addition, the plain Up/Down arrows — never Left/Right, which move the
-// cursor inside the field instead of leaving it.
-let NP_LASTPTR = null, NP_NAVKEY = false;
-document.addEventListener('pointerdown', e => { NP_LASTPTR = e.target; }, true);
-document.addEventListener('keydown', e => {
-  if (e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp') NP_NAVKEY = true;
-}, true);
+// A field gaining focus opens the keypad by default — a tap, Tab, a hardware
+// keyboard's own Up/Down between fields, even Safari's own native field-
+// navigation chevrons in a text field's accessory bar, none of which raise an
+// event this page can see happening first. This page has no autofocus call of
+// its own to suppress — no plan is ever loaded straight into a box the way the
+// companion's takeoff time is — but the one-shot flag stays here so the two
+// pages' keypads keep reading as one implementation, ready if that changes.
+let NP_SUPPRESS_NEXT = false;
+function npSuppressNext(){ NP_SUPPRESS_NEXT = true; }
 // Setting .value from script, unlike real typing, never sets a field's own
 // dirty flag — so blurring it afterwards raises no native change event, only
 // the input events dispatched below. This page's own HH:MM formatting is keyed
@@ -1007,14 +1010,37 @@ function npHide(){
   numpad.classList.remove('show');
   document.body.classList.remove('numpad-open');
 }
+// A synthesized tick rather than a fetched sound file, so the page stays
+// self-contained. There is no Web API to read the ring/silent switch or the
+// system's own "Keyboard Clicks" setting, so this leans on iOS Safari's own
+// behaviour of muting exactly this kind of ambient Web Audio output when the
+// switch is set to silent — the same way the system keyboard's own clicks go
+// quiet, without this code ever having to know the switch's state itself.
+let NP_ACTX = null;
+function npClick(){
+  try{
+    NP_ACTX = NP_ACTX || new (window.AudioContext || window.webkitAudioContext)();
+    if (NP_ACTX.state === 'suspended') NP_ACTX.resume();
+    const t = NP_ACTX.currentTime;
+    const osc = NP_ACTX.createOscillator(), gain = NP_ACTX.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1000, t);
+    gain.gain.setValueAtTime(.05, t);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + .03);
+    osc.connect(gain).connect(NP_ACTX.destination);
+    osc.start(t); osc.stop(t + .03);
+  }catch(e){}
+}
 numpad.querySelectorAll('[data-k]').forEach(b => b.addEventListener('pointerdown', e => {
   e.preventDefault();
+  npClick();
   b.dataset.k === 'del' ? npDelete() : npInsert(b.dataset.k);
 }));
 document.getElementById('numpadDone').addEventListener('pointerdown', e => {
   e.preventDefault();
   const el = NP_TARGET;
   if (!el) return;
+  npClick();
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   if (document.activeElement === el) el.blur();
 });
@@ -1025,12 +1051,13 @@ document.getElementById('numpadPrev').addEventListener('pointerdown', e => {
   e.preventDefault();
   const el = NP_TARGET;
   if (!el || e.currentTarget.disabled) return;
+  npClick();
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
 });
 document.addEventListener('focusin', e => {
-  const navkey = NP_NAVKEY; NP_NAVKEY = false;
+  const suppress = NP_SUPPRESS_NEXT; NP_SUPPRESS_NEXT = false;
   if (e.target.matches && e.target.matches('.numkey')){
-    if (NP_TARGET || e.target === NP_LASTPTR || navkey) npShow(e.target);
+    if (!suppress) npShow(e.target);
   }
   else if (NP_TARGET) npHide();
 });
@@ -1051,7 +1078,7 @@ function npHideForce(){
   npHide();
   if (el) el.blur();
 }
-document.getElementById('numpadHide').addEventListener('pointerdown', e => { e.preventDefault(); npHideForce(); });
+document.getElementById('numpadHide').addEventListener('pointerdown', e => { e.preventDefault(); npClick(); npHideForce(); });
 // A tap anywhere outside the field and the keypad itself dismisses it, the way
 // tapping elsewhere on the page dismisses the system keyboard.
 document.addEventListener('pointerdown', e => {
@@ -1520,6 +1547,14 @@ function applyTheme(){
 }
 applyTheme();
 addEventListener('storage', e=>{ if(e.key === 'etofill:theme') applyTheme(); });
+// No explicit choice saved yet keeps following the device's own theme live,
+// the same way the companion does — flipping the system switch flips this
+// page too, whether or not the companion happens to be the one open right now.
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+  let saved = null;
+  try{ saved = localStorage.getItem('etofill:theme'); }catch(e){}
+  if(!saved) applyTheme();
+});
 
 /* The companion's header travels with its page, so it is only under this button
    while that page is at the top. Crossing back asks for the top, or the return
