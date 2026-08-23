@@ -158,6 +158,13 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 6. **Open charts** to page through the wind components and the significant
    weather sheets on their own.
 
+Every digits-only box — takeoff time, ATO and fuel, the altimeter readings, ALTM/STBY/QNH,
+PIC BLOCK — opens the app's own numeric keypad instead of Safari's, docked to the bottom the
+way a system keyboard is and built to match it: the same 3×4 layout, the same weight, the
+same slide. The key in the corner plays whatever that field's own Return key would have —
+**Next** across a run of boxes, **Go** on the takeoff time, **Done** wherever nothing moves —
+so filling a column works exactly as it did with the system keyboard raised.
+
 The page scrolls plainly. Three attempts to help it along have been made and all three
 withdrawn — CSS scroll snapping, then a pull onto the nearest card once your scroll came to
 rest, then page-by-page turning. Each was flown with and each got in the way, so where you
@@ -353,6 +360,8 @@ all — and it goes down in blue, apart from the legs that came printed.
 - **Times take four digits.** `0340` becomes `03:40` when you leave the box —
   in the leg table and in Duty time, Night duty and Alwd. time alike. DUTY is
   left alone, being a code rather than a clock.
+- **Digits-only boxes open the app's own numeric keypad**, the same one the OFP
+  companion uses and not Safari's — times, fuel and payload figures alike.
 - **Blk and Flt work themselves out** — Blk from ATD and ATA, Flt from TKOF and
   TDWN, past midnight included. They are set like every other entry, since that
   is what they are. Write your own figure in and the box is yours from then on;

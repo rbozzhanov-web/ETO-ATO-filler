@@ -163,6 +163,31 @@ input.fill:focus{background:var(--fill-focus); box-shadow:inset 0 0 0 .75pt var(
    like any other and are set like them. */
 input.l{text-align:left; padding-left:2pt}
 
+/* iOS's own numeric keypad, not the sheet's own boxes: a digits-only cell carries
+   inputmode="none" so Safari never raises the system keyboard for it, and this bar
+   stands in for it — same layout, weight and dock-and-slide as the companion's own,
+   since one switch already serves both pages and this is the other thing that does. */
+:root{--npbg:#1c1c1e; --npkey:#3a3a3c; --npkeypress:#57585a; --npdel:#57585a; --nptxt:#fff;
+  --npline:#000; --npshadow:rgba(0,0,0,.6)}
+html[data-theme=light]{--npbg:#d1d3d9; --npkey:#fff; --npkeypress:#b9bbc1; --npdel:#b9bbc1;
+  --nptxt:#000; --npline:#b9bbc1; --npshadow:rgba(0,0,0,.28)}
+.numpad{position:fixed; left:0; right:0; bottom:0; z-index:80; background:var(--npbg);
+  box-shadow:0 -1px 0 var(--npline); transform:translateY(100%);
+  transition:transform .22s cubic-bezier(.32,.72,0,1); pointer-events:none}
+.numpad.show{transform:translateY(0); pointer-events:auto}
+.numpad-bar{display:flex; justify-content:flex-end; padding:4px 10px}
+.numpad-bar button{background:none; border:0; color:var(--acc); font-size:17px;
+  font-weight:600; padding:8px 6px; min-height:0; border-radius:6px}
+.numpad-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
+  max-width:420px; margin:0 auto; padding:0 8px calc(8px + env(safe-area-inset-bottom))}
+.numpad-grid button{background:var(--npkey); color:var(--nptxt); border:0; border-radius:8px;
+  font:400 26px/1 -apple-system,BlinkMacSystemFont,sans-serif; min-height:56px;
+  box-shadow:0 1px 0 var(--npshadow)}
+.numpad-grid button:active{background:var(--npkeypress)}
+.numpad-grid .np-del{font-size:19px; background:var(--npdel)}
+.numpad-grid .np-empty{background:none; box-shadow:none; pointer-events:none}
+body.numpad-open{padding-bottom:var(--numpad-h,0px)}
+
 /* Carries the captain's figure down the column — the crew almost always share it. */
 button.dup{
   position:absolute; padding:0; margin:0; width:9pt; height:9pt; min-height:0;
@@ -270,6 +295,18 @@ body:not(.loaded) #print,body:not(.loaded) #reset,body:not(.loaded) #remove{disp
 </div>
 
 <div id="stage"></div>
+
+<div class="numpad" id="numpad" aria-hidden="true">
+  <div class="numpad-bar"><button type="button" id="numpadDone">Done</button></div>
+  <div class="numpad-grid">
+    <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+    <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+    <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+    <button type="button" class="np-empty" tabindex="-1" aria-hidden="true"></button>
+    <button type="button" data-k="0">0</button>
+    <button type="button" class="np-del" data-k="del" aria-label="Delete">&#9003;</button>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -838,7 +875,7 @@ function field(parent, x0, x1, y, h, opt){
   inp.style.width = pt(x1 - x0 - LW*2); inp.style.height = pt(h - LW*2);
   inp.value = opt.value || '';
   inp.dataset.path = opt.path;
-  if(opt.numeric) inp.inputMode = 'numeric';
+  if(opt.numeric){ inp.inputMode = 'none'; inp.classList.add('numkey'); inp.enterKeyHint = 'next'; }
   if(opt.time) inp.dataset.time = '1';
   if(!opt.pre) inp.dataset.upper = '1';
   if(opt.maxlength) inp.maxLength = opt.maxlength;
@@ -849,6 +886,68 @@ function field(parent, x0, x1, y, h, opt){
   else inputs.push(inp);
   return inp;
 }
+
+/* ================= numeric keypad =================
+   iOS's own numeric keyboard, deliberately not raised (see the .numkey cells
+   above): this bar stands in for it, docked and sliding the same way the system's
+   own would, and reusing the page's own Enter-to-next-box handling below rather
+   than knowing about it — the action key just replays a real Enter on whatever
+   is focused. */
+let NP_TARGET = null;
+const numpad = document.getElementById('numpad');
+function npInsert(ch){
+  const el = NP_TARGET;
+  if (!el) return;
+  const start = el.selectionStart ?? el.value.length, end = el.selectionEnd ?? el.value.length;
+  el.value = el.value.slice(0, start) + ch + el.value.slice(end);
+  el.setSelectionRange(start + ch.length, start + ch.length);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+function npDelete(){
+  const el = NP_TARGET;
+  if (!el) return;
+  const start = el.selectionStart ?? el.value.length, end = el.selectionEnd ?? el.value.length;
+  const from = start === end ? Math.max(0, start - 1) : start;
+  el.value = el.value.slice(0, from) + el.value.slice(end);
+  el.setSelectionRange(from, from);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+const NP_LABEL = { next: 'Next', go: 'Go', done: 'Done', previous: 'Previous', search: 'Search', send: 'Send' };
+function npShow(el){
+  NP_TARGET = el;
+  document.getElementById('numpadDone').textContent = NP_LABEL[el.enterKeyHint] || 'Done';
+  numpad.classList.add('show');
+  document.body.style.setProperty('--numpad-h', numpad.offsetHeight + 'px');
+  document.body.classList.add('numpad-open');
+  setTimeout(() => { if (NP_TARGET === el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60);
+}
+function npHide(){
+  NP_TARGET = null;
+  numpad.classList.remove('show');
+  document.body.classList.remove('numpad-open');
+}
+numpad.querySelectorAll('[data-k]').forEach(b => b.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  b.dataset.k === 'del' ? npDelete() : npInsert(b.dataset.k);
+}));
+document.getElementById('numpadDone').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  const el = NP_TARGET;
+  if (!el) return;
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  if (document.activeElement === el) el.blur();
+});
+document.addEventListener('focusin', e => {
+  if (e.target.matches && e.target.matches('.numkey')) npShow(e.target);
+  else if (NP_TARGET) npHide();
+});
+document.addEventListener('focusout', e => {
+  if (e.target !== NP_TARGET) return;
+  setTimeout(() => {
+    const a = document.activeElement;
+    if (!a || !a.matches || !a.matches('.numkey')) npHide();
+  }, 0);
+});
 
 /* The underlined items across the top of the page size themselves to their
    text, exactly as the printed ones do. */
