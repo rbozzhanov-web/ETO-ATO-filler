@@ -164,11 +164,16 @@ input:focus{outline:none;border-color:var(--acc)}
    so the substitute reads as familiar as the thing it replaces. Kept off-screen by
    transform rather than display so its height is always there to measure and the
    slide is a transform, not a reflow. */
-:root{--npbg:#1c1c1e;--npkey:#3a3a3c;--npkeypress:#57585a;--npdel:#57585a;--nptxt:#fff;
-  --npline:#000;--npshadow:rgba(0,0,0,.6)}
-html[data-theme=light]{--npbg:#d1d3d9;--npkey:#fff;--npkeypress:#b9bbc1;--npdel:#b9bbc1;
-  --nptxt:#000;--npline:#b9bbc1;--npshadow:rgba(0,0,0,.28)}
+/* Current iOS keyboards are frosted glass, not a flat panel — content keeps
+   moving dimly behind them. backdrop-filter carries that; the colours behind
+   it are the same ones the flat version used, just no longer fully opaque. */
+:root{--npbg:rgba(28,28,30,.86);--npkey:rgba(60,60,62,.92);--npkeypress:#68686b;
+  --npdel:rgba(88,89,91,.92);--nptxt:#fff;--npline:rgba(255,255,255,.08);--npshadow:rgba(0,0,0,.6)}
+html[data-theme=light]{--npbg:rgba(216,218,223,.82);--npkey:rgba(255,255,255,.92);
+  --npkeypress:#c6c8cd;--npdel:rgba(198,200,205,.92);--nptxt:#000;--npline:rgba(0,0,0,.08);
+  --npshadow:rgba(0,0,0,.22)}
 .numpad{position:fixed;left:0;right:0;bottom:0;z-index:80;background:var(--npbg);
+  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
   box-shadow:0 -1px 0 var(--npline);transform:translateY(100%);
   transition:transform .22s cubic-bezier(.32,.72,0,1);pointer-events:none}
 .numpad.show{transform:translateY(0);pointer-events:auto}
@@ -192,7 +197,9 @@ html[data-theme=light]{--npbg:#d1d3d9;--npkey:#fff;--npkeypress:#b9bbc1;--npdel:
   font:400 26px/1 -apple-system,BlinkMacSystemFont,sans-serif;min-height:56px;
   box-shadow:0 1px 0 var(--npshadow)}
 .numpad-grid button:active{background:var(--npkeypress)}
-.numpad-grid .np-del{font-size:19px;background:var(--npdel)}
+.numpad-grid .np-del{background:var(--npdel)}
+.numpad-grid .np-del svg{width:24px;height:24px;display:block;margin:0 auto;fill:none;
+  stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .numpad-grid .np-empty{background:none;box-shadow:none;pointer-events:none}
 /* Pinned to the keyboard's own corner — not the grid's, which is centred and
    often narrower than the bar — the way the iPad's own dismiss key sits at the
@@ -634,7 +641,8 @@ td.diff{text-align:right;font-weight:700}
 
       <h3>Numeric keypad</h3>
       <p>Every digits-only box opens the app's own keypad instead of Safari's —
-      docked to the bottom and built to match the system's, key for key. The corner button
+      docked to the bottom and built to match the system's, key for key, on frosted glass rather
+      than a flat panel now, the page still faintly visible moving behind it. The corner button
       plays whatever that field's own Return key would have: <b>Next</b> across a run of
       boxes, <b>Go</b> on the takeoff time, <b>Done</b> wherever nothing moves.</p>
       <p>It dismisses the way a system keyboard does, too: the iPad's own dismiss key, pinned to
@@ -642,6 +650,9 @@ td.diff{text-align:right;font-weight:700}
       or a real scroll.</p>
       <p>Mirrored opposite it, top left, <b>Previous</b> steps back the same run
       of boxes — greyed out on the first one, since there is nowhere behind it to go.</p>
+      <p class="new">Every key answers with the same short click the system keyboard's own keys
+      make, and goes quiet the same way that keyboard's clicks do when the ring/silent switch is
+      set to silent.</p>
 
       <h3>Altimeter cross-checks</h3>
       <p>Company rule: an hourly comparison. The app finds the waypoint on each full hour after
@@ -738,6 +749,8 @@ td.diff{text-align:right;font-weight:700}
         <li>Route ID, request number and release time sit under the title in the header, so the
             plan on screen can be checked against the one you were given.</li>
         <li>The sun and moon buttons switch the screen theme; print colours never change.</li>
+        <li class="new">Until one of them is tapped, the screen theme instead follows the
+            device's own light/dark setting live.</li>
         <li>A warning about ET and T/T means the plan's own columns disagree — check those
             waypoints by hand.</li>
       </ul>
@@ -746,7 +759,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 34.7 &nbsp;·&nbsp; published 23 Aug 2026 15:10 UTC</span></p>
+      <span class="build">Version 35 &nbsp;·&nbsp; published 23 Aug 2026 16:20 UTC</span></p>
 
     </div>
   </div>
@@ -770,7 +783,10 @@ td.diff{text-align:right;font-weight:700}
       <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
       <button type="button" class="np-empty" tabindex="-1" aria-hidden="true"></button>
       <button type="button" data-k="0">0</button>
-      <button type="button" class="np-del" data-k="del" aria-label="Delete">&#9003;</button>
+      <button type="button" class="np-del" data-k="del" aria-label="Delete">
+        <svg viewBox="0 0 24 24"><path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7 6-7z"/>
+          <path d="M12.2 10l5 5m0-5l-5 5"/></svg>
+      </button>
     </div>
   </div>
   <!-- The iPad's own dismiss key sits here — pinned to the keyboard's own
@@ -1320,10 +1336,32 @@ function npHide(){
   numpad.classList.remove('show');
   document.body.classList.remove('numpad-open');
 }
+// A synthesized tick rather than a fetched sound file, so the page stays
+// self-contained. There is no Web API to read the ring/silent switch or the
+// system's own "Keyboard Clicks" setting, so this leans on iOS Safari's own
+// behaviour of muting exactly this kind of ambient Web Audio output when the
+// switch is set to silent — the same way the system keyboard's own clicks go
+// quiet, without this code ever having to know the switch's state itself.
+let NP_ACTX = null;
+function npClick(){
+  try{
+    NP_ACTX = NP_ACTX || new (window.AudioContext || window.webkitAudioContext)();
+    if (NP_ACTX.state === 'suspended') NP_ACTX.resume();
+    const t = NP_ACTX.currentTime;
+    const osc = NP_ACTX.createOscillator(), gain = NP_ACTX.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1000, t);
+    gain.gain.setValueAtTime(.05, t);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + .03);
+    osc.connect(gain).connect(NP_ACTX.destination);
+    osc.start(t); osc.stop(t + .03);
+  }catch(e){}
+}
 // pointerdown, not click: click fires after the field below has already blurred
 // from the tap landing outside it, by which point NP_TARGET is already gone.
 numpad.querySelectorAll('[data-k]').forEach(b => b.addEventListener('pointerdown', e => {
   e.preventDefault();
+  npClick();
   b.dataset.k === 'del' ? npDelete() : npInsert(b.dataset.k);
 }));
 // The action key plays the field's own Enter handler — the table's "next field",
@@ -1334,6 +1372,7 @@ $('#numpadDone').addEventListener('pointerdown', e => {
   e.preventDefault();
   const el = NP_TARGET;
   if (!el) return;
+  npClick();
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   if (document.activeElement === el) el.blur();
 });
@@ -1344,6 +1383,7 @@ $('#numpadPrev').addEventListener('pointerdown', e => {
   e.preventDefault();
   const el = NP_TARGET;
   if (!el || e.currentTarget.disabled) return;
+  npClick();
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
 });
 document.addEventListener('focusin', e => {
@@ -1373,7 +1413,7 @@ function npHideForce(){
   npHide();
   if (el) el.blur();
 }
-$('#numpadHide').addEventListener('pointerdown', e => { e.preventDefault(); npHideForce(); });
+$('#numpadHide').addEventListener('pointerdown', e => { e.preventDefault(); npClick(); npHideForce(); });
 // A tap anywhere outside the field and the keypad itself dismisses it, the way
 // tapping elsewhere on the page dismisses the system keyboard. Tapping the field
 // again, or another .numkey field, is left alone — the second is already a
@@ -1454,7 +1494,11 @@ function onScreen(h){
   const k = (.42 - lum) * 1.3, mix = v => Math.round(255 * (v + (1 - v) * k));
   return `rgb(${mix(c.r)},${mix(c.g)},${mix(c.b)})`;
 }
-function applyTheme(t){
+// persist defaults to true — every caller except the device-preference sync
+// below wants the choice remembered. That one caller passes false: writing a
+// system-derived guess to storage would freeze it there, and every later
+// launch would read the stale guess back instead of asking the device again.
+function applyTheme(t, persist = true){
   document.documentElement.dataset.theme = t;
   document.querySelectorAll('[data-theme-set]').forEach(b =>
     b.setAttribute('aria-pressed', String(b.dataset.themeSet === t)));
@@ -1465,7 +1509,7 @@ function applyTheme(t){
   s.setProperty('--c-ato', onScreen(C.ato));
   s.setProperty('--c-fuel', onScreen(C.fuel));
   RESULT.forEach(p => paint(p.i));
-  try { localStorage.setItem('etofill:theme', t); } catch(e){}
+  if (persist) try { localStorage.setItem('etofill:theme', t); } catch(e){}
 }
 const guide = $('#guide');
 const showGuide = on => {
@@ -1498,8 +1542,17 @@ document.querySelectorAll('[data-theme-set]').forEach(b =>
 (() => {
   let t = null;
   try { t = localStorage.getItem('etofill:theme'); } catch(e){}
-  if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  applyTheme(t);
+  if (t){ applyTheme(t, false); return; }        // an explicit choice from a previous launch
+  const mq = matchMedia('(prefers-color-scheme: light)');
+  applyTheme(mq.matches ? 'light' : 'dark', false);
+  // Until the sun/moon button is actually tapped, the theme keeps following
+  // the device's own — flipping the system switch flips this page with it,
+  // the same launch or not, rather than freezing on whatever it read once.
+  mq.addEventListener('change', e => {
+    let saved = null;
+    try { saved = localStorage.getItem('etofill:theme'); } catch(err){}
+    if (!saved) applyTheme(e.matches ? 'light' : 'dark', false);
+  });
 })();
 
 /* ================= file loading ================= */

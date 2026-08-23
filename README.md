@@ -161,11 +161,17 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
 Every digits-only box — takeoff time, ATO and fuel, the altimeter readings, ALTM/STBY/QNH,
 PIC BLOCK — opens the app's own numeric keypad instead of Safari's, docked to the bottom the
 way a system keyboard is and built to match it: the same 3×4 layout, the same weight, the
-same slide. Top right, a chevron and a label play whatever that field's own Return key would
-have — **Next** across a run of boxes, **Go** on the takeoff time, **Done** wherever nothing
-moves — so filling a column works exactly as it did with the system keyboard raised. Mirrored
-opposite it, top left, **Previous** steps back the same way Shift+Return already does with a
-keyboard attached; greyed out on the first box of a run, since there is nowhere behind it to go.
+same slide, and the same frosted glass — the keys sit on a blurred, translucent panel rather
+than a flat one, the content behind still faintly moving under it, and the delete key carries
+the system's own glyph rather than a plain character. Top right, a chevron and a label play
+whatever that field's own Return key would have — **Next** across a run of boxes, **Go** on
+the takeoff time, **Done** wherever nothing moves — so filling a column works exactly as it
+did with the system keyboard raised. Mirrored opposite it, top left, **Previous** steps back
+the same way Shift+Return already does with a keyboard attached; greyed out on the first box
+of a run, since there is nowhere behind it to go. Every key answers with the same short click
+the system keyboard's own keys make; there is no way for the page to ask the ring/silent
+switch its state, so this leans on the same thing Safari itself does — going quiet when the
+switch is set to silent, without the app ever having to know.
 
 It opens for any field that gains focus, the way the system keyboard would — a tap, Tab, a
 hardware keyboard's own Up/Down between fields, even Safari's own field-navigation chevrons in
@@ -186,6 +192,9 @@ rest, then page-by-page turning. Each was flown with and each got in the way, so
 stop is where it stays.
 
 The button in the header switches between light and dark themes; the choice is remembered.
+Until it is tapped, the page instead follows the device's own light/dark setting live — flip
+the system switch and the page flips with it, the same launch or not, rather than freezing on
+whatever it read the first time.
 
 ## Getting the plan in
 
