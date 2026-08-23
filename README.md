@@ -168,10 +168,12 @@ whatever that field's own Return key would have — **Next** across a run of box
 the takeoff time, **Done** wherever nothing moves — so filling a column works exactly as it
 did with the system keyboard raised. Mirrored opposite it, top left, **Previous** steps back
 the same way Shift+Return already does with a keyboard attached; greyed out on the first box
-of a run, since there is nowhere behind it to go. Every key answers with the same short click
-the system keyboard's own keys make; there is no way for the page to ask the ring/silent
-switch its state, so this leans on the same thing Safari itself does — going quiet when the
-switch is set to silent, without the app ever having to know.
+of a run, since there is nowhere behind it to go. Every key answers with the same soft tock
+the system keyboard's own keys make — carved out of noise rather than played as a tone, since
+a tone at any pitch reads as a beep and a keyboard never sounds like one. There is no way for
+the page to ask the ring/silent switch its state, so this leans on the same thing Safari
+itself does — going quiet when the switch is set to silent, without the app ever having to
+know.
 
 It opens for any field that gains focus, the way the system keyboard would — a tap, Tab, a
 hardware keyboard's own Up/Down between fields, even Safari's own field-navigation chevrons in
@@ -387,7 +389,9 @@ all — and it goes down in blue, apart from the legs that came printed.
 - **Digits-only boxes open the app's own numeric keypad**, the same one the OFP
   companion uses and not Safari's — times, fuel and payload figures alike. A box
   filled this way still gets its colon the moment it stops being edited, same as
-  one filled by hand.
+  one filled by hand. The sheet runs on under the keypad rather than being lifted
+  clear of it, so the frosted glass has the form to show through it here too, and
+  the last rows still scroll up clear of the keys.
 - **Blk and Flt work themselves out** — Blk from ATD and ATA, Flt from TKOF and
   TDWN, past midnight included. They are set like every other entry, since that
   is what they are. Write your own figure in and the box is yours from then on;
