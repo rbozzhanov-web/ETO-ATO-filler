@@ -650,7 +650,7 @@ td.diff{text-align:right;font-weight:700}
       or a real scroll.</p>
       <p>Mirrored opposite it, top left, <b>Previous</b> steps back the same run
       of boxes — greyed out on the first one, since there is nowhere behind it to go.</p>
-      <p class="new">Every key answers with the same short click the system keyboard's own keys
+      <p>Every key answers with the same soft tock the system keyboard's own keys
       make, and goes quiet the same way that keyboard's clicks do when the ring/silent switch is
       set to silent.</p>
 
@@ -749,7 +749,7 @@ td.diff{text-align:right;font-weight:700}
         <li>Route ID, request number and release time sit under the title in the header, so the
             plan on screen can be checked against the one you were given.</li>
         <li>The sun and moon buttons switch the screen theme; print colours never change.</li>
-        <li class="new">Until one of them is tapped, the screen theme instead follows the
+        <li>Until one of them is tapped, the screen theme instead follows the
             device's own light/dark setting live.</li>
         <li>A warning about ET and T/T means the plan's own columns disagree — check those
             waypoints by hand.</li>
@@ -759,7 +759,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 35 &nbsp;·&nbsp; published 23 Aug 2026 16:20 UTC</span></p>
+      <span class="build">Version 35.1 &nbsp;·&nbsp; published 23 Aug 2026 20:05 UTC</span></p>
 
     </div>
   </div>
@@ -1336,25 +1336,48 @@ function npHide(){
   numpad.classList.remove('show');
   document.body.classList.remove('numpad-open');
 }
-// A synthesized tick rather than a fetched sound file, so the page stays
+// A synthesized tock rather than a fetched sound file, so the page stays
 // self-contained. There is no Web API to read the ring/silent switch or the
 // system's own "Keyboard Clicks" setting, so this leans on iOS Safari's own
 // behaviour of muting exactly this kind of ambient Web Audio output when the
 // switch is set to silent — the same way the system keyboard's own clicks go
 // quiet, without this code ever having to know the switch's state itself.
-let NP_ACTX = null;
+// The system's key sound is percussive, not musical: a broadband transient
+// that is over almost before it starts. So it is carved out of noise rather
+// than played on an oscillator — a tone at any pitch reads as a beep, which
+// is the one thing a keyboard never sounds like. The band-pass sets how
+// wooden it is, the low-pass takes the hiss off the top, and the whole thing
+// decays inside 25ms.
+let NP_ACTX = null, NP_NOISE = null;
 function npClick(){
   try{
     NP_ACTX = NP_ACTX || new (window.AudioContext || window.webkitAudioContext)();
-    if (NP_ACTX.state === 'suspended') NP_ACTX.resume();
-    const t = NP_ACTX.currentTime;
-    const osc = NP_ACTX.createOscillator(), gain = NP_ACTX.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(1000, t);
-    gain.gain.setValueAtTime(.05, t);
-    gain.gain.exponentialRampToValueAtTime(.0001, t + .03);
-    osc.connect(gain).connect(NP_ACTX.destination);
-    osc.start(t); osc.stop(t + .03);
+    const ctx = NP_ACTX;
+    if (ctx.state === 'suspended') ctx.resume();
+    // Built once and replayed: the buffer is the same every press, only the
+    // envelope is redrawn, which is cheaper than regenerating noise per key.
+    if (!NP_NOISE){
+      const n = Math.ceil(ctx.sampleRate * .03);
+      NP_NOISE = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = NP_NOISE.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource(); src.buffer = NP_NOISE;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = .7;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 4200;
+    const gain = ctx.createGain();
+    // exponential ramps cannot touch zero, hence the floor at both ends.
+    // .45 at the gain stage, not at the ear: the two filters take roughly 8dB
+    // back out of it, landing the sound near .18 peak — present, but well
+    // under the alert tones this app already makes.
+    gain.gain.setValueAtTime(.0001, t);
+    gain.gain.exponentialRampToValueAtTime(.45, t + .001);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + .032);
+    src.connect(bp).connect(lp).connect(gain).connect(ctx.destination);
+    src.start(t); src.stop(t + .03);
   }catch(e){}
 }
 // pointerdown, not click: click fires after the field below has already blurred

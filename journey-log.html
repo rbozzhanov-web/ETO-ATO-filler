@@ -212,7 +212,18 @@ html[data-theme=light]{--npbg:rgba(216,218,223,.82); --npkey:rgba(255,255,255,.9
 .np-hide svg{width:24px; height:24px; display:block; margin:0 auto; fill:none;
   stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round}
 .np-hide:active{background:color-mix(in srgb, var(--dim) 16%, transparent)}
-body.numpad-open{padding-bottom:var(--numpad-h,0px)}
+/* The companion pads the body for this, since that page scrolls as a whole and
+   the padding merely adds room while the page still runs on under the keypad.
+   Here the body is a fixed-height flex column, so padding it does the opposite:
+   with border-box the column shrinks by the keypad's height, lifting the sheet
+   entirely clear of it and leaving flat background behind the glass — nothing
+   for it to blur. The scroll containers take the room instead. They keep their
+   full height, running on down behind the keypad, and only their contents are
+   pushed up far enough to clear it. */
+body.numpad-open #stage{padding-bottom:calc(24px + env(safe-area-inset-bottom, 0px)
+                                            + var(--numpad-h, 0px))}
+body.numpad-open #empty{padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px)
+                                            + var(--numpad-h, 0px))}
 
 /* Carries the captain's figure down the column — the crew almost always share it. */
 button.dup{
@@ -1010,25 +1021,48 @@ function npHide(){
   numpad.classList.remove('show');
   document.body.classList.remove('numpad-open');
 }
-// A synthesized tick rather than a fetched sound file, so the page stays
+// A synthesized tock rather than a fetched sound file, so the page stays
 // self-contained. There is no Web API to read the ring/silent switch or the
 // system's own "Keyboard Clicks" setting, so this leans on iOS Safari's own
 // behaviour of muting exactly this kind of ambient Web Audio output when the
 // switch is set to silent — the same way the system keyboard's own clicks go
 // quiet, without this code ever having to know the switch's state itself.
-let NP_ACTX = null;
+// The system's key sound is percussive, not musical: a broadband transient
+// that is over almost before it starts. So it is carved out of noise rather
+// than played on an oscillator — a tone at any pitch reads as a beep, which
+// is the one thing a keyboard never sounds like. The band-pass sets how
+// wooden it is, the low-pass takes the hiss off the top, and the whole thing
+// decays inside 25ms.
+let NP_ACTX = null, NP_NOISE = null;
 function npClick(){
   try{
     NP_ACTX = NP_ACTX || new (window.AudioContext || window.webkitAudioContext)();
-    if (NP_ACTX.state === 'suspended') NP_ACTX.resume();
-    const t = NP_ACTX.currentTime;
-    const osc = NP_ACTX.createOscillator(), gain = NP_ACTX.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(1000, t);
-    gain.gain.setValueAtTime(.05, t);
-    gain.gain.exponentialRampToValueAtTime(.0001, t + .03);
-    osc.connect(gain).connect(NP_ACTX.destination);
-    osc.start(t); osc.stop(t + .03);
+    const ctx = NP_ACTX;
+    if (ctx.state === 'suspended') ctx.resume();
+    // Built once and replayed: the buffer is the same every press, only the
+    // envelope is redrawn, which is cheaper than regenerating noise per key.
+    if (!NP_NOISE){
+      const n = Math.ceil(ctx.sampleRate * .03);
+      NP_NOISE = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = NP_NOISE.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource(); src.buffer = NP_NOISE;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = .7;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 4200;
+    const gain = ctx.createGain();
+    // exponential ramps cannot touch zero, hence the floor at both ends.
+    // .45 at the gain stage, not at the ear: the two filters take roughly 8dB
+    // back out of it, landing the sound near .18 peak — present, but well
+    // under the alert tones this app already makes.
+    gain.gain.setValueAtTime(.0001, t);
+    gain.gain.exponentialRampToValueAtTime(.45, t + .001);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + .032);
+    src.connect(bp).connect(lp).connect(gain).connect(ctx.destination);
+    src.start(t); src.stop(t + .03);
   }catch(e){}
 }
 numpad.querySelectorAll('[data-k]').forEach(b => b.addEventListener('pointerdown', e => {
