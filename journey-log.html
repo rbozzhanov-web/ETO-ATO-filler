@@ -184,6 +184,16 @@ html[data-theme=light]{--npbg:#d1d3d9; --npkey:#fff; --npkeypress:#b9bbc1; --npd
 .numpad-bar .np-hide{padding:6px; color:var(--dim)}
 .numpad-bar .np-hide svg{width:20px; height:20px; display:block; fill:none;
   stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+.numpad-nav{display:flex; align-items:center; gap:2px}
+/* Previous sits beside the field's own action key rather than opposite it, the
+   way the pair reads on the system's own form toolbar — grouped, since they walk
+   the same run of boxes in opposite directions. Greyed out and inert rather than
+   removed when there is nothing behind the field, exactly as that toolbar's own
+   arrow does, so the row never reflows depending on which field is focused. */
+.numpad-nav .np-prev{padding:8px; color:var(--dim)}
+.numpad-nav .np-prev:disabled{opacity:.3}
+.numpad-nav .np-prev svg{width:19px; height:19px; display:block; fill:none;
+  stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
 .numpad-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
   max-width:420px; margin:0 auto; padding:0 8px calc(8px + env(safe-area-inset-bottom))}
 .numpad-grid button{background:var(--npkey); color:var(--nptxt); border:0; border-radius:8px;
@@ -307,7 +317,12 @@ body:not(.loaded) #print,body:not(.loaded) #reset,body:not(.loaded) #remove{disp
     <button type="button" id="numpadHide" class="np-hide" aria-label="Hide keyboard">
       <svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg>
     </button>
-    <button type="button" id="numpadDone">Done</button>
+    <div class="numpad-nav">
+      <button type="button" id="numpadPrev" class="np-prev" aria-label="Previous field" disabled>
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <button type="button" id="numpadDone">Done</button>
+    </div>
   </div>
   <div class="numpad-grid">
     <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
@@ -924,9 +939,14 @@ function npDelete(){
   el.dispatchEvent(new Event('input', { bubbles: true }));
 }
 const NP_LABEL = { next: 'Next', go: 'Go', done: 'Done', previous: 'Previous', search: 'Search', send: 'Send' };
+// The page's own tab-order array already carries this: Shift+Enter on the first
+// field in it has nowhere to go, since the delegated handler below only ever
+// steps within it.
+function npHasPrev(el){ return inputs.indexOf(el) > 0; }
 function npShow(el){
   NP_TARGET = el;
   document.getElementById('numpadDone').textContent = NP_LABEL[el.enterKeyHint] || 'Done';
+  document.getElementById('numpadPrev').disabled = !npHasPrev(el);
   numpad.classList.add('show');
   document.body.style.setProperty('--numpad-h', numpad.offsetHeight + 'px');
   document.body.classList.add('numpad-open');
@@ -947,6 +967,15 @@ document.getElementById('numpadDone').addEventListener('pointerdown', e => {
   if (!el) return;
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   if (document.activeElement === el) el.blur();
+});
+// Previous plays the same field's own handler backwards — Shift+Enter, exactly
+// as it would from a keyboard with a Shift key. Disabled rather than wired to
+// close anything when there is nowhere to go, so a stray tap on it never does.
+document.getElementById('numpadPrev').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  const el = NP_TARGET;
+  if (!el || e.currentTarget.disabled) return;
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
 });
 document.addEventListener('focusin', e => {
   if (e.target.matches && e.target.matches('.numkey')) npShow(e.target);

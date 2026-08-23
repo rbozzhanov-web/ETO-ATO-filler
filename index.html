@@ -181,6 +181,16 @@ html[data-theme=light]{--npbg:#d1d3d9;--npkey:#fff;--npkeypress:#b9bbc1;--npdel:
 .numpad-bar .np-hide{padding:6px;color:var(--dim)}
 .numpad-bar .np-hide svg{width:20px;height:20px;display:block;fill:none;
   stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.numpad-nav{display:flex;align-items:center;gap:2px}
+/* Previous sits beside the field's own action key rather than opposite it, the
+   way the pair reads on the system's own form toolbar — grouped, since they walk
+   the same run of boxes in opposite directions. Greyed out and inert rather than
+   removed when there is nothing behind the field, exactly as that toolbar's own
+   arrow does, so the row never reflows depending on which field is focused. */
+.numpad-nav .np-prev{padding:8px;color:var(--dim)}
+.numpad-nav .np-prev:disabled{opacity:.3}
+.numpad-nav .np-prev svg{width:19px;height:19px;display:block;fill:none;
+  stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .numpad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
   max-width:420px;margin:0 auto;padding:0 8px calc(8px + env(safe-area-inset-bottom))}
 .numpad-grid button{background:var(--npkey);color:var(--nptxt);border:0;border-radius:8px;
@@ -624,8 +634,10 @@ td.diff{text-align:right;font-weight:700}
       docked to the bottom and built to match the system's, key for key. The corner button
       plays whatever that field's own Return key would have: <b>Next</b> across a run of
       boxes, <b>Go</b> on the takeoff time, <b>Done</b> wherever nothing moves.</p>
-      <p class="new">It dismisses the way a system keyboard does, too: the chevron in the
+      <p>It dismisses the way a system keyboard does, too: the chevron in the
       opposite corner always just closes it, and so does a tap outside it or a real scroll.</p>
+      <p class="new">Beside Next sits <b>Previous</b>, stepping back the same run of boxes —
+      greyed out on the first one, since there is nowhere behind it to go.</p>
 
       <h3>Altimeter cross-checks</h3>
       <p>Company rule: an hourly comparison. The app finds the waypoint on each full hour after
@@ -730,7 +742,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 33 &nbsp;·&nbsp; published 23 Aug 2026 11:30 UTC</span></p>
+      <span class="build">Version 34 &nbsp;·&nbsp; published 23 Aug 2026 12:15 UTC</span></p>
 
     </div>
   </div>
@@ -741,7 +753,12 @@ td.diff{text-align:right;font-weight:700}
     <button type="button" id="numpadHide" class="np-hide" aria-label="Hide keyboard">
       <svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg>
     </button>
-    <button type="button" id="numpadDone">Done</button>
+    <div class="numpad-nav">
+      <button type="button" id="numpadPrev" class="np-prev" aria-label="Previous field" disabled>
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <button type="button" id="numpadDone">Done</button>
+    </div>
   </div>
   <div class="numpad-grid">
     <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
@@ -1232,9 +1249,22 @@ function npDelete(){
 // keyboard's would have: Next on a field that has one to jump to, Go on the
 // takeoff time, Done everywhere else.
 const NP_LABEL = { next: 'Next', go: 'Go', done: 'Done', previous: 'Previous', search: 'Search', send: 'Send' };
+// Whether Shift+Enter on this field actually goes anywhere: the table walks its
+// own flat list of inputs, the document fields their own run of fd-numbered ids,
+// neither the takeoff time nor an altimeter row (which has no Enter handling of
+// its own at all, forward or back) ever has a field before it worth returning to.
+function npHasPrev(el){
+  if (el.matches('#tbl input')){
+    const all = [...document.querySelectorAll('#tbl input')];
+    return all.indexOf(el) > 0;
+  }
+  const m = el.id.match(/^fd(\d+)$/);
+  return m ? +m[1] > 0 : false;
+}
 function npShow(el){
   NP_TARGET = el;
   $('#numpadDone').textContent = NP_LABEL[el.enterKeyHint] || 'Done';
+  $('#numpadPrev').disabled = !npHasPrev(el);
   numpad.classList.add('show');
   document.body.style.setProperty('--numpad-h', numpad.offsetHeight + 'px');
   document.body.classList.add('numpad-open');
@@ -1261,6 +1291,15 @@ $('#numpadDone').addEventListener('pointerdown', e => {
   if (!el) return;
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   if (document.activeElement === el) el.blur();
+});
+// Previous plays the same field's own handler backwards — Shift+Enter, exactly
+// as it would from a keyboard with a Shift key. Disabled rather than wired to
+// close anything when there is nowhere to go, so a stray tap on it never does.
+$('#numpadPrev').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  const el = NP_TARGET;
+  if (!el || e.currentTarget.disabled) return;
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
 });
 document.addEventListener('focusin', e => {
   if (e.target.matches && e.target.matches('.numkey')) npShow(e.target);
@@ -2943,7 +2982,8 @@ function bindInputs(){
       paint(i); countFilled(); refreshFuel(); refreshProgress(); save();
     };
     inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
-      const nx = inputs[idx + 1]; if (nx){ nx.focus(); nx.select(); } else inp.blur(); } };
+      const nx = inputs[idx + (e.shiftKey ? -1 : 1)];
+      if (nx){ nx.focus(); nx.select(); } else if (!e.shiftKey) inp.blur(); } };
     inp.onfocus = () => inp.select();
   });
 }
@@ -2975,7 +3015,8 @@ function renderFields(){
       save();
     };
     inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
-      const nx = document.getElementById('fd' + (f.i + 1)); if (nx) nx.focus(); else inp.blur(); } };
+      const nx = document.getElementById('fd' + (f.i + (e.shiftKey ? -1 : 1)));
+      if (nx) nx.focus(); else if (!e.shiftKey) inp.blur(); } };
     return inp;
   };
 
