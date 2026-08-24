@@ -183,11 +183,16 @@ input.l{text-align:left; padding-left:2pt}
 html[data-theme=light]{--npbg:rgba(216,218,223,.82); --npkey:rgba(255,255,255,.92);
   --npkeypress:#c6c8cd; --npdel:rgba(198,200,205,.92); --nptxt:#000; --npline:rgba(0,0,0,.08);
   --npshadow:rgba(0,0,0,.22)}
+/* translateZ(0) keeps this panel on its own standing compositing layer rather
+   than one WebKit only spins up for the length of the slide transition — without
+   it the backdrop-filter can end up sampling whichever layer happens to be
+   composited behind it at the moment, rather than the page. */
 .numpad{position:fixed; left:0; right:0; bottom:0; z-index:80; background:var(--npbg);
   backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%);
-  box-shadow:0 -1px 0 var(--npline); transform:translateY(100%);
+  box-shadow:0 -1px 0 var(--npline); transform:translateY(100%) translateZ(0);
+  will-change:transform, backdrop-filter;
   transition:transform .22s cubic-bezier(.32,.72,0,1); pointer-events:none}
-.numpad.show{transform:translateY(0); pointer-events:auto}
+.numpad.show{transform:translateY(0) translateZ(0); pointer-events:auto}
 .numpad-bar{display:flex; justify-content:space-between; align-items:center; padding:4px 10px}
 .numpad-bar button{background:none; border:0; color:var(--acc); font-size:17px;
   font-weight:600; padding:8px 6px; min-height:0; border-radius:6px}
