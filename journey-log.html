@@ -109,7 +109,15 @@ button.on{border-color:var(--acc); color:var(--acc);
 /* The sheets pan inside here, both ways. A zoomed sheet that outgrows the
    window is reached by scrolling it, and the toolbar does not travel with it. */
 #stage{
-  flex:1 1 auto; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch;
+  /* No -webkit-overflow-scrolling:touch here, deliberately. It has done nothing
+     for scrolling since iOS 13 — momentum became the default — but it still
+     promotes this scroller onto its own UIScrollView-backed layer, and a fixed
+     element's backdrop-filter cannot sample into that. Since this is the main
+     scroller, everything behind the keypad lived in that layer, so the frosted
+     glass had only the flat page background to blur and read as no glass at
+     all. The companion never hit this: it scrolls on the body and carries the
+     property only on small inner boxes. */
+  flex:1 1 auto; min-height:0; overflow:auto;
   overscroll-behavior:contain;
   display:flex; flex-direction:column; align-items:flex-start; gap:18px;
   padding:16px calc(12px + env(safe-area-inset-right, 0px))
