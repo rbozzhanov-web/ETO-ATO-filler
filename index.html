@@ -31,8 +31,13 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--txt);-webkit-tap-highlight-color:transparent;
   font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   transition:background .15s,color .15s}
+/* var(--topgap) here, not a fresh env() expression: #statusScrim covers exactly
+   --topgap's height, fixed, regardless of scroll — if this padding fell short
+   of that, the header would render its top slice under the scrim rather than
+   below it. max(20px, ...) keeps the floor for no-safe-area contexts, where
+   --topgap alone (12px) would be a touch tighter than before. */
 .wrap{max-width:1120px;margin:0 auto;
-  padding:max(20px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) 70px max(18px,env(safe-area-inset-left))}
+  padding:max(20px,var(--topgap)) max(18px,env(safe-area-inset-right)) 70px max(18px,env(safe-area-inset-left))}
 h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 .sub{color:var(--dim);font-size:13px}
 .ofp{margin-top:3px;font:700 12.5px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -827,7 +832,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 36.3 &nbsp;·&nbsp; published 27 Aug 2026 11:17 UTC</span></p>
+      <span class="build">Version 36.4 &nbsp;·&nbsp; published 27 Aug 2026 11:27 UTC</span></p>
 
     </div>
   </div>
