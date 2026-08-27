@@ -1,6 +1,8 @@
 /* OFP Companion — offline cache. Two apps, one page each:
    index.html is the OFP companion, journey-log.html the Journey Log form. */
-const V = 'eto-filler-v51.1';
+const CACHE_PREFIX = 'ofp-companion-';
+const LEGACY_CACHE_PREFIX = 'eto-filler-v';
+const V = CACHE_PREFIX + 'v50.5';
 const FILES = ['./', './index.html', './journey-log.html',
                './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const PAGES = ['./index.html', './journey-log.html'];
@@ -11,7 +13,9 @@ self.addEventListener('install', e => {
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k))))
+    .then(ks => Promise.all(ks.filter(k => (k.startsWith(CACHE_PREFIX)
+                                          || k.startsWith(LEGACY_CACHE_PREFIX)) && k !== V)
+                                .map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -27,14 +31,32 @@ function pageFor(req){
   return hit || './index.html';
 }
 
+function offlineResponse(){
+  return new Response('OFP Companion is offline and this page is not cached yet.', {
+    status: 503,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+  });
+}
+
+function cacheable(req, response){
+  return response.ok
+    && (response.type === 'basic' || response.type === 'default')
+    && new URL(req.url).origin === self.location.origin;
+}
+
 function freshPage(req){
   const key = pageFor(req);
   return new Promise(resolve => {
     let done = false;
-    const fallback = () => { if (!done){ done = true; resolve(caches.match(key)); } };
+    const fallback = async () => {
+      if (done) return;
+      done = true;
+      resolve(await caches.match(key) || offlineResponse());
+    };
     const timer = setTimeout(fallback, NET_MS);
     fetch(req).then(r => {
       clearTimeout(timer);
+      if (!cacheable(req, r)){ fallback(); return; }
       caches.open(V).then(c => c.put(key, r.clone())).catch(() => {});
       if (done) return;
       done = true;
@@ -49,9 +71,11 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true })
       .then(hit => hit || fetch(e.request).then(r => {
-        const copy = r.clone();
-        caches.open(V).then(c => c.put(e.request, copy)).catch(() => {});
+        if (cacheable(e.request, r)){
+          const copy = r.clone();
+          caches.open(V).then(c => c.put(e.request, copy)).catch(() => {});
+        }
         return r;
-      }).catch(() => caches.match(pageFor(e.request))))
+      }).catch(() => Response.error()))
   );
 });
