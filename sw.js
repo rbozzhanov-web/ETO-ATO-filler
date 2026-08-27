@@ -2,7 +2,7 @@
    index.html is the OFP companion, journey-log.html the Journey Log form. */
 const CACHE_PREFIX = 'ofp-companion-';
 const LEGACY_CACHE_PREFIX = 'eto-filler-v';
-const V = CACHE_PREFIX + 'v51.3';
+const V = CACHE_PREFIX + 'v51.4';
 const FILES = ['./', './index.html', './journey-log.html',
                './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const PAGES = ['./index.html', './journey-log.html'];
