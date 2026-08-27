@@ -271,7 +271,7 @@ button.sm{padding:9px 15px;font-size:13.5px;min-height:38px}
    table is tall enough that they used to scroll out of view. Sticking the row
    to the top of the page while its section (#c3) is in view means they can't —
    it un-sticks on its own once the actuals section is scrolled past. */
-.stats{display:flex;gap:24px;flex-wrap:wrap;position:sticky;top:0;z-index:5;
+.stats{display:flex;gap:24px;flex-wrap:wrap;position:sticky;top:var(--topgap);z-index:5;
   background:var(--panel);padding-bottom:8px;margin-bottom:4px;
   border-bottom:1px solid var(--line)}
 .stat b{display:block;font:700 20px/1.3 ui-monospace,Menlo,monospace;color:var(--acc)}
@@ -813,7 +813,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 36 &nbsp;·&nbsp; published 27 Aug 2026 06:36 UTC</span></p>
+      <span class="build">Version 36.1 &nbsp;·&nbsp; published 27 Aug 2026 07:36 UTC</span></p>
 
     </div>
   </div>
