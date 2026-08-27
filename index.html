@@ -111,11 +111,29 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 .disc{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:12.5px;color:var(--dim)}
 .fplbox{margin-top:14px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);overflow:hidden}
 .fplhead{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);
-  font-size:12px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--dim)}
+  font-size:12px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--dim);
+  cursor:pointer}
 .fplhead em{flex:1;font-style:normal;font-weight:400;letter-spacing:0;text-transform:none;font-size:12px}
 .fplbox pre{margin:0;padding:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;
   font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--txt);white-space:pre-wrap;
   word-break:break-word}
+/* Read once at load to cross-check against the paper, rarely needed again in
+   cruise: collapsed by default, a tap on the header brings it back. */
+.fplbox.collapsed pre{display:none}
+.fplchev{flex:0 0 auto;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.fplbox.collapsed .fplchev{transform:rotate(-90deg)}
+/* Filled in on the ground, rarely touched again once the flight is running —
+   the card folds to a one-line summary once Calculate has run, the same as the
+   drop zone above it folds once a plan is in. Its own header re-expands it. */
+#c4 .step{cursor:pointer;margin-bottom:0}
+#c4 .fldsum{display:none;flex:1;text-transform:none;font-weight:400;letter-spacing:0;
+  color:var(--dim);text-align:right}
+#c4.collapsed .fld{display:none}
+#c4.collapsed .fldsum{display:block}
+#c4 .step svg{flex:0 0 auto;width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;transition:transform .15s;margin-left:2px}
+#c4.collapsed .step svg{transform:rotate(-90deg)}
 .disc::before{content:"";flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--gold)}
 #wxApt{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:5px;
   padding:8px 10px;font:700 15px/1 ui-monospace,Menlo,monospace;min-width:200px}
@@ -253,6 +271,13 @@ button.sm{padding:9px 15px;font-size:13.5px;min-height:38px}
 .stat span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
 /* The wall clock is the one figure here that is not read off the plan. */
 .stat.live b{color:var(--gold);font-variant-numeric:tabular-nums}
+/* Next waypoint, the fuel check and the actuals count keep changing through the
+   flight and drive what happens next; takeoff, arrival and the rest were fixed
+   the moment Calculate ran. Sized apart so the eye lands on what still moves. */
+.stat.hero b{font-size:26px}
+.statbreak{flex-basis:100%;height:0}
+.stat.quiet{opacity:.7}
+.stat.quiet b{font-size:14px;font-weight:600}
 /* Next to Calculate rather than adrift at the far end of the row, and built like the
    HHMM group beside it — label above, figure below — so the row reads as one line of
    labels over one line of values instead of a stack straddling the button. */
@@ -485,7 +510,8 @@ td.diff{text-align:right;font-weight:700}
     <div class="row" style="margin-top:12px"><button type="button" class="ghost sm" id="paste">Paste a PDF</button></div>
     <p class="disc" id="disc">Only Air Astana computerized flight plans are supported.</p>
     <div class="fplbox hide" id="fplBox">
-      <div class="fplhead">
+      <div class="fplhead" id="fplHead">
+        <svg class="fplchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
         <span>ICAO flight plan</span>
         <em id="fplSrc"></em>
         <button type="button" class="ghost sm" id="fplCopy">Copy</button>
@@ -496,7 +522,10 @@ td.diff{text-align:right;font-weight:700}
   </div>
 
   <div class="card hide" id="c4">
-    <div class="step"><i>2</i> Document fields</div>
+    <div class="step" id="c4Head"><i>2</i> Document fields
+      <span class="fldsum" id="fldSum"></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
     <div class="fld" id="fields"></div>
   </div>
 
@@ -772,7 +801,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 35.3 &nbsp;·&nbsp; published 24 Aug 2026 06:56 UTC</span></p>
+      <span class="build">Version 36 &nbsp;·&nbsp; published 27 Aug 2026 06:02 UTC</span></p>
 
     </div>
   </div>
@@ -1715,11 +1744,15 @@ function showIcao(p){
   if (!p){ box.classList.add('hide'); $('#disc').classList.remove('hide'); return; }
   $('#disc').classList.add('hide');
   box.classList.remove('hide');
+  // Read once to cross-check against the paper; collapsed by default so it
+  // doesn't sit between the load box and the fields the crew fills in next.
+  box.classList.add('collapsed');
   $('#fplText').textContent = p.lines.join('\n');
   $('#fplSrc').textContent = p.split
     ? `reassembled from pages ${p.pages[0]}\u2013${p.pages[p.pages.length - 1]}`
     : `page ${p.pages[0]}`;
 }
+$('#fplHead').onclick = () => $('#fplBox').classList.toggle('collapsed');
 
 /* ================= OFP identity ================= */
 function showFigs(f){
@@ -2034,7 +2067,8 @@ $('#chartZoom').onclick = () => {
   scrollHint($('#chartBox'));
 };
 
-$('#fplCopy').onclick = async () => {
+$('#fplCopy').onclick = async e => {
+  e.stopPropagation();   // sits inside the header the click also toggles
   if (!ICAO) return;
   const btn = $('#fplCopy'), txt = ICAO.oneLine;
   let ok = false;
@@ -2585,6 +2619,7 @@ $('#etd').onkeydown = e => { if (e.key === 'Enter'){ e.target.blur(); $('#calc')
 $('#alt').onchange = () => { if (RESULT.length) $('#calc').click(); };
 
 $('#calc').onclick = () => {
+  const firstRun = $('#c3').classList.contains('hide');
   const t0 = parseTime($('#etd').value);
   if (t0 === null){ msg('#m2', 'Enter the time as HHMM, for example 0210', 'err'); return; }
   if (!PLAN){ msg('#m2', 'Load a PDF first', 'err'); return; }
@@ -2600,6 +2635,10 @@ $('#calc').onclick = () => {
   renderFuel();
   $('#c3').classList.remove('hide');
   if (CHECKS.length) $('#c6').classList.remove('hide');
+  // Filling the fields is done on the ground; the first Calculate — the move
+  // into cruise — folds the card to its one-line summary. A later recalculation
+  // (the ALTN box, a corrected time) leaves it wherever the crew put it.
+  if (firstRun) $('#c4').classList.add('collapsed');
   save();
 };
 
@@ -3023,7 +3062,7 @@ function refreshFuel(){
   if (tile){
     const st = open ? fuelState(open, off) : 'done';
     const d = open ? sinceDue(open.due) : 0;
-    tile.className = 'stat ' + (st === 'late' ? 'bad' : st === 'soon' ? 'warn' : '');
+    tile.className = 'stat hero ' + (st === 'late' ? 'bad' : st === 'soon' ? 'warn' : '');
     tile.querySelector('b').textContent = open ? fmt(open.due) : 'done';
     tile.querySelector('span').textContent =
       !open ? 'All fuel checks recorded'
@@ -3046,13 +3085,14 @@ function refreshFuel(){
 function render(t0, arr){
   const last = RESULT.filter(p => p.sec === 1).slice(-1)[0];
   $('#stats').innerHTML = `
-    <div class="stat"><b>${fmt(t0)}</b><span>Takeoff</span></div>
-    <div class="stat"><b>${last ? fmt(arr) : '—'}</b><span>Arrival (ETO)</span></div>
-    <div class="stat"><b>${last ? hhmm(last.cum) : '—'}</b><span>Time en route</span></div>
-    <div class="stat"><b>${RESULT.length}</b><span>Waypoints</span></div>
-    <div class="stat" id="stFilled"><b>0</b><span>Actuals entered</span></div>
-    <div class="stat" id="stNext"><b>—</b><span>Next waypoint</span></div>
-    <div class="stat" id="stFuel"><b>—</b><span>Fuel check</span></div>`;
+    <div class="stat hero" id="stNext"><b>—</b><span>Next waypoint</span></div>
+    <div class="stat hero" id="stFuel"><b>—</b><span>Fuel check</span></div>
+    <div class="stat hero" id="stFilled"><b>0</b><span>Actuals entered</span></div>
+    <div class="statbreak"></div>
+    <div class="stat quiet"><b>${fmt(t0)}</b><span>Takeoff</span></div>
+    <div class="stat quiet"><b>${last ? fmt(arr) : '—'}</b><span>Arrival (ETO)</span></div>
+    <div class="stat quiet"><b>${last ? hhmm(last.cum) : '—'}</b><span>Time en route</span></div>
+    <div class="stat quiet"><b>${RESULT.length}</b><span>Waypoints</span></div>`;
   clockTick();
 
   const tb = $('#tbl tbody'); tb.innerHTML = '';
@@ -3151,6 +3191,7 @@ function renderFields(){
       if (!inp.value) delete TXT[f.i];
       const c = document.getElementById('cnt' + f.i);
       if (c) c.textContent = inp.value.length + ' / ' + f.n;
+      fieldsSummary();
       save();
     };
     inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
@@ -3194,7 +3235,16 @@ function renderFields(){
       box.append(lab, wrap);
     }
   }
+  fieldsSummary();
 }
+// What the collapsed card shows in place of the grid — read at a glance rather
+// than reopened just to check whether anything was missed.
+function fieldsSummary(){
+  const el = $('#fldSum'); if (!el) return;
+  const n = FIELDS.filter(f => TXT[f.i]).length;
+  el.textContent = n + ' of ' + FIELDS.length + ' filled';
+}
+$('#c4Head').onclick = () => $('#c4').classList.toggle('collapsed');
 
 $('#clearAct').onclick = () => {
   if (!confirm('Clear all entered ATO and fuel values?')) return;
@@ -3407,6 +3457,7 @@ $('#reset').onclick = () => {
   $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
   $('#fname').textContent = ''; $('#saved').textContent = '';
   drop.classList.remove('loaded');
+  $('#c4').classList.remove('collapsed'); $('#fplBox').classList.remove('collapsed');
   for (const c of ['#c2','#c3','#c4','#c5','#c6','#c7','#c8']) $(c).classList.add('hide');
   $('#fpl').className = 'hint hide';
   hide('#m1'); hide('#m2'); hide('#m3');
