@@ -602,7 +602,8 @@ td.diff{text-align:right;font-weight:700}
   <div class="card hide" id="c6">
     <div class="step"><i>4</i> Altimeter cross-checks</div>
     <p class="disc">Hourly comparison of ALTM1 / STBY / ALTM2, printed next to the waypoint
-      reached at each full hour after takeoff.</p>
+      reached at each full hour after takeoff. Under two hours total, where that never falls,
+      one check is raised at TOC instead.</p>
     <!-- The clock is deliberately outside the label: a label toggles its checkbox from
          anywhere inside it, so a glance-and-tap at the clock used to silence the alert. -->
     <div class="chkrow">
@@ -832,7 +833,7 @@ td.diff{text-align:right;font-weight:700}
       <!-- Written out rather than computed, so it names the version actually
            running: on a stale cache it still reads the old number. Keep the
            number in step with V in sw.js. -->
-      <span class="build">Version 36.4 &nbsp;·&nbsp; published 27 Aug 2026 11:27 UTC</span></p>
+      <span class="build">Version 36.5 &nbsp;·&nbsp; published 27 Aug 2026 20:19 UTC</span></p>
 
     </div>
   </div>
@@ -2963,7 +2964,14 @@ function hourlyChecks(){
   for (let mark = 60; total - mark >= 60; mark += 60){
     const wp = main.find(p => p.cum >= mark);
     if (!wp || out.some(c => c.wp === wp)) continue;
-    out.push({ mark, wp, due: T0 + mark });
+    out.push({ mark, wp, due: T0 + mark, label: `+${mark / 60}:00` });
+  }
+  // Under two hours the grid above never fires, yet a check is still owed — the
+  // OFP's own waypoint table always carries a TOC line, and that is the natural
+  // point of levelling into cruise the hourly grid is standing in for anyway.
+  if (!out.length){
+    const toc = main.find(p => /^TOC$/i.test(p.wp));
+    if (toc) out.push({ mark: toc.cum, wp: toc, due: T0 + toc.cum, label: 'TOC' });
   }
   return out;
 }
@@ -2974,7 +2982,10 @@ function renderAlt(){
   for (const c of CHECKS){
     const row = document.createElement('div'); row.className = 'altrow'; row.id = 'altrow' + c.mark;
     const tag = document.createElement('div'); tag.className = 'tag';
-    tag.innerHTML = `+${c.mark / 60}:00 &nbsp; <b>${fmt(c.wp.t)}</b> &nbsp; at ${c.wp.wp}`
+    // The TOC fallback's own waypoint is named TOC too — "at TOC" alongside a
+    // TOC label would just repeat itself, so it's dropped for that row only.
+    tag.innerHTML = `${c.label} &nbsp; <b>${fmt(c.wp.t)}</b>`
+                  + (c.wp.wp === c.label ? '' : ` &nbsp; at ${c.wp.wp}`)
                   + `<br><span class="st wait" id="altst${c.mark}"></span>`;
     row.appendChild(tag);
     for (const [key, cap] of [['a1','ALTM1'],['sb','STBY'],['a2','ALTM2']]){

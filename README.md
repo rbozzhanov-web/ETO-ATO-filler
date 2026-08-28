@@ -145,7 +145,9 @@ On a computer (macOS/Windows) the same file opens with a double click and works 
    red once the check is overdue, with a short tone when it first falls due
    (switch it off with the checkbox — the choice is remembered, and tapping the
    clock beside it no longer knocks it off). No check is raised inside the last
-   hour before arrival. Saving the PDF with checks still missing asks for
+   hour before arrival. On a sector under two hours, where the hourly grid never
+   falls, one check is raised at TOC instead — the OFP's own waypoint table
+   always carries that line. Saving the PDF with checks still missing asks for
    confirmation first.
 5. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
    or send it to ForeFlight.
