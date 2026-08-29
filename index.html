@@ -204,16 +204,22 @@ input:focus{outline:none;border-color:var(--acc)}
 html[data-theme=light]{--npbg:rgba(216,218,223,.82);--npkey:rgba(255,255,255,.92);
   --npkeypress:#c6c8cd;--npdel:rgba(198,200,205,.92);--nptxt:#000;--npline:rgba(0,0,0,.08);
   --npshadow:rgba(0,0,0,.22)}
-/* translateZ(0) keeps this panel on its own standing compositing layer rather
-   than one WebKit only spins up for the length of the slide transition — without
-   it the backdrop-filter can end up sampling whichever layer happens to be
-   composited behind it at the moment, rather than the page. */
+/* A permanent transform layer keeps the glass stable through its slide, while
+   keeping backdrop-filter out of will-change avoids the stale surface WebKit can
+   briefly show after a standalone app returns from the background. */
 .numpad{position:fixed;left:0;right:0;bottom:0;z-index:80;background:var(--npbg);
   backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
-  box-shadow:0 -1px 0 var(--npline);transform:translateY(100%) translateZ(0);
-  will-change:transform,backdrop-filter;
+  box-shadow:0 -1px 0 var(--npline);transform:translate3d(0,100%,0);
+  will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  touch-action:none;overscroll-behavior:none;
   transition:transform .22s cubic-bezier(.32,.72,0,1);pointer-events:none}
-.numpad.show{transform:translateY(0) translateZ(0);pointer-events:auto}
+.numpad.show{transform:translate3d(0,0,0);pointer-events:auto}
+/* WebKit rebuilds compositing layers when a standalone web app returns from the
+   background. Keep the first settled frame still, so a resumed blur or a colour
+   transition cannot briefly show its old backing surface. */
+html.app-resuming body,html.app-resuming .numpad,html.app-resuming .fplchev,
+html.app-resuming #c4 .step svg,html.app-resuming .scrollwrap::before,
+html.app-resuming .scrollwrap::after,html.app-resuming .chev{transition:none!important}
 .numpad-bar{display:flex;justify-content:space-between;align-items:center;padding:4px 10px}
 .numpad-bar button{background:none;border:0;color:var(--acc);font-size:17px;
   font-weight:600;padding:8px 6px;min-height:0;border-radius:6px}
@@ -1523,8 +1529,14 @@ document.addEventListener('pointerdown', e => {
 // keypad's own scrollIntoView bringing the field above it into view — dismisses
 // it too, the way scrolling the content behind the system keyboard does.
 let NP_GESTURE = false;
-addEventListener('touchmove', () => { NP_GESTURE = true; }, { passive: true });
-addEventListener('wheel', () => { NP_GESTURE = true; }, { passive: true });
+// The keypad is a control, not a handle for the page behind it. On iPadOS a
+// vertical drag on this fixed panel can otherwise begin a document scroll; that
+// scroll is then correctly recognised below, but incorrectly dismisses the pad.
+// touch-action covers current browsers and preventDefault covers older WebKit.
+numpad.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
+const npGestureElsewhere = e => { if (!numpad.contains(e.target)) NP_GESTURE = true; };
+addEventListener('touchmove', npGestureElsewhere, { passive: true });
+addEventListener('wheel', npGestureElsewhere, { passive: true });
 // Capturing: a scroll inside the waypoint table or the NOTAM list is its own
 // element and never bubbles, but the capture phase still reaches it on the way
 // down, so one listener here covers every scrollable box on the page.
@@ -2950,9 +2962,35 @@ function refreshProgress(){
     box.addEventListener(ev, () => { typedAt = Date.now(); }, { passive: true });
 }
 
-const tick = () => { refreshProgress(); refreshAlt(); refreshFuel(); };
+const tick = () => {
+  // Updating a hidden standalone app forces WebKit to redraw several fixed and
+  // blurred layers just as it is being frozen. Leave the screen untouched until
+  // it is visible again; the resume hook below catches the UI up in one frame.
+  if (document.hidden) return;
+  refreshProgress(); refreshAlt(); refreshFuel();
+};
 setInterval(tick, 15000);
-document.addEventListener('visibilitychange', tick);
+let resumeFrame = 0;
+function settleAfterResume(){
+  if (document.hidden) return;
+  const root = document.documentElement;
+  root.classList.add('app-resuming');
+  if (resumeFrame) cancelAnimationFrame(resumeFrame);
+  // Give Safari one frame to restore its surfaces, then update the time-based
+  // statuses with transitions held off for that paint. The next frame restores
+  // normal motion before the crew can interact with the page.
+  resumeFrame = requestAnimationFrame(() => {
+    resumeFrame = requestAnimationFrame(() => {
+      tick();
+      root.classList.remove('app-resuming');
+      resumeFrame = 0;
+    });
+  });
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) settleAfterResume();
+});
+addEventListener('pageshow', e => { if (e.persisted) settleAfterResume(); });
 
 // waypoints reached at each full hour after takeoff
 function hourlyChecks(){
