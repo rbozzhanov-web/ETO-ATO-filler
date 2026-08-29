@@ -39,11 +39,15 @@ header, and both are cached, so either can be opened offline.
 
 To update: upload the new `index.html` and bump the `V` constant in `sw.js`.
 
-Versions are whole numbers while there is something new in them. A release that only fixes
-things takes a fractional number instead — 19.1 after 19, 19.1.1 after that — so the number
-says at a glance whether anything has changed in how the app is used.
+Release candidates use the following version scheme:
 
-The app then updates itself — there is no need to remove and re-add the icon.
+- `RC1` is the first release candidate.
+- Bug fixes and small refinements use `RC1.1`, `RC1.1.2`, `RC1.2`, and so on.
+- Major changes move to `RC2`, `RC3`, and later release candidates until the final release.
+
+When a new version is ready, the app offers an **Update now** button. It never
+interrupts an open plan: update only when you choose it, and there is no need to
+remove and re-add the home-screen icon.
 
 The page is fetched from the network whenever there is one, so a new version is picked up on
 the next launch rather than waiting on a service-worker update check. If the network does not

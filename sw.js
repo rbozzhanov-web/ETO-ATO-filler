@@ -2,14 +2,19 @@
    index.html is the OFP companion, journey-log.html the Journey Log form. */
 const CACHE_PREFIX = 'ofp-companion-';
 const LEGACY_CACHE_PREFIX = 'eto-filler-v';
-const V = CACHE_PREFIX + 'v51.5';
+const V = CACHE_PREFIX + 'rc1';
 const FILES = ['./', './index.html', './journey-log.html',
                './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const PAGES = ['./index.html', './journey-log.html'];
 const NET_MS = 2500;            // give the network this long before falling back to the cache
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(V).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // A new worker waits until the crew explicitly accepts it in the app. That
+  // makes an update visible without moving the open OFP under their hands.
+  e.waitUntil(caches.open(V).then(c => c.addAll(FILES)));
+});
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'skip-waiting') self.skipWaiting();
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
