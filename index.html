@@ -478,7 +478,8 @@ td.diff{text-align:right;font-weight:700}
 .chartbox.zoom img{max-width:none;max-height:none}
 .chartbox .disc{justify-content:center;padding:40px 0;color:var(--dim)}
 .guide{padding:6px 22px 26px}
-/* A thin rule marks what this release changed; cleared on the next one. */
+/* The current release summary is marked with an accent rule. Replace it, rather
+   than accumulating old notes, when the next significant RC is published. */
 .guide .new{border-left:2px solid var(--acc);padding-left:15px;margin-left:-17px}
 .guide h3{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--acc);
   margin:24px 0 9px;font-weight:700}
@@ -487,21 +488,11 @@ td.diff{text-align:right;font-weight:700}
 .guide ul,.guide ol{margin:0 0 11px;padding-left:22px;font-size:14px;line-height:1.7}
 .guide ol li{margin-bottom:8px}
 .guide li{margin-bottom:6px}
-.guide code{background:var(--panel2);padding:1px 5px;border-radius:3px;
-  font:13px/1 ui-monospace,Menlo,monospace}
-.guide table{width:100%;border-collapse:collapse;font-size:13.5px;margin:0 0 12px}
-.guide th,.guide td{text-align:left;padding:8px;border-bottom:1px solid var(--line2);vertical-align:top}
-.guide th{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
 .credit{margin:26px 0 0;padding-top:14px;border-top:1px solid var(--line);
   font-size:12.5px;color:var(--dim)}
 .credit b{color:var(--txt);font-weight:600}
 .credit .build{display:inline-block;margin-top:6px;
   font:11.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.3px}
-.paper{display:inline-block;background:#fff;border:1px solid #c8ced6;border-radius:4px;
-  padding:4px 9px;font:700 13px/1.3 ui-monospace,Menlo,monospace;letter-spacing:.5px}
-.paper b+b{margin-left:10px}
-.guide .tip{border-left:3px solid var(--gold);border-radius:0;padding:2px 0 2px 14px;
-  margin:0 0 12px;color:var(--dim);font-size:13.5px;line-height:1.65}
 
 /* keep last: a later rule setting display would defeat it */
 .hide{display:none}
@@ -687,159 +678,60 @@ td.diff{text-align:right;font-weight:700}
     </div>
     <div class="guide">
 
-      <!-- Release convention: mark what changed with class="new" and strip the
-           previous release's marks in the same commit, so the rules always point
-           at this version's changes and nothing older. -->
+      <!-- Keep only the current significant RC here; move the accent to the
+           next What's new block when a later major release candidate ships. -->
+      <div class="new">
+        <h3>What's new in RC1</h3>
+        <ul>
+          <li>OFP completion, live fuel and altimeter checks, weather, NOTAMs and charts in one offline app.</li>
+          <li>Journey Log is available alongside the OFP Companion and shares the same interface and theme.</li>
+          <li>Updates are now offered with an <b>Update now</b> button instead of interrupting an open plan.</li>
+        </ul>
+      </div>
 
-      <h3>Install on the home screen</h3>
-      <p>Do this once: it then runs offline, looks like a normal app, and saving works properly.</p>
+      <h3>Install once</h3>
+      <p>Open this page in <b>Safari</b>, then tap <b>Share → Add to Home Screen → Add</b>.
+      Launch it once before departure to make it available offline.</p>
       <ol>
-        <li>Open this page in <b>Safari</b> — Chrome cannot add to the home screen.</li>
-        <li>Tap <b>Share</b> → <b>Add to Home Screen</b> → <b>Add</b>.</li>
-        <li>Launch from the new icon. Try it once in airplane mode.</li>
+        <li>Use the home-screen app, not a Files preview: saving and sharing work reliably there.</li>
+        <li>Keep the version you have checked before departure; an offline app does not update.</li>
+        <li>When connected, a new version offers <b>Update now</b>. It updates only when you choose it.</li>
       </ol>
-      <div class="tip">Opening the PDF straight from the Files app puts iPadOS into a preview mode
-      where saving and the share sheet may not work — the home screen icon avoids that.</div>
 
-      <h3>Quick start</h3>
+      <h3>Before flight</h3>
       <ol>
-        <li><b>Load</b> the flight plan PDF. The ICAO flight plan appears under the box,
-            reassembled across page breaks; <b>Copy</b> gives it as one line.</li>
-        <li><b>Document fields</b> — ATIS, ATC CLRNC, altimeter settings, PIC BLOCK. Free text
-            uses the space around the dots, with a counter for what's left. PIC BLOCK shows the
-            planned block fuel greyed alongside, for reference only — never written into the
-            document.</li>
-        <li><b>Takeoff time</b>, UTC, four digits — everything else follows from it.</li>
-        <li><b>Actuals</b> — ATO and remaining fuel per waypoint. Enter moves to the next field.</li>
-        <li><b>Altimeter cross-checks</b> — one row per hour of flight.</li>
-        <li><b>Save PDF</b> — Save to Files, AirDrop, Print, or ForeFlight.</li>
-        <li><b>Weather &amp; NOTAMs</b> and <b>Charts</b> — read straight out of the loaded
-            package.</li>
+        <li><b>Load</b> the Air Astana OFP PDF and check the route ID, request number and release time in the header.</li>
+        <li>Complete document fields such as ATIS, ATC clearance, altimeter settings and PIC BLOCK.</li>
+        <li>Enter the <b>takeoff time</b> in UTC as four digits. The ETD button uses the planned off-block time, so verify it before use.</li>
+        <li>Read the ICAO flight plan, weather, NOTAMs and charts from the package as required.</li>
       </ol>
-      <div class="tip">The ETD button fills in the off-block time from the plan — takeoff is
-      normally later, so check it.</div>
 
-      <h3>Numeric keypad</h3>
-      <p>Every digits-only box opens the app's own keypad instead of Safari's —
-      docked to the bottom and built to match the system's, key for key, on frosted glass rather
-      than a flat panel now, the page still faintly visible moving behind it. The corner button
-      plays whatever that field's own Return key would have: <b>Next</b> across a run of
-      boxes, <b>Go</b> on the takeoff time, <b>Done</b> wherever nothing moves.</p>
-      <p>It dismisses the way a system keyboard does, too: the iPad's own dismiss key, pinned to
-      the keypad's own bottom-right corner, always just closes it, and so does a tap outside it
-      or a real scroll.</p>
-      <p>Mirrored opposite it, top left, <b>Previous</b> steps back the same run
-      of boxes — greyed out on the first one, since there is nowhere behind it to go.</p>
-      <p>Every key answers with the same soft tock the system keyboard's own keys
-      make, and goes quiet the same way that keyboard's clicks do when the ring/silent switch is
-      set to silent.</p>
-
-      <h3>Altimeter cross-checks</h3>
-      <p>Company rule: an hourly comparison. The app finds the waypoint on each full hour after
-      takeoff and prints your reading on the line under it. A row turns amber as it nears, red
-      once overdue, with a short tone the first time. Saving with checks missing asks for
-      confirmation.</p>
-
-      <h3>Fuel checks</h3>
-      <p>Company rule: a fuel check on overflying a waypoint, or at least every 30 minutes. The
-      next due time shows above the table — amber as it nears, red once overdue — and the fuel
-      box it belongs to is ringed. A figure entered anywhere inside that half hour clears it.
-      Saving with a check overdue asks for confirmation.</p>
-      <p>A figure entered early restarts the thirty minutes from that moment, rather
-      than leaving the next one due on the old half-hour mark.</p>
-
-      <h3>Following the flight</h3>
-      <p>The table tracks the clock: passed points fade back, the last one is shaded, and the
-      one you're running to is highlighted and kept centred. It holds still while a box has
-      focus, and for twenty seconds after you scroll by hand. The highlight follows your
-      <b>ATO</b> entries rather than the clock, so it stays right even when actuals run a few
-      points behind.</p>
-
-      <h3>Direct to a waypoint</h3>
-      <p>Press <b>Direct to…</b> and tap the waypoint you're cleared to. Skipped waypoints stay
-      where they are, struck through and faded — the order still has to match the paper form —
-      and the target is marked <b>DCT</b>. Nothing reaches the document and no ETO is rewritten;
-      only the highlight moves. The toolbar chip undoes it, and each direct remembers just the
-      waypoints it cut out.</p>
-
-      <h3>Weather and NOTAMs</h3>
-      <p>Read entirely out of the loaded package — no network, no account, no key. The dropdown
-      groups aerodromes as <b>this flight</b>, <b>areas along the route</b> and <b>other
-      aerodromes</b>. Each gives METAR and TAF as printed, then NOTAMs with their number,
-      validity and subject, then company NOTAMs. Reports are exactly as old as the document —
-      re-brief from the current source before acting on them.</p>
-      <p>The TAF change group and any NOTAM the flight actually meets are picked out — departure
-      at ETD, destination and alternates at ETA, the en-route alternate at the flight's midpoint.
-      A plan carrying no date of flight gets no highlight.</p>
-      <p>A NOTAM about the runway is marked red, the taxiway amber — read off its own words,
-      muted the way a fuel check already is, never a traffic light. Naming both marks it for the
-      runway. The list itself never reorders.</p>
-      <p>The whole aerodrome closed outranks both: it gets the one saturated fill on the card,
-      the same red as <b>Reset</b>, since it is worth catching before the rest of the list is
-      even read.</p>
-      <p><b>Highlight what applies now</b>, beside the aerodrome dropdown, turns all
-      three off at once for a crew that would rather read the reports plain. It is a device
-      preference, kept the same way the theme is — set once, left as it is after that.</p>
-
-      <h3>Wind components and weather charts</h3>
-      <p><b>Open charts</b> pages through the wind components, tropopause/MORA profile and
-      significant weather charts on their own. Arrow keys or Prev/Next move between them,
-      <b>Zoom</b> toggles full size with scrolling, Escape closes.</p>
-
-      <h3>Getting the plan in</h3>
-      <p>Tap the box, or drag the PDF out of Files — put it alongside in Split View or Slide
-      Over, press and hold the plan, and drop it on the box. On a computer it can also be
-      pasted; not on iPad, since Safari never hands a PDF to a web page.</p>
-
-      <h3>If iPadOS closes the app</h3>
-      <p>The plan and everything entered are kept on the device, so opening the app again
-      restores it — takeoff time, actuals, altimeter readings and which OFP it is. Checks
-      already announced don't sound again. <b>Reset</b> clears it and returns to an empty drop
-      zone.</p>
-
-      <h3>Updates</h3>
-      <p>The app updates itself — the icon never needs removing and re-adding. With no plan
-      loaded it comes back on the new version on next launch; with one open it waits until you
-      close it, so nothing moves while you're using it. Offline it never updates: the version
-      you leave the ground with is the version you fly with.</p>
-
-      <h3>Print colours</h3>
-      <p>Fixed, so every document comes out the same. Samples below are shown on white, exactly
-      as they print:</p>
-      <table>
-        <tr><th>Item</th><th>On paper</th></tr>
-        <tr><td>ETO</td><td><span class="paper"><b style="color:#0033cc">0210</b></span></td></tr>
-        <tr><td>ATO</td><td><span class="paper"><b style="color:#00762e">0213</b></span></td></tr>
-        <tr><td>Fuel, and the FUEL column</td>
-            <td><span class="paper"><b style="color:#000">22741</b></span></td></tr>
-        <tr><td>Document fields and ALTM CHK</td>
-            <td><span class="paper"><b style="color:#0033cc">ALTM1 1013</b></span></td></tr>
-        <tr><td>DIFF, against planned fuel</td>
-            <td><span class="paper"><b style="color:#00762e">+180</b>
-                <b style="color:#cc0000">-220</b></span></td></tr>
-      </table>
-      <p>All of it in bold Courier, to stand apart from the form's own type.</p>
-
-      <h3>Good to know</h3>
+      <h3>In flight</h3>
       <ul>
-        <li>Only Air Astana computerized flight plans are supported.</li>
-        <li>Entries save automatically and come back when you reload the same plan; Reset clears
-            them.</li>
-        <li>Nothing leaves the iPad and no connection is ever needed.</li>
-        <li>Route ID, request number and release time sit under the title in the header, so the
-            plan on screen can be checked against the one you were given.</li>
-        <li>The sun and moon buttons switch the screen theme; print colours never change.</li>
-        <li>Until one of them is tapped, the screen theme instead follows the
-            device's own light/dark setting live.</li>
-        <li>A warning about ET and T/T means the plan's own columns disagree — check those
-            waypoints by hand.</li>
+        <li>Enter actual <b>ATO</b> and remaining fuel at each waypoint. <b>Next</b> and <b>Previous</b> move through the entry fields.</li>
+        <li>Record fuel checks at an overflown waypoint or at least every 30 minutes. Amber means due soon; red means overdue.</li>
+        <li>Complete the altimeter cross-checks when due. The app highlights overdue items and asks before saving with missing checks.</li>
+        <li>For a clearance direct, use <b>Direct to…</b>; it updates the live highlight only and never rewrites the planned ETOs.</li>
       </ul>
 
-      <p class="credit">Built by <b>Ramil Bozzhanov 9871</b> with Claude.<br>
-      <!-- Written out rather than computed, so it names the version actually
-           running: on a stale cache it still reads the old number. Keep the
-           number in step with V in sw.js. -->
-      <span class="build">Version 36.5 &nbsp;·&nbsp; published 27 Aug 2026 20:19 UTC</span></p>
+      <h3>Weather, charts and saving</h3>
+      <p>Weather, NOTAMs and charts are read from the loaded package; they are not live data.
+      Re-brief from the current operational source before acting on them. <b>Save PDF</b> opens
+      the share sheet for Files, AirDrop, Print or ForeFlight. ETO is blue, ATO is green, and
+      fuel is black in the saved document.</p>
+
+      <h3>Data and limits</h3>
+      <p>Everything is processed on the device and saves automatically for the current plan.
+      <b>Reset</b> permanently removes the plan and its entries. Only supported Air Astana
+      computerized OFPs can be loaded.</p>
+
+      <h3>Release candidate versions</h3>
+      <p><b>RC1</b> is the first release candidate. Bug fixes and small refinements use
+      <b>RC1.1</b>, <b>RC1.1.2</b>, <b>RC1.2</b> and so on. Major changes move to
+      <b>RC2</b>, <b>RC3</b> and later release candidates until the final release.</p>
+
+      <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
+      <span class="build">RC1 &nbsp;·&nbsp; published 29 Aug 2026</span></p>
 
     </div>
   </div>
@@ -1571,23 +1463,39 @@ function scrollHint(el){
 }
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
-  // True on every launch after the first install: there is already a version
-  // running, so a change of controller means a newer one has just replaced it.
-  const replaced = !!navigator.serviceWorker.controller;
   let reloading = false;
+  function offerUpdate(reg){
+    const worker = reg.waiting;
+    if (!worker) return;
+    const box = $('#mUpd');
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'sm'; btn.textContent = 'Update now';
+    btn.onclick = () => {
+      btn.disabled = true;
+      btn.textContent = 'Updating…';
+      worker.postMessage({ type: 'skip-waiting' });
+    };
+    box.className = 'msg show ok';
+    box.replaceChildren('A new version is ready. ', btn);
+  }
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!replaced || reloading) return;
-    if (RAW){
-      // Never pull the page out from under the crew: entries, scroll position
-      // and the open plan all survive only if the reload waits.
-      msg('#mUpd', 'A new version has been installed. It will be used the next '
-                 + 'time you open the app — nothing you have entered is affected.', 'ok');
-      return;
-    }
+    // This only follows an explicit tap on Update now. The page is then reloaded
+    // under the new worker whether or not an OFP is open; the app already keeps
+    // the document and entries locally for that purpose.
+    if (reloading) return;
     reloading = true;
     location.reload();
   });
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    offerUpdate(reg);                  // an update found before this page loaded
+    reg.addEventListener('updatefound', () => {
+      const candidate = reg.installing;
+      if (!candidate) return;
+      candidate.addEventListener('statechange', () => {
+        if (candidate.state === 'installed' && navigator.serviceWorker.controller) offerUpdate(reg);
+      });
+    });
+  }).catch(() => {});
 }
 
 /* ================= theme ================= */
