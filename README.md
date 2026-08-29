@@ -416,11 +416,13 @@ Where a name or a heading is wider than its column — the device's font is rare
 the Calibri the document was set in — it is set down a little until it fits, so a
 column never loses its last character.
 
-## Getting it onto paper
+## Exporting a completed PDF
 
-**Print / PDF** puts the sheets out at their true size: A4 landscape, 297 × 210mm,
-one sheet per page, with the toolbar and the box tints left off. The browser's
-"Save as PDF" therefore gives back the same document with the entries in it.
+**Export PDF** creates a completed copy of the issued Journey Log: the original
+pages are kept intact and the entries are added as a PDF layer. On iPad it opens
+the share sheet, where the file can be saved to Files, AirDropped or sent on;
+other browsers download the `.pdf` directly. The output stays A4 landscape,
+one sheet per page, with no toolbar or entry-box tinting.
 
 ## Zoom
 
