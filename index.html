@@ -731,7 +731,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.2 &nbsp;·&nbsp; published 29 Aug 2026</span></p>
+      <span class="build">RC1.2.1 &nbsp;·&nbsp; published 30 Aug 2026</span></p>
 
     </div>
   </div>
@@ -1289,6 +1289,10 @@ function npHasPrev(el){
     const all = [...document.querySelectorAll('#tbl input')];
     return all.indexOf(el) > 0;
   }
+  if (el.matches('#altrows input')){
+    const all = [...document.querySelectorAll('#altrows input')];
+    return all.indexOf(el) > 0;
+  }
   const m = el.id.match(/^fd(\d+)$/);
   return m ? +m[1] > 0 : false;
 }
@@ -1403,12 +1407,39 @@ document.addEventListener('focusout', e => {
 // box. inputmode="none" keeps Safari's keyboard from ever appearing, so none of
 // its own dismiss gestures come with it; both this key and the two listeners
 // below stand in for those.
-function npHideForce(){
+function revealActualsAfterNumpad(el){
+  if (!el || !el.matches('#tbl input') || !matchMedia('(orientation: portrait)').matches) return;
+  // Wait until the panel and the input focus are both gone. Scrolling any sooner
+  // competes with WebKit's focus restoration and can leave the section half-hidden.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const card = $('#c3'), table = card?.querySelector('.tblbox');
+    if (!card || !table) return;
+    table.style.removeProperty('max-height');
+    // The table is already its own scroller. If the complete Actuals card cannot
+    // fit after the keypad closes, shorten that inner viewport just enough for the
+    // whole card to remain on screen instead of leaving its lower edge obscured.
+    const room = innerHeight - 32;
+    if (card.getBoundingClientRect().height > room){
+      const chrome = card.getBoundingClientRect().height - table.getBoundingClientRect().height;
+      table.style.maxHeight = Math.max(160, Math.floor(room - chrome)) + 'px';
+    }
+    const height = card.getBoundingClientRect().height;
+    const top = Math.max(0, scrollY + card.getBoundingClientRect().top - Math.max(0, (innerHeight - height) / 2));
+    scrollTo({ top, behavior: 'smooth' });
+  }));
+}
+function npHideForce({ revealActuals = false } = {}){
   const el = NP_TARGET;
   npHide();
   if (el) el.blur();
+  if (revealActuals) revealActualsAfterNumpad(el);
 }
-$('#numpadHide').addEventListener('pointerdown', e => { e.preventDefault(); npClick(); npHideForce(); });
+addEventListener('orientationchange', () => setTimeout(() => {
+  if (!matchMedia('(orientation: portrait)').matches) $('#c3 .tblbox')?.style.removeProperty('max-height');
+}, 0));
+$('#numpadHide').addEventListener('pointerdown', e => {
+  e.preventDefault(); npClick(); npHideForce({ revealActuals: true });
+});
 // A tap anywhere outside the field and the keypad itself dismisses it, the way
 // tapping elsewhere on the page dismisses the system keyboard. Tapping the field
 // again, or another .numkey field, is left alone — the second is already a
@@ -2952,11 +2983,20 @@ function renderAlt(){
         refreshAlt(); save();
       };
       inp.onfocus = () => inp.select();
+      inp.onkeydown = e => { if (e.key === 'Enter'){
+        e.preventDefault();
+        const all = [...box.querySelectorAll('input')];
+        const next = all[all.indexOf(inp) + (e.shiftKey ? -1 : 1)];
+        if (next){ next.focus(); next.select(); }
+        else if (!e.shiftKey) inp.blur();
+      } };
       cell.append(s, inp);
       row.appendChild(cell);
     }
     box.appendChild(row);
   }
+  const altInputs = [...box.querySelectorAll('input')];
+  altInputs.forEach((inp, i) => { inp.enterKeyHint = i === altInputs.length - 1 ? 'done' : 'next'; });
   alerted.clear();
   refreshAlt();
 }
