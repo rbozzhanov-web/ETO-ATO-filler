@@ -731,7 +731,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.2.3 &nbsp;·&nbsp; published 31 Aug 2026</span></p>
+      <span class="build">RC1.2.4 &nbsp;·&nbsp; published 31 Aug 2026</span></p>
 
     </div>
   </div>
@@ -1410,7 +1410,7 @@ document.addEventListener('focusout', e => {
 // its own dismiss gestures come with it; both this key and the two listeners
 // below stand in for those.
 function revealActualsAfterNumpad(el){
-  if (!el || !el.matches('#tbl input') || innerHeight <= innerWidth) return;
+  if (!el || !el.matches('#tbl input')) return;
   // Wait until the panel and the input focus are both gone. Scrolling any sooner
   // competes with WebKit's focus restoration and can leave the section half-hidden.
   requestAnimationFrame(() => requestAnimationFrame(() => {
