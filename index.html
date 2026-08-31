@@ -731,7 +731,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.2.1 &nbsp;·&nbsp; published 30 Aug 2026</span></p>
+      <span class="build">RC1.2.2 &nbsp;·&nbsp; published 31 Aug 2026</span></p>
 
     </div>
   </div>
@@ -1306,11 +1306,13 @@ function npShow(el){
   document.body.classList.add('numpad-open');
   setTimeout(() => { if (NP_TARGET === el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60);
 }
-function npHide(){
+function npHide({ revealActuals = false } = {}){
+  const el = NP_TARGET;
   npFlushChange();
   NP_TARGET = null;
   numpad.classList.remove('show');
   document.body.classList.remove('numpad-open');
+  if (revealActuals) revealActualsAfterNumpad(el);
 }
 // A synthesized tock rather than a fetched sound file, so the page stays
 // self-contained. There is no Web API to read the ring/silent switch or the
@@ -1399,7 +1401,7 @@ document.addEventListener('focusout', e => {
   if (e.target !== NP_TARGET) return;
   setTimeout(() => {
     const a = document.activeElement;
-    if (!a || !a.matches || !a.matches('.numkey')) npHide();
+    if (!a || !a.matches || !a.matches('.numkey')) npHide({ revealActuals: true });
   }, 0);
 });
 // Closes on its own, unconditionally — unlike the action key, which plays
@@ -1408,7 +1410,7 @@ document.addEventListener('focusout', e => {
 // its own dismiss gestures come with it; both this key and the two listeners
 // below stand in for those.
 function revealActualsAfterNumpad(el){
-  if (!el || !el.matches('#tbl input') || !matchMedia('(orientation: portrait)').matches) return;
+  if (!el || !el.matches('#tbl input') || innerHeight <= innerWidth) return;
   // Wait until the panel and the input focus are both gone. Scrolling any sooner
   // competes with WebKit's focus restoration and can leave the section half-hidden.
   requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -1428,17 +1430,16 @@ function revealActualsAfterNumpad(el){
     scrollTo({ top, behavior: 'smooth' });
   }));
 }
-function npHideForce({ revealActuals = false } = {}){
+function npHideForce(){
   const el = NP_TARGET;
-  npHide();
+  npHide({ revealActuals: true });
   if (el) el.blur();
-  if (revealActuals) revealActualsAfterNumpad(el);
 }
 addEventListener('orientationchange', () => setTimeout(() => {
   if (!matchMedia('(orientation: portrait)').matches) $('#c3 .tblbox')?.style.removeProperty('max-height');
 }, 0));
 $('#numpadHide').addEventListener('pointerdown', e => {
-  e.preventDefault(); npClick(); npHideForce({ revealActuals: true });
+  e.preventDefault(); npClick(); npHideForce();
 });
 // A tap anywhere outside the field and the keypad itself dismisses it, the way
 // tapping elsewhere on the page dismisses the system keyboard. Tapping the field
