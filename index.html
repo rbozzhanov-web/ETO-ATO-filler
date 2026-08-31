@@ -731,7 +731,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.2.2 &nbsp;·&nbsp; published 31 Aug 2026</span></p>
+      <span class="build">RC1.2.3 &nbsp;·&nbsp; published 31 Aug 2026</span></p>
 
     </div>
   </div>
@@ -1414,12 +1414,12 @@ function revealActualsAfterNumpad(el){
   // Wait until the panel and the input focus are both gone. Scrolling any sooner
   // competes with WebKit's focus restoration and can leave the section half-hidden.
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    const card = $('#c3'), table = card?.querySelector('.tblbox');
+    const card = $('#c2'), table = card?.querySelector('.tblbox');
     if (!card || !table) return;
     table.style.removeProperty('max-height');
-    // The table is already its own scroller. If the complete Actuals card cannot
+    // The table is already its own scroller. If the complete Step 3 card cannot
     // fit after the keypad closes, shorten that inner viewport just enough for the
-    // whole card to remain on screen instead of leaving its lower edge obscured.
+    // whole card — takeoff time, Actuals, and the table — to remain on screen.
     const room = innerHeight - 32;
     if (card.getBoundingClientRect().height > room){
       const chrome = card.getBoundingClientRect().height - table.getBoundingClientRect().height;
