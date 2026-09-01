@@ -1,0 +1,47 @@
+# The app is deployed straight from main by GitHub Pages, so main is what has to
+# be right: every push and every pull request runs the whole suite before it can
+# get there. Turn on branch protection for main with these two checks required —
+# CI cannot enforce that for itself.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit and structure tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # No install step: the app ships no dependencies and the tests use only
+      # node:test and the platform APIs the browser gives the app itself.
+      - name: Run the test suite
+        run: npm test
+
+  smoke:
+    name: Browser smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Serve the app and drive it in a browser
+        run: npm run smoke
