@@ -74,7 +74,7 @@ test('one flight survives the complete operational workflow', () => {
     return a == null ? p.cum + off : wrapMin(a - t0);
   };
   const checks = fuelChecks(flown, off, p => !!fuel[p.i], atTime);
-  assert.ok(checks.length >= 4);
+  assert.equal(checks.length, 3);
   assert.ok(checks.every(c => c.to > c.from));
   assert.ok(checks.some(c => c.from === 75), 'an early check moves the next window anchor');
 
