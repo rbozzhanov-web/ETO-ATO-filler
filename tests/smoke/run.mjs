@@ -6,12 +6,13 @@
    its scripts, a policy that blocks its own code, or a selector that no longer
    matches anything, none of which a Node test can see.
 
-   Run:  node tests/smoke/run.mjs      (needs playwright; see .github/workflows) */
+   Run:  node tests/smoke/run.mjs      (needs playwright; see .github/workflows)
+   Set SMOKE_BROWSER=webkit to exercise the WebKit/iPad-like path. */
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -34,11 +35,24 @@ const check = (ok, what) => { if (!ok) failures.push(what); else console.log('  
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}/`;
 
-// CI installs its own browser; a sandbox with one already in place can point at
-// it with PLAYWRIGHT_CHROMIUM_PATH instead of downloading a second copy.
-const browser = await chromium.launch(
-  process.env.PLAYWRIGHT_CHROMIUM_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } : {});
-const context = await browser.newContext();
+const engineName = process.env.SMOKE_BROWSER || 'chromium';
+const engines = { chromium, webkit };
+const engine = engines[engineName];
+if (!engine) throw new Error(`Unknown SMOKE_BROWSER: ${engineName}`);
+
+// CI installs its own browser. A sandbox with one already in place can point at
+// it instead of downloading a second copy.
+const executablePath = engineName === 'webkit'
+  ? process.env.PLAYWRIGHT_WEBKIT_PATH
+  : process.env.PLAYWRIGHT_CHROMIUM_PATH;
+const browser = await engine.launch(executablePath ? { executablePath } : {});
+const context = await browser.newContext(engineName === 'webkit' ? {
+  viewport: { width: 1024, height: 1366 },
+  deviceScaleFactor: 2,
+  isMobile: true,
+  hasTouch: true
+} : {});
+console.log(`browser smoke: ${engineName}`);
 
 async function open(url){
   const page = await context.newPage();
@@ -127,6 +141,25 @@ try {
     check(injected.inputs === 5, 'each row carries its ATO box');
     check(injected.checks === 2, 'the altimeter checks are laid out');
     check(injected.chips === 1, 'the direct-to chip is shown');
+
+    // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
+    // numpad plus both orientations. This is not a substitute for a real iPad,
+    // but it catches WebKit-only regressions before they reach one.
+    if (engineName === 'webkit'){
+      const firstAto = page.locator('#tbl tbody input.ato').first();
+      await firstAto.focus();
+      check(await page.locator('#numpad').evaluate(e => e.classList.contains('show')),
+            'WebKit opens the custom numpad for an ATO field');
+      await page.setViewportSize({ width: 1366, height: 1024 });
+      check(await page.evaluate(() => matchMedia('(orientation: landscape)').matches),
+            'WebKit survives landscape orientation');
+      await page.setViewportSize({ width: 1024, height: 1366 });
+      check(await page.evaluate(() => matchMedia('(orientation: portrait)').matches),
+            'WebKit survives portrait orientation');
+      await page.locator('#numpadHide').dispatchEvent('pointerdown');
+      check(!await page.locator('#numpad').evaluate(e => e.classList.contains('show')),
+            'WebKit dismisses the custom numpad');
+    }
     await page.close();
   }
 
