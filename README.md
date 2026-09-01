@@ -13,31 +13,43 @@ Requires iPadOS 16.4 or newer (`DecompressionStream` is needed to inflate PDF st
 Behaves like a normal app, and saving the PDF goes through the iOS share sheet.
 You need the internet **once**, so Safari can fetch the page and cache it.
 
-Everything required is in the `pwa/` folder:
+Everything required sits in the root of this repository:
 
 ```
-pwa/index.html
-pwa/journey-log.html
-pwa/sw.js
-pwa/manifest.webmanifest
-pwa/icon-192.png
-pwa/icon-512.png
+index.html            the OFP companion
+journey-log.html      the Journey Log form
+pdfmini.js            the PDF reader and incremental writer
+ofp-core.js           the flight-plan arithmetic
+app.js                the OFP companion itself
+jl-pdf.js             the Journey Log's PDF reader, writer and export geometry
+journey-log.js        the Journey Log form itself
+sw.js                 the offline cache
+manifest.webmanifest
+icon-192.png
+icon-512.png
 ```
 
 There are two pages: `index.html` is the OFP companion described below, and
 `journey-log.html` is the Journey Log form. Each links to the other from its
 header, and both are cached, so either can be opened offline.
 
-1. Upload the **contents** of `pwa/` to any https host.
-   GitHub Pages is free for public repositories: create a repo, put the files in
-   the root, then enable Settings → Pages. Netlify Drop also works — just drag
-   the folder onto netlify.com/drop.
+The code sits in `.js` files beside the pages rather than inside them. That is
+what lets the Content-Security-Policy on both pages refuse inline script
+outright, which is the guarantee that nothing read out of a PDF can ever be run
+as code.
+
+1. Upload **all of the files above** to any https host, keeping them together in
+   one directory. GitHub Pages is free for public repositories: create a repo,
+   put the files in the root, then enable Settings → Pages. Netlify Drop also
+   works — just drag the folder onto netlify.com/drop.
 2. On the iPad open the address in **Safari** (not Chrome — only Safari offers
    "Add to Home Screen").
 3. Share button → **Add to Home Screen** → Add.
 4. Turn on airplane mode and launch the icon. If it opens, the offline cache is in place.
 
-To update: upload the new `index.html` and bump the `V` constant in `sw.js`.
+To update: upload the changed files and bump the `V` constant in `sw.js`. The
+pages and the scripts they load are all fetched network-first, so a new page is
+never paired with a previous version's script.
 
 Release candidates use the following version scheme:
 
@@ -60,21 +72,25 @@ moves under your hands.
 Offline it never updates, which means the version you leave the ground with is the version you
 fly with.
 
-`OFP-Companion.html` in the archive root and `pwa/index.html` are the same file
-under two names, for the two scenarios.
-
 ---
 
-## Option 2. A single file in the Files app
+## Option 2. Running it from a folder
 
-No hosting at all. Put `OFP-Companion.html` in iCloud Drive or On My iPad and tap it.
+The app is no longer one self-contained HTML file: the code lives in the `.js`
+files listed above so that inline script can be forbidden outright. Opening
+`index.html` straight off the disk (`file://`) therefore does not work — the
+browser will not load those scripts under the page's own security policy, and
+`crypto.subtle`, which identifies a plan by its PDF's digest, is unavailable
+outside a secure context.
 
-Caveat: iPadOS shows local HTML in a preview view rather than full Safari.
-The calculation and the table work, but the share sheet, saving the file and
-remembering settings between launches may be unavailable — that is a limitation
-of the preview mode, not of the app. If saving does not work, use option 1.
+To run it from a checkout, serve the folder over HTTP instead:
 
-On a computer (macOS/Windows) the same file opens with a double click and works fully.
+```
+python3 -m http.server 8000        # then open http://localhost:8000/
+```
+
+On an iPad, option 1 is the way; `localhost` and `https` are both secure
+contexts, so everything works on either.
 
 ---
 
@@ -452,16 +468,85 @@ between the two documents, and neither has to be looked for.
 
 ## What is inside
 
-No external libraries — no pdf.js, no pdf-lib, no CDN. `journey-log.html` is one
-file of plain HTML, CSS and script; it borrows the OFP companion's PDF reader to
-find the text and where it sits, then bins each item into the cell its
-coordinates land in. The Journey Log's fonts are Type0/Identity-H, so the glyph
+No external libraries — no pdf.js, no pdf-lib, no CDN. `journey-log.js` borrows
+the OFP companion's PDF reader — `jl-pdf.js`, the same engine — to find the text
+and where it sits, then bins each item into the cell its coordinates land in. The Journey Log's fonts are Type0/Identity-H, so the glyph
 numbers are put back into letters through each font's ToUnicode map — that is
-what makes the Cyrillic come out as Cyrillic. `index.html` carries its own
+what makes the Cyrillic come out as Cyrillic. `pdfmini.js` is the companion's own
 minimal PDF engine: it reads text with coordinates out of FlateDecode streams and
 appends an overlay through an incremental update, so the original bytes of the
 document stay untouched and new content is simply added at the end of the file.
+Both engines carry every object's generation number through parsing, rewriting
+and the cross-reference table, so a document whose objects were not issued at
+generation 0 comes back out valid.
+
+Both engines also bound what one document may cost: the file size, the page
+count, a decompressed stream and a decoded chart each have a limit, and a
+document past any of them is refused with a message rather than taking the tab
+down with it.
 
 Built for Air Astana plans: unencrypted PDF, classic xref table, uncompressed
 objects, Courier font. If the format turns out to be different, the app says so
 on load instead of damaging the document.
+
+---
+
+## What is kept on the device
+
+Times, fuel figures, altimeter readings, directs and document fields are saved in
+the browser's own storage on the device, and nowhere else — nothing is uploaded,
+and the app makes no network request of any kind once it is installed.
+
+A flight's entries are held against the SHA-256 digest of the PDF they were
+entered for, so two packages that happen to share a file name and a byte length
+can never be handed each other's numbers. The loaded PDF itself is kept in
+IndexedDB so a cold start can pick the flight up where it stopped; on resume the
+digest is checked again, and a copy that does not match is discarded rather than
+paired with the wrong document.
+
+Nothing is kept indefinitely: entries age out after 30 days, only the 20 most
+recent flights are held, and **Clear other flights** on the load card removes
+every stored flight but the one open now.
+
+---
+
+## Releases
+
+`main` is the web app, and it is what GitHub Pages serves. It is the only branch
+these instructions describe.
+
+The tags under [Releases](../../releases) are not all cut from it. `v1.0.0` and
+`v1.1.0` are the Swift/iPadOS rewrite, and neither is an ancestor of `main` —
+`v1.1.0` is the head of `claude/swift-ipados-ios-rewrite-q4lbzb`, and that source
+is not on `main` at all. Read a release from its own tag; do not assume `main`
+contains it, and do not read the instructions above as applying to it.
+
+---
+
+## Developing
+
+The app ships no dependencies. The tests need only Node 22 or newer:
+
+```
+npm test          # unit and structure tests, no browser, no install
+npm run smoke     # loads both pages in Chromium (needs: npm i --no-save playwright)
+```
+
+`npm test` covers the PDF reader and incremental writer against built fixtures,
+the ETO, fuel and altimeter arithmetic, the direct-to logic, the per-PDF
+isolation of saved state and its retention, the Journey Log's export geometry —
+including that it does not move with the sheet's zoom — the service worker's
+offline behaviour, and structural checks on the shipped files: that no code
+parses a string as HTML, that each page's policy still refuses inline script,
+and that every script a page loads exists and is precached.
+
+Both jobs run on every push and pull request (`.github/workflows/ci.yml`).
+GitHub Pages deploys from `main`, so `main` should be protected with both checks
+required before merge — that is a repository setting, and CI cannot set it for
+itself.
+
+---
+
+## Licence
+
+MIT — see [LICENSE](LICENSE).
