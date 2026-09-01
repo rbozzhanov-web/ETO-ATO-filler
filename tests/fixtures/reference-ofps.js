@@ -82,7 +82,7 @@ module.exports = [
     expected: {
       arrival:'2355',
       alternate:[{ wp:'A50', eto:'0015' }, { wp:'CCCC', eto:'0050' }],
-      altimeter:[{ mark:60, wp:'P50', label:'+1:00' }]
+      altimeter:[{ mark:18, wp:'TOC', label:'TOC' }]
     }
   },
   {
