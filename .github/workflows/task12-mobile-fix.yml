@@ -1,0 +1,39 @@
+name: Apply Task 12 mobile header fix
+
+on:
+  push:
+    branches: [hardening/reliability-plan]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[task12-mobile-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hardening/reliability-plan
+      - name: Apply narrow-screen Journey Log header layout
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('journey-log.html')
+          s = p.read_text()
+          anchor = '''#bar h1{font-size:20px; letter-spacing:.3px; margin:0 4px 0 0; white-space:nowrap}\n#bar h1 span{color:var(--dim); font-size:13px; letter-spacing:0; font-weight:400}\n'''
+          addition = anchor + '''\n/* On phones the iPad-alignment spacer and a single-row control strip are wider\n   than the viewport. Keep the iPad layout untouched, but let phone controls\n   wrap onto their own row and use the full available width. */\n@media(max-width:600px){\n  .barhd{flex-wrap:wrap; align-items:flex-start; gap:8px;\n    padding-left:max(12px, env(safe-area-inset-left, 0px));\n    padding-right:max(12px, env(safe-area-inset-right, 0px))}\n  #bar h1{flex:1 0 100%; margin:0}\n  .hdctl{width:100%; margin:0; align-self:auto; flex-wrap:wrap; gap:8px}\n  .swgap{display:none}\n  #bar button{padding-left:10px; padding-right:10px}\n  #ofp{width:auto; min-width:0}\n}\n'''
+          assert s.count(anchor) == 1, 'Journey Log header CSS anchor changed unexpectedly'
+          p.write_text(s.replace(anchor, addition))
+          PY
+          rm .github/workflows/task12-mobile-fix.yml
+          npm test
+      - name: Commit Task 12 mobile header fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Task 12: make Journey Log header responsive [task12-mobile-applied]"
+          git push origin HEAD:hardening/reliability-plan
