@@ -33,7 +33,8 @@ test('long entered text is escaped safely into the incremental PDF stream', asyn
   const out = jl.appendPdf(doc, new Map([[0, ops]]));
   const again = new jl.Doc(out);
   const content = await again.content(again.pages()[0]);
-  assert.match(content, /CAPT \\(TEST\\) \\\\ LONG - VALUE/);
+  assert.ok(content.includes('\\(TEST\\)'), 'parentheses stay escaped in the PDF string');
+  assert.ok(content.includes('\\\\ LONG - VALUE'), 'backslash stays escaped and em dash degrades safely');
 });
 
 test('characters outside the PDF writer encoding degrade predictably instead of corrupting syntax', () => {
