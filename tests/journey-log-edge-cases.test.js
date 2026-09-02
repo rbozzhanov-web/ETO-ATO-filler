@@ -60,3 +60,18 @@ test('export walks all sheets and all writable input/contenteditable fields', ()
   assert.match(app, /stage\.querySelectorAll\('\.sheet'\)\.forEach\(\(sheet, pi\) =>/);
   assert.match(app, /sheet\.querySelectorAll\('input\.fill, \.ed:not\(\.pre\)'\)/);
 });
+
+
+test('Journey Log rejects malformed or out-of-range times before PDF export', () => {
+  assert.match(app, /function validateTimesForExport\(\)/);
+  assert.match(app, /if\(!validateTimesForExport\(\)\) return;/);
+  assert.match(app, /invalid Journey Log time field/);
+  assert.match(app, /aria-invalid/);
+  assert.doesNotMatch(app, /\\d\{3,4\}/);
+  assert.doesNotMatch(app, /padStart\(4,'0'\)/);
+});
+
+test('Journey Log flushes pending form state before iPadOS can freeze the page', () => {
+  assert.match(app, /addEventListener\('pagehide', flushSave\)/);
+  assert.match(app, /visibilitychange[\s\S]*?document\.hidden[\s\S]*?flushSave/);
+});

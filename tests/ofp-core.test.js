@@ -10,11 +10,15 @@ const { parseTime, fmt, hhmm, norm, wrapMin, sinceDueAt, computeResult,
 /* ---------------------------------------------------------------- times */
 test('parseTime takes HHMM and refuses anything else', () => {
   assert.equal(parseTime('0210'), 130);
-  assert.equal(parseTime('00:00'), 0);
+  assert.equal(parseTime('0000'), 0);
   assert.equal(parseTime('2359'), 23 * 60 + 59);
   assert.equal(parseTime('2400'), null);   // hour out of range
   assert.equal(parseTime('1260'), null);   // minute out of range
   assert.equal(parseTime('210'), null);    // not four digits
+  assert.equal(parseTime('00:00'), null);  // punctuation is never stripped/guessed
+  assert.equal(parseTime('02 10'), null);
+  assert.equal(parseTime('0210Z'), null);
+  assert.equal(parseTime('ab0210'), null);
   assert.equal(parseTime(''), null);
   assert.equal(parseTime(undefined), null);
 });

@@ -4,6 +4,14 @@ The app is fully self-contained: the PDF is parsed and written on the device.
 Nothing is uploaded anywhere, and after installation nothing is fetched either.
 Everything flies with the radios off.
 
+## Operational scope
+
+> Приложение предназначено исключительно для заполнения и оформления OFP/Journey Log. Оно не заменяет утверждённые источники полётной информации, OFP, SOP и одобренные приложения авиакомпании.
+
+**English:** This application is only an electronic tool for filling and formatting OFP / Journey Log. It is not an approved source of flight information and does not replace the issued/approved OFP, SOP, current operational sources or airline-approved EFB applications.
+
+Weather, NOTAM and chart views only duplicate information already carried by the loaded package. They are document-navigation conveniences, not live data and not a source for operational decisions. Until the real-document, physical-iPad and shadow-flight gates in `RELEASE_CHECKLIST.md` are complete, describe the build as a working prototype / candidate for a controlled pilot rather than a verified production tool.
+
 Requires iPadOS 16.4 or newer (`DecompressionStream` is needed to inflate PDF streams).
 
 ---
@@ -256,6 +264,8 @@ example, `-12 on plan`. A fuel window left with nothing to overfly after a direc
 rather than sitting red for the rest of the flight.
 
 ## Weather and NOTAMs
+
+**Document-view convenience only.** This section does not provide live operational information and no highlight is an approved decision aid. The authoritative source remains the airline-approved briefing / EFB process.
 
 A card at the bottom shows the METAR, TAF and NOTAMs carried by the loaded package. Pick an
 aerodrome from the dropdown and its reports are listed: METAR and TAF raw as printed, then

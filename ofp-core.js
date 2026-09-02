@@ -17,8 +17,8 @@ const hhmm = m => Math.floor(m / 60) + '.' + String(m % 60).padStart(2, '0');
 // HHMM as typed, or null when it is not a time. Anything but four digits, an
 // hour past 23 or a minute past 59 is rejected rather than guessed at.
 function parseTime(v){
-  const d = (v || '').replace(/\D/g, '');
-  if (d.length !== 4) return null;
+  const d = String(v ?? '');
+  if (!/^\d{4}$/.test(d)) return null;
   const h = +d.slice(0, 2), m = +d.slice(2);
   return (h > 23 || m > 59) ? null : h * 60 + m;
 }
