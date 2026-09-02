@@ -80,6 +80,8 @@ try {
     // and that the arithmetic in the browser agrees with the arithmetic in the tests
     check(await page.evaluate(() => fmt(parseTime('0210') + 205)) === '0535',
           'the ETO arithmetic runs in the browser');
+    check(await page.evaluate(() => parseTime('02:10') === null && parseTime('0210Z') === null),
+          'OFP time input is strict four-digit HHMM');
 
     check(await page.locator('#drop').isVisible(), 'the load box is shown');
     check(await page.locator('#clearStored').isVisible(), 'stored-data controls are shown');
@@ -175,6 +177,9 @@ try {
           (problems.length ? ': ' + problems.join(' | ') : ''));
     check(await page.evaluate(() => typeof appendPdf === 'function'), 'jl-pdf.js ran');
     check(await page.evaluate(() => typeof exportOps === 'function'), 'journey-log.js ran');
+    check(await page.evaluate(() => toMinutes('0340') === 220 && toMinutes('03:40') === 220 &&
+                                   toMinutes('340') === null && toMinutes('2460') === null),
+          'Journey Log accepts only valid four-digit HHMM / formatted HH:MM');
 
     // The fix this stands over: the export geometry must not move with the zoom.
     check(await page.evaluate(() => {

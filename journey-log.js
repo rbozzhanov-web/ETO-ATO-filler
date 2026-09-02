@@ -269,14 +269,26 @@ function load(){
   return emptyDoc();
 }
 let saveTimer = null;
+function saveNow(){
+  clearTimeout(saveTimer); saveTimer = null;
+  try{
+    localStorage.setItem(KEY, JSON.stringify(doc));
+    return true;
+  }catch(e){
+    say('There is no room left on the device to save this.', 'err');
+    return false;
+  }
+}
 function save(){
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(()=>{
-    try{
-      localStorage.setItem(KEY, JSON.stringify(doc));
-    }catch(e){ say('There is no room left on the device to save this.', 'err'); }
-  }, 250);
+  saveTimer = setTimeout(saveNow, 250);
 }
+function flushSave(){ if(saveTimer) saveNow(); }
+// iPadOS can freeze or evict a backgrounded Home Screen app quickly. Flush the
+// last debounced keystrokes before the page is hidden so lock, app switching or
+// a PWA restart cannot lose the final entry.
+addEventListener('pagehide', flushSave);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) flushSave(); });
 
 function get(path){
   return path.split('.').reduce((o,k)=> o == null ? o : o[k], doc);
@@ -808,6 +820,9 @@ function render(){
   });
   applyZoom();
   refreshDerived();
+  stage.querySelectorAll('input[data-time]:not([readonly])').forEach(t => {
+    if(t.value.trim()) setTimeInvalid(t, !isTimeEntry(t.value));
+  });
   fitAll(stage);
   /* Three boxes share a line with a printed label. How wide that label comes
      out depends on the device's font, so each box is told where to start only
@@ -838,6 +853,8 @@ function exportOps(){
     sheet.querySelectorAll('input.fill, .ed:not(.pre)').forEach(el => {
       const value = el.tagName === 'INPUT' ? el.value.trim() : el.textContent.trim();
       if(!value) return;
+      if(el.dataset.time && !isTimeEntry(value))
+        throw new Error('invalid Journey Log time field: ' + (el.dataset.path || 'unknown'));
       const { x, y, size } = exportPlacement({
         rect: el.getBoundingClientRect(), sheetRect,
         fontPx: parseFloat(getComputedStyle(el).fontSize),
@@ -864,6 +881,7 @@ async function deliverPdf(blob, name){
 }
 async function exportPdf(){
   if(document.activeElement) document.activeElement.blur();
+  if(!validateTimesForExport()) return;
   const button = document.getElementById('export');
   button.disabled = true; button.textContent = 'Exporting…';
   try{
@@ -882,9 +900,9 @@ async function exportPdf(){
 
 /* --------------------------------------------------------------------- times */
 function toMinutes(s){
-  const m = /^\s*(\d{1,2}):?(\d{2})\s*$/.exec(s || '');
+  const m = /^\s*(?:(\d{2})(\d{2})|(\d{2}):(\d{2}))\s*$/.exec(s || '');
   if(!m) return null;
-  const h = +m[1], mi = +m[2];
+  const h = +(m[1] ?? m[3]), mi = +(m[2] ?? m[4]);
   return (h > 23 || mi > 59) ? null : h*60 + mi;
 }
 function fromMinutes(n){
@@ -895,6 +913,42 @@ function span(from, to){
   const a = toMinutes(from), b = toMinutes(to);
   if(a == null || b == null) return '';
   return fromMinutes(b - a);
+}
+function isTimeEntry(v){
+  const s = String(v ?? '').trim();
+  if(!s) return true;
+  return (/^\d{4}$/.test(s) || /^\d{2}:\d{2}$/.test(s)) && toMinutes(s) != null;
+}
+function setTimeInvalid(t, bad){
+  t.toggleAttribute('aria-invalid', !!bad);
+  t.classList.toggle('badtime', !!bad);
+}
+function previewTimeField(t){
+  const s = t.value.trim();
+  const complete = /^\d{4,}$/.test(s) || s.includes(':');
+  setTimeInvalid(t, !!s && complete && !isTimeEntry(s));
+}
+function normalizeTimeField(t){
+  const s = t.value.trim();
+  if(!s){ setTimeInvalid(t, false); return true; }
+  if(/^\d{4}$/.test(s) && toMinutes(s) != null){
+    const v = s.slice(0,2) + ':' + s.slice(2);
+    t.value = v;
+    set(t.dataset.path, v);
+    setTimeInvalid(t, false);
+    return true;
+  }
+  const ok = /^\d{2}:\d{2}$/.test(s) && toMinutes(s) != null;
+  setTimeInvalid(t, !ok);
+  return ok;
+}
+function validateTimesForExport(){
+  const fields = [...stage.querySelectorAll('input[data-time]:not([readonly])')];
+  const bad = fields.find(t => !normalizeTimeField(t));
+  if(!bad){ refreshDerived(); saveNow(); return true; }
+  bad.focus(); bad.select();
+  say('Fix the highlighted time before export. Enter HHMM from 0000 to 2359.', 'err');
+  return false;
 }
 /* Blk from the block times, Flt from the wheels, until the cell is written in. */
 function refreshDerived(){
@@ -920,6 +974,7 @@ stage.addEventListener('input', e=>{
   }
   const path = t.dataset.path;
   set(path, t.value);
+  if(t.dataset.time) previewTimeField(t);
   if(derived.has(path)){
     if(t.value) doc.manual[path] = 1; else delete doc.manual[path];
   }
@@ -931,14 +986,9 @@ stage.addEventListener('input', e=>{
 stage.addEventListener('change', e=>{
   const t = e.target;
   if(t.tagName !== 'INPUT' || !t.dataset.time) return;
-  const m = /^\s*(\d{3,4})\s*$/.exec(t.value);
-  if(m){
-    const raw = m[1].padStart(4,'0');
-    const v = raw.slice(0,2) + ':' + raw.slice(2);
-    if(toMinutes(v) != null){
-      t.value = v; set(t.dataset.path, v); refreshDerived(); save();
-    }
-  }
+  normalizeTimeField(t);
+  refreshDerived();
+  save();
 });
 
 /* Carry the captain's duty figure down its column. */

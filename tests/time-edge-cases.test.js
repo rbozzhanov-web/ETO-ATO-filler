@@ -71,7 +71,8 @@ test('deviation wrapping is deterministic at the twelve-hour boundary', () => {
 test('invalid HHMM values are rejected instead of guessed', () => {
   const invalid = [
     '', '0', '1', '12', '123', '12345',
-    '2400', '2401', '2460', '2360', '1260', '9999'
+    '2400', '2401', '2460', '2360', '1260', '9999',
+    '00:00', '02 10', '0210Z', 'ab0210'
   ];
   for (const value of invalid)
     assert.equal(parseTime(value), null, `${JSON.stringify(value)} must be invalid`);
@@ -79,7 +80,6 @@ test('invalid HHMM values are rejected instead of guessed', () => {
 
 test('valid HHMM boundary values still parse exactly', () => {
   assert.equal(parseTime('0000'), 0);
-  assert.equal(parseTime('00:00'), 0);
   assert.equal(parseTime('0001'), 1);
   assert.equal(parseTime('2358'), 1438);
   assert.equal(parseTime('2359'), 1439);
