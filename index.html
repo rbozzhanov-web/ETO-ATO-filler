@@ -400,7 +400,7 @@ td input,.fld input,.altrow input{background:transparent;border:1px solid var(--
   border-radius:5px;padding:7px 4px;font:700 16px/1 ui-monospace,Menlo,monospace;
   width:78px;text-align:center}
 input::placeholder{color:var(--fld);font-weight:400;font-size:14px}
-td input.bad{border-color:var(--err)}
+input.bad{border-color:var(--err)!important}\ntd input.suspect{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent)}
 td input:focus,.fld input:focus,.altrow input:focus{border-color:var(--acc);background:var(--bg)}
 td input.ato{color:var(--c-ato)}
 td input.fuel{color:var(--c-fuel)}
@@ -787,6 +787,7 @@ td.diff{text-align:right;font-weight:700}
 
 <script src="pdfmini.js"></script>
 <script src="ofp-core.js"></script>
+<script src="storage.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

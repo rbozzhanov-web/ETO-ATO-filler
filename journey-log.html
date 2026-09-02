@@ -88,6 +88,20 @@ body{
 #bar h1{font-size:20px; letter-spacing:.3px; margin:0 4px 0 0; white-space:nowrap}
 #bar h1 span{color:var(--dim); font-size:13px; letter-spacing:0; font-weight:400}
 
+/* On phones the iPad-alignment spacer and a single-row control strip are wider
+   than the viewport. Keep the iPad layout untouched, but let phone controls
+   wrap onto their own row and use the full available width. */
+@media(max-width:600px){
+  .barhd{flex-wrap:wrap; align-items:flex-start; gap:8px;
+    padding-left:max(12px, env(safe-area-inset-left, 0px));
+    padding-right:max(12px, env(safe-area-inset-right, 0px))}
+  #bar h1{flex:1 0 100%; margin:0}
+  .hdctl{width:100%; margin:0; align-self:auto; flex-wrap:wrap; gap:8px}
+  .swgap{display:none}
+  #bar button{padding-left:10px; padding-right:10px}
+  #ofp{width:auto; min-width:0}
+}
+
 /* Verbatim from the companion, family and line-height included — that is, left
    unset, so the buttons take the same face and sit their labels the same way. */
 button{

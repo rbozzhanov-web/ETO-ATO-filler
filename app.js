@@ -446,13 +446,10 @@ $('#paste').onclick = async () => {
       const blob = await item.getType(type);
       return loadBuffer('pasted.pdf', blob.size, await blob.arrayBuffer(), false);
     }
-    // Name what was actually offered, so a report of this carries evidence.
-    const had = [...new Set(items.flatMap(i => i.types))].join(', ');
-    msg('#m1', 'No PDF on the clipboard' + (had ? ' — it offered: ' + had : '')
-             + '. Use the box above to pick the file.', 'warn');
+    msg('#m1', 'No PDF was found on the clipboard. Use the box above to pick the file.', 'warn');
   } catch (err){
-    msg('#m1', 'The clipboard could not be read here (' + err.message
-             + '). Use the box above to pick the file.', 'warn');
+    console.warn('Clipboard read failed:', err);
+    msg('#m1', 'The clipboard could not be read. Use the box above to pick the file instead.', 'warn');
   }
 };
 
@@ -464,7 +461,7 @@ async function load(f){
 // iPadOS has evicted the app from memory.
 async function loadBuffer(name, size, buf, resumed){
   if (typeof DecompressionStream === 'undefined'){
-    msg('#m1', 'Browser too old: no DecompressionStream. Safari 16.4+ / iPadOS 16.4+ required.', 'err');
+    msg('#m1', 'This browser is not supported. OFP Companion requires Safari/iPadOS 16.4 or later.', 'err');
     return false;
   }
   // Refused before anything is allocated for it, and with a message that says
@@ -529,7 +526,8 @@ async function loadBuffer(name, size, buf, resumed){
     if (!resumed){ npSuppressNext(); $('#etd').focus({ preventScroll: true }); }
     return true;
   } catch (err){
-    msg('#m1', 'Could not parse the document: ' + err.message, 'err');
+    console.error('OFP parse failed:', err);
+    msg('#m1', 'This PDF could not be read as a supported flight-plan package. Try another OFP PDF.', 'err');
     return false;
   }
 }
@@ -1457,13 +1455,22 @@ function showFpl(){
 }
 
 $('#etd').oninput = e => { e.target.value = e.target.value.replace(/[^\d:]/g, ''); };
+$('#etd').oninput = () => {
+  const v = $('#etd').value, bad = v.length > 0 && parseTime(v) === null;
+  $('#etd').classList.toggle('bad', bad);
+  $('#etd').setAttribute('aria-invalid', bad ? 'true' : 'false');
+};
 $('#etd').onkeydown = e => { if (e.key === 'Enter'){ e.target.blur(); $('#calc').click(); } };
 $('#alt').onchange = () => { if (RESULT.length) $('#calc').click(); };
 
 $('#calc').onclick = () => {
   const firstRun = $('#c3').classList.contains('hide');
   const t0 = parseTime($('#etd').value);
-  if (t0 === null){ msg('#m2', 'Enter the time as HHMM, for example 0210', 'err'); return; }
+  if (t0 === null){
+    $('#etd').classList.add('bad'); $('#etd').setAttribute('aria-invalid', 'true');
+    msg('#m2', 'Enter the time as HHMM, for example 0210', 'err'); return;
+  }
+  $('#etd').classList.remove('bad'); $('#etd').setAttribute('aria-invalid', 'false');
   if (!PLAN){ msg('#m2', 'Load a PDF first', 'err'); return; }
   T0 = t0;
   const { rows, arr } = computeResult(PLAN, t0, $('#alt').checked);
@@ -1660,7 +1667,9 @@ function afterDct(){
   renderDctChips();
   lastNext = null;
   refreshProgress();
+  renderAlt(true);                 // checks follow the waypoints a direct removed
   renderFuel();                    // windows follow the waypoints a direct removed
+  refreshInputValidity();          // fuel-trend warnings follow the flown route too
   save();
 }
 
@@ -1782,8 +1791,10 @@ document.addEventListener('visibilitychange', () => {
 addEventListener('pageshow', e => { if (e.persisted) settleAfterResume(); });
 
 // waypoints reached at each full hour after takeoff
-function renderAlt(){
-  CHECKS = hourlyChecks(RESULT, T0);
+function renderAlt(preserveAlerts = false){
+  const announced = preserveAlerts ? new Set(alerted) : null;
+  CHECKS = hourlyChecks(flown(), T0);
+  $('#c6').classList.toggle('hide', !CHECKS.length);
   const box = $('#altrows'); clear(box);
   for (const c of CHECKS){
     const row = document.createElement('div'); row.className = 'altrow'; row.id = 'altrow' + c.mark;
@@ -1831,6 +1842,8 @@ function renderAlt(){
   const altInputs = [...box.querySelectorAll('input')];
   altInputs.forEach((inp, i) => { inp.enterKeyHint = i === altInputs.length - 1 ? 'done' : 'next'; });
   alerted.clear();
+  if (announced)
+    for (const mark of announced) if (CHECKS.some(c => c.mark === mark)) alerted.add(mark);
   refreshAlt();
 }
 
@@ -1851,7 +1864,7 @@ const atTime = (p, off) => {
   return a === null ? p.t + off : a;
 };
 
-const hasFuel = p => !!(ACT[p.i] || {}).fuel;
+const hasFuel = p => validFuelEntry((ACT[p.i] || {}).fuel);
 const checksFor = off => fuelChecks(flown(), off, hasFuel, atTime);
 const boxFor = (c, off) => fuelBox(flown(), c, off);
 // The waypoint the check falls on: the last one before the half-hour mark, so the
@@ -1989,7 +2002,7 @@ const planOf = i => RESULT.find(p => p.i === +i);
 function paint(i){
   const p = planOf(i), a = ACT[i] || {}, td = $(`td.diff[data-d="${i}"]`);
   if (!td || !p) return;
-  const f = a.fuel !== undefined && a.fuel !== '' ? +a.fuel : null;
+  const f = validFuelEntry(a.fuel) ? +a.fuel : null;
   if (f === null || p.rem === null){ td.textContent = '—'; td.style.color = 'var(--fld)'; }
   else {
     const d = f - p.rem;
@@ -2003,6 +2016,30 @@ function countFilled(){
   const n = RESULT.filter(p => { const a = ACT[p.i]; return a && (a.ato || a.fuel); }).length;
   const el = $('#stFilled'); if (el) el.querySelector('b').textContent = n;
 }
+function refreshInputValidity(){
+  let previousFuel = null;
+  for (const inp of document.querySelectorAll('#tbl input')){
+    const isAto = inp.classList.contains('ato'), value = inp.value;
+    const bad = value.length > 0 && (isAto ? parseTime(value) === null : !validFuelEntry(value));
+    inp.classList.toggle('bad', bad);
+    inp.setAttribute('aria-invalid', bad ? 'true' : 'false');
+    inp.classList.remove('suspect');
+    inp.removeAttribute('title');
+    if (bad){
+      inp.title = isAto ? 'Enter a valid UTC time as HHMM.' : 'Fuel must be a positive number.';
+      continue;
+    }
+    if (!isAto && validFuelEntry(value) && !isSkipped(inp.dataset.i)){
+      const fuel = +value;
+      if (previousFuel !== null && fuel > previousFuel){
+        inp.classList.add('suspect');
+        inp.title = 'Fuel is higher than the previous entered value — check the entry.';
+      }
+      previousFuel = fuel;
+    }
+  }
+}
+
 function bindInputs(){
   const inputs = [...document.querySelectorAll('#tbl input')];
   inputs.forEach((inp, idx) => {
@@ -2012,8 +2049,7 @@ function bindInputs(){
       ACT[i] = ACT[i] || {};
       ACT[i][isAto ? 'ato' : 'fuel'] = inp.value;
       if (!ACT[i].ato && !ACT[i].fuel) delete ACT[i];
-      inp.classList.toggle('bad', isAto && inp.value.length > 0 &&
-                                  (inp.value.length !== 4 || parseTime(inp.value) === null));
+      refreshInputValidity();
       paint(i); countFilled(); refreshFuel(); refreshProgress(); save();
     };
     inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
@@ -2021,6 +2057,7 @@ function bindInputs(){
       if (nx){ nx.focus(); nx.select(); } else if (!e.shiftKey) inp.blur(); } };
     inp.onfocus = () => inp.select();
   });
+  refreshInputValidity();
 }
 
 /* ================= document fields ================= */
@@ -2114,7 +2151,9 @@ $('#c4Head').onclick = () => $('#c4').classList.toggle('collapsed');
 $('#clearAct').onclick = () => {
   if (!confirm('Clear all entered ATO and fuel values?')) return;
   for (const k in ACT) delete ACT[k];
-  document.querySelectorAll('#tbl input').forEach(i => { i.value = ''; i.classList.remove('bad'); });
+  document.querySelectorAll('#tbl input').forEach(i => {
+    i.value = ''; i.classList.remove('bad', 'suspect'); i.setAttribute('aria-invalid', 'false'); i.removeAttribute('title');
+  });
   RESULT.forEach(p => paint(p.i)); countFilled(); refreshFuel(); save();
 };
 
@@ -2133,16 +2172,7 @@ $('#clearAct').onclick = () => {
 // ofp-core.js; only the device-side wiring is here.
 const RETAIN_DAYS = 30, MAX_PLANS = 20;
 
-async function digestOf(buf){
-  // crypto.subtle needs a secure context; over file:// there is none, and the
-  // app falls back to the old name-and-size identity rather than losing the
-  // save entirely. Everywhere the app is actually installed from is HTTPS.
-  try {
-    if (typeof crypto === 'undefined' || !crypto.subtle) return null;
-    const d = await crypto.subtle.digest('SHA-256', buf);
-    return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch(e){ return null; }
-}
+const digestOf = OFPStorage.digestOf;
 
 const storedPlanKeys = () => planKeysIn(localStorage);
 function readPlan(key){
@@ -2214,62 +2244,13 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) flush
    The form state fits in localStorage, the PDF does not — it goes to IndexedDB so
    a cold start can pick the flight up where it stopped instead of showing an empty
    drop zone. Every failure here is non-fatal: the app just loses the resume. */
-const LAST = 'etofill:last';
-function idb(){
-  return new Promise((res, rej) => {
-    const rq = indexedDB.open('etofill', 1);
-    rq.onupgradeneeded = () => rq.result.createObjectStore('pdf');
-    rq.onsuccess = () => res(rq.result);
-    rq.onerror = () => rej(rq.error);
-  });
-}
-async function idbSet(key, val){
-  const db = await idb();
-  await new Promise((res, rej) => {
-    const tx = db.transaction('pdf', 'readwrite');
-    tx.objectStore('pdf').put(val, key);
-    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
-  });
-  db.close();
-}
-async function idbGet(key){
-  const db = await idb();
-  const v = await new Promise((res, rej) => {
-    const rq = db.transaction('pdf', 'readonly').objectStore('pdf').get(key);
-    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
-  });
-  db.close();
-  return v;
-}
 async function keepSession(name, size, buf){
-  if (typeof indexedDB === 'undefined') return;
-  try {
-    await idbSet('last', { name, size, hash: HASH, buf });
-    localStorage.setItem(LAST, JSON.stringify({ name, size, hash: HASH, at: Date.now() }));
-  } catch(e){ /* quota or private mode — carry on without resume */ }
+  return OFPStorage.keepSession(name, size, HASH, buf);
 }
-async function dropSession(){
-  try { localStorage.removeItem(LAST); } catch(e){}
-  try { await idbSet('last', null); } catch(e){}
-}
+async function dropSession(){ return OFPStorage.dropSession(); }
 async function resumeSession(){
-  if (typeof indexedDB === 'undefined') return;
-  let meta;
-  try { meta = JSON.parse(localStorage.getItem(LAST) || 'null'); } catch(e){ return; }
-  if (!meta) return;
-  let rec;
-  try { rec = await idbGet('last'); } catch(e){ return; }
-  if (!rec || !rec.buf || rec.name !== meta.name || rec.size !== meta.size) return;
-  // The two stores can drift apart — a quota eviction, a half-finished write,
-  // a second tab. The digest says whether the bytes on hand are the ones the
-  // saved state was entered against; if they are not, the resume is dropped
-  // rather than pairing a flight's numbers with another flight's document.
-  if (meta.hash || rec.hash){
-    if (meta.hash && rec.hash && meta.hash !== rec.hash){ await dropSession(); return; }
-    const have = await digestOf(rec.buf);
-    if (have && have !== (meta.hash || rec.hash)){ await dropSession(); return; }
-  }
-  await loadBuffer(rec.name, rec.size, rec.buf, true);
+  const rec = await OFPStorage.resumeRecord();
+  if (rec) await loadBuffer(rec.name, rec.size, rec.buf, true);
 }
 pruneStoredPlans();
 showStoredCount();
@@ -2297,11 +2278,11 @@ function build(){
     o.rect(p.ex - 1, p.ey - 2.6, cw * 4 + 1.5, p.size + .5, WHITE);
     o.text(BOLD, p.size, p.ex, p.ey, fmt(p.t), C_ETO);
 
-    if (a.ato && a.ato.length === 4){
+    if (parseTime(a.ato) !== null){
       o.rect(p.ax - 1, p.ay - 2.6, cw * 4 + 1.5, p.size + .5, WHITE);
       o.text(BOLD, p.size, p.ax, p.ay, a.ato, C_ATO);
     }
-    if (a.fuel){
+    if (validFuelEntry(a.fuel)){
       const A = ANCHOR + cw;
       o.text(BOLD, p.size, right(A, cw, 5, a.fuel), p.ay, a.fuel, C_FUEL);
       if (p.rem !== null){
@@ -2369,7 +2350,10 @@ $('#dl').onclick = async () => {
     a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
     msg('#m3', 'Saved: ' + name, 'ok');
-  } catch (e){ msg('#m3', 'Error: ' + e.message, 'err'); }
+  } catch (e){
+    console.error('OFP PDF save failed:', e);
+    msg('#m3', 'The completed OFP PDF could not be saved. Try Save PDF again.', 'err');
+  }
   finally { b.disabled = false; b.textContent = 'Save PDF'; }
 };
 
@@ -2380,7 +2364,10 @@ $('#open').onclick = () => {
     if (!w) msg('#m3', 'The browser blocked the preview tab — use “Save PDF” instead.', 'warn');
     else hide('#m3');
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-  } catch (e){ msg('#m3', 'Error: ' + e.message, 'err'); }
+  } catch (e){
+    console.error('OFP PDF preview failed:', e);
+    msg('#m3', 'The PDF preview could not be opened. Use Save PDF instead.', 'err');
+  }
 };
 
 $('#clearStored').onclick = async () => {
