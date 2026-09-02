@@ -1,0 +1,147 @@
+name: Task 13 storage extraction
+
+on:
+  push:
+    branches: [hardening/reliability-plan]
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: ${{ !contains(github.event.head_commit.message, '[task13-refactor]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hardening/reliability-plan
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Extract device persistence module and verify
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          storage = r'''/* Device persistence for OFP Companion.
+             No DOM and no flight arithmetic live here: only SHA-256 identity and the
+             IndexedDB/localStorage resume copy that lets iPadOS restore an evicted tab. */
+          const OFPStorage = (() => {
+            const LAST = 'etofill:last';
+
+            async function digestOf(buf){
+              try {
+                if (typeof crypto === 'undefined' || !crypto.subtle) return null;
+                const d = await crypto.subtle.digest('SHA-256', buf);
+                return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
+              } catch(e){ return null; }
+            }
+
+            function idb(){
+              return new Promise((res, rej) => {
+                const rq = indexedDB.open('etofill', 1);
+                rq.onupgradeneeded = () => rq.result.createObjectStore('pdf');
+                rq.onsuccess = () => res(rq.result);
+                rq.onerror = () => rej(rq.error);
+              });
+            }
+            async function idbSet(key, val){
+              const db = await idb();
+              try {
+                await new Promise((res, rej) => {
+                  const tx = db.transaction('pdf', 'readwrite');
+                  tx.objectStore('pdf').put(val, key);
+                  tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+                });
+              } finally { db.close(); }
+            }
+            async function idbGet(key){
+              const db = await idb();
+              try {
+                return await new Promise((res, rej) => {
+                  const rq = db.transaction('pdf', 'readonly').objectStore('pdf').get(key);
+                  rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+                });
+              } finally { db.close(); }
+            }
+
+            async function keepSession(name, size, hash, buf){
+              if (typeof indexedDB === 'undefined') return;
+              try {
+                await idbSet('last', { name, size, hash, buf });
+                localStorage.setItem(LAST, JSON.stringify({ name, size, hash, at: Date.now() }));
+              } catch(e){ /* quota/private mode: the live flight continues without cold resume */ }
+            }
+            async function dropSession(){
+              try { localStorage.removeItem(LAST); } catch(e){}
+              if (typeof indexedDB === 'undefined') return;
+              try { await idbSet('last', null); } catch(e){}
+            }
+            async function resumeRecord(){
+              if (typeof indexedDB === 'undefined') return null;
+              let meta;
+              try { meta = JSON.parse(localStorage.getItem(LAST) || 'null'); } catch(e){ return null; }
+              if (!meta) return null;
+              let rec;
+              try { rec = await idbGet('last'); } catch(e){ return null; }
+              if (!rec || !rec.buf || rec.name !== meta.name || rec.size !== meta.size) return null;
+              if (meta.hash || rec.hash){
+                if (meta.hash && rec.hash && meta.hash !== rec.hash){ await dropSession(); return null; }
+                const have = await digestOf(rec.buf);
+                if (have && have !== (meta.hash || rec.hash)){ await dropSession(); return null; }
+              }
+              return rec;
+            }
+            return { LAST, digestOf, keepSession, dropSession, resumeRecord };
+          })();
+
+          if (typeof module !== 'undefined' && module.exports) module.exports = OFPStorage;
+          '''
+          Path('storage.js').write_text(storage)
+
+          p = Path('app.js'); s = p.read_text()
+          a = s.index('async function digestOf(buf){')
+          b = s.index('\nconst storedPlanKeys', a)
+          s = s[:a] + "const digestOf = OFPStorage.digestOf;\n" + s[b:]
+          a = s.index("const LAST = 'etofill:last';")
+          b = s.index('pruneStoredPlans();', a)
+          wrappers = '''async function keepSession(name, size, buf){\n  return OFPStorage.keepSession(name, size, HASH, buf);\n}\nasync function dropSession(){ return OFPStorage.dropSession(); }\nasync function resumeSession(){\n  const rec = await OFPStorage.resumeRecord();\n  if (rec) await loadBuffer(rec.name, rec.size, rec.buf, true);\n}\n'''
+          s = s[:a] + wrappers + s[b:]
+          p.write_text(s)
+
+          p = Path('index.html'); s = p.read_text()
+          old = '<script src="ofp-core.js"></script>\n<script src="app.js"></script>'
+          assert old in s
+          p.write_text(s.replace(old, '<script src="ofp-core.js"></script>\n<script src="storage.js"></script>\n<script src="app.js"></script>'))
+
+          p = Path('sw.js'); s = p.read_text()
+          old = "'./ofp-core.js', './app.js'"
+          assert s.count(old) == 2
+          p.write_text(s.replace(old, "'./ofp-core.js', './storage.js', './app.js'"))
+
+          p = Path('tests/storage-edge-cases.test.js'); s = p.read_text()
+          start = s.index("test('autosave and resume degrade safely when browser storage is unavailable'")
+          s = s[:start] + r'''test('autosave delegates cold-session persistence to the isolated storage module', () => {
+            const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+            const storage = fs.readFileSync(path.join(__dirname, '..', 'storage.js'), 'utf8');
+            const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+            const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
+            assert.match(app, /const digestOf = OFPStorage\.digestOf;/);
+            assert.match(app, /OFPStorage\.keepSession\(name, size, HASH, buf\)/);
+            assert.match(app, /OFPStorage\.resumeRecord\(\)/);
+            assert.match(storage, /catch\(e\)\{ \/\* quota\/private mode:/);
+            assert.match(storage, /if \(meta\.hash && rec\.hash && meta\.hash !== rec\.hash\)/);
+            assert.match(html, /ofp-core\.js[\s\S]*storage\.js[\s\S]*app\.js/);
+            assert.match(sw, /ofp-core\.js', '\.\/storage\.js', '\.\/app\.js/);
+          });
+          '''
+          p.write_text(s)
+          PY
+          rm .github/workflows/task13-refactor.yml
+          npm test
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Task 13: extract device persistence from app.js [task13-refactor]"
+          git push origin HEAD:hardening/reliability-plan
