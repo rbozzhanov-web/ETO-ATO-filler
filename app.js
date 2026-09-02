@@ -1455,13 +1455,22 @@ function showFpl(){
 }
 
 $('#etd').oninput = e => { e.target.value = e.target.value.replace(/[^\d:]/g, ''); };
+$('#etd').oninput = () => {
+  const v = $('#etd').value, bad = v.length > 0 && parseTime(v) === null;
+  $('#etd').classList.toggle('bad', bad);
+  $('#etd').setAttribute('aria-invalid', bad ? 'true' : 'false');
+};
 $('#etd').onkeydown = e => { if (e.key === 'Enter'){ e.target.blur(); $('#calc').click(); } };
 $('#alt').onchange = () => { if (RESULT.length) $('#calc').click(); };
 
 $('#calc').onclick = () => {
   const firstRun = $('#c3').classList.contains('hide');
   const t0 = parseTime($('#etd').value);
-  if (t0 === null){ msg('#m2', 'Enter the time as HHMM, for example 0210', 'err'); return; }
+  if (t0 === null){
+    $('#etd').classList.add('bad'); $('#etd').setAttribute('aria-invalid', 'true');
+    msg('#m2', 'Enter the time as HHMM, for example 0210', 'err'); return;
+  }
+  $('#etd').classList.remove('bad'); $('#etd').setAttribute('aria-invalid', 'false');
   if (!PLAN){ msg('#m2', 'Load a PDF first', 'err'); return; }
   T0 = t0;
   const { rows, arr } = computeResult(PLAN, t0, $('#alt').checked);
@@ -1660,6 +1669,7 @@ function afterDct(){
   refreshProgress();
   renderAlt(true);                 // checks follow the waypoints a direct removed
   renderFuel();                    // windows follow the waypoints a direct removed
+  refreshInputValidity();          // fuel-trend warnings follow the flown route too
   save();
 }
 
@@ -1854,7 +1864,7 @@ const atTime = (p, off) => {
   return a === null ? p.t + off : a;
 };
 
-const hasFuel = p => !!(ACT[p.i] || {}).fuel;
+const hasFuel = p => validFuelEntry((ACT[p.i] || {}).fuel);
 const checksFor = off => fuelChecks(flown(), off, hasFuel, atTime);
 const boxFor = (c, off) => fuelBox(flown(), c, off);
 // The waypoint the check falls on: the last one before the half-hour mark, so the
@@ -1992,7 +2002,7 @@ const planOf = i => RESULT.find(p => p.i === +i);
 function paint(i){
   const p = planOf(i), a = ACT[i] || {}, td = $(`td.diff[data-d="${i}"]`);
   if (!td || !p) return;
-  const f = a.fuel !== undefined && a.fuel !== '' ? +a.fuel : null;
+  const f = validFuelEntry(a.fuel) ? +a.fuel : null;
   if (f === null || p.rem === null){ td.textContent = '—'; td.style.color = 'var(--fld)'; }
   else {
     const d = f - p.rem;
@@ -2006,6 +2016,30 @@ function countFilled(){
   const n = RESULT.filter(p => { const a = ACT[p.i]; return a && (a.ato || a.fuel); }).length;
   const el = $('#stFilled'); if (el) el.querySelector('b').textContent = n;
 }
+function refreshInputValidity(){
+  let previousFuel = null;
+  for (const inp of document.querySelectorAll('#tbl input')){
+    const isAto = inp.classList.contains('ato'), value = inp.value;
+    const bad = value.length > 0 && (isAto ? parseTime(value) === null : !validFuelEntry(value));
+    inp.classList.toggle('bad', bad);
+    inp.setAttribute('aria-invalid', bad ? 'true' : 'false');
+    inp.classList.remove('suspect');
+    inp.removeAttribute('title');
+    if (bad){
+      inp.title = isAto ? 'Enter a valid UTC time as HHMM.' : 'Fuel must be a positive number.';
+      continue;
+    }
+    if (!isAto && validFuelEntry(value) && !isSkipped(inp.dataset.i)){
+      const fuel = +value;
+      if (previousFuel !== null && fuel > previousFuel){
+        inp.classList.add('suspect');
+        inp.title = 'Fuel is higher than the previous entered value — check the entry.';
+      }
+      previousFuel = fuel;
+    }
+  }
+}
+
 function bindInputs(){
   const inputs = [...document.querySelectorAll('#tbl input')];
   inputs.forEach((inp, idx) => {
@@ -2015,8 +2049,7 @@ function bindInputs(){
       ACT[i] = ACT[i] || {};
       ACT[i][isAto ? 'ato' : 'fuel'] = inp.value;
       if (!ACT[i].ato && !ACT[i].fuel) delete ACT[i];
-      inp.classList.toggle('bad', isAto && inp.value.length > 0 &&
-                                  (inp.value.length !== 4 || parseTime(inp.value) === null));
+      refreshInputValidity();
       paint(i); countFilled(); refreshFuel(); refreshProgress(); save();
     };
     inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
@@ -2024,6 +2057,7 @@ function bindInputs(){
       if (nx){ nx.focus(); nx.select(); } else if (!e.shiftKey) inp.blur(); } };
     inp.onfocus = () => inp.select();
   });
+  refreshInputValidity();
 }
 
 /* ================= document fields ================= */
@@ -2117,7 +2151,9 @@ $('#c4Head').onclick = () => $('#c4').classList.toggle('collapsed');
 $('#clearAct').onclick = () => {
   if (!confirm('Clear all entered ATO and fuel values?')) return;
   for (const k in ACT) delete ACT[k];
-  document.querySelectorAll('#tbl input').forEach(i => { i.value = ''; i.classList.remove('bad'); });
+  document.querySelectorAll('#tbl input').forEach(i => {
+    i.value = ''; i.classList.remove('bad', 'suspect'); i.setAttribute('aria-invalid', 'false'); i.removeAttribute('title');
+  });
   RESULT.forEach(p => paint(p.i)); countFilled(); refreshFuel(); save();
 };
 
@@ -2242,11 +2278,11 @@ function build(){
     o.rect(p.ex - 1, p.ey - 2.6, cw * 4 + 1.5, p.size + .5, WHITE);
     o.text(BOLD, p.size, p.ex, p.ey, fmt(p.t), C_ETO);
 
-    if (a.ato && a.ato.length === 4){
+    if (parseTime(a.ato) !== null){
       o.rect(p.ax - 1, p.ay - 2.6, cw * 4 + 1.5, p.size + .5, WHITE);
       o.text(BOLD, p.size, p.ax, p.ay, a.ato, C_ATO);
     }
-    if (a.fuel){
+    if (validFuelEntry(a.fuel)){
       const A = ANCHOR + cw;
       o.text(BOLD, p.size, right(A, cw, 5, a.fuel), p.ay, a.fuel, C_FUEL);
       if (p.rem !== null){

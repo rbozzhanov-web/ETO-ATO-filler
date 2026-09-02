@@ -23,6 +23,14 @@ function parseTime(v){
   return (h > 23 || m > 59) ? null : h * 60 + m;
 }
 
+// Fuel entries are deliberately conservative: the app does not invent an
+// aircraft-specific upper limit, but an empty, non-numeric, zero or overlong
+// value cannot satisfy an in-flight fuel check.
+function validFuelEntry(v){
+  const d = String(v ?? '');
+  return /^\d{1,5}$/.test(d) && +d > 0;
+}
+
 // A difference between two times of day, read the short way round: a flight is
 // never twelve hours out from its own plan, so a larger gap is the day rolling
 // over rather than the aeroplane being half a day late.
@@ -168,6 +176,6 @@ function prunePlans(store, now, retainDays, maxPlans){
 // In the browser this file is a classic script and these are simply globals.
 // Under Node — the test runner — it is a CommonJS module, and this is its export.
 if (typeof module !== 'undefined' && module.exports)
-  module.exports = { norm, fmt, hhmm, parseTime, wrapMin, sinceDueAt, computeResult,
+  module.exports = { norm, fmt, hhmm, parseTime, validFuelEntry, wrapMin, sinceDueAt, computeResult,
                      hourlyChecks, fuelBox, fuelChecks, directSkips,
                      PLAN_PREFIX, SETTING_KEYS, legacyKeyFor, planKeyFor, planKeysIn, prunePlans };
