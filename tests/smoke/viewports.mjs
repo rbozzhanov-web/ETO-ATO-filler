@@ -68,9 +68,14 @@ try {
 
     const first = page.locator('#tbl tbody input.ato:visible').first();
     await first.tap();
-    // The keypad deliberately slides for 220 ms. Geometry measured before that
-    // transition finishes describes an animation frame, not the docked state.
-    await page.waitForTimeout(260);
+    // Wait for the actual docked geometry, not a guessed animation duration.
+    // This makes slow WebKit CI scheduling visible as a timeout while still
+    // failing if the panel genuinely never reaches the viewport edge.
+    await page.waitForFunction(() => {
+      const e = document.querySelector('#numpad');
+      if (!e || !e.classList.contains('show')) return false;
+      return Math.abs(e.getBoundingClientRect().bottom - innerHeight) <= 2;
+    }, null, { timeout:1500 });
     const pad = await page.locator('#numpad').evaluate(e => {
       const r = e.getBoundingClientRect();
       return { shown:e.classList.contains('show'), left:r.left, right:r.right, bottom:r.bottom,
@@ -80,7 +85,10 @@ try {
     check(pad.left >= -1 && pad.right <= pad.width + 1, `${name}: numpad stays within horizontal bounds`);
     check(Math.abs(pad.bottom - pad.height) <= 2, `${name}: numpad stays docked to viewport bottom`);
     await page.locator('#numpadHide').dispatchEvent('pointerdown');
-    await page.waitForTimeout(260);
+    await page.waitForFunction(() => {
+      const e = document.querySelector('#numpad');
+      return e && !e.classList.contains('show') && e.getBoundingClientRect().top >= innerHeight - 2;
+    }, null, { timeout:1500 });
   }
   check(errors.length === 0, 'viewport matrix produces no browser errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await page.close();
