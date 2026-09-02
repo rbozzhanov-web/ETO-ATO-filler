@@ -1660,6 +1660,7 @@ function afterDct(){
   renderDctChips();
   lastNext = null;
   refreshProgress();
+  renderAlt(true);                 // checks follow the waypoints a direct removed
   renderFuel();                    // windows follow the waypoints a direct removed
   save();
 }
@@ -1782,8 +1783,10 @@ document.addEventListener('visibilitychange', () => {
 addEventListener('pageshow', e => { if (e.persisted) settleAfterResume(); });
 
 // waypoints reached at each full hour after takeoff
-function renderAlt(){
-  CHECKS = hourlyChecks(RESULT, T0);
+function renderAlt(preserveAlerts = false){
+  const announced = preserveAlerts ? new Set(alerted) : null;
+  CHECKS = hourlyChecks(flown(), T0);
+  $('#c6').classList.toggle('hide', !CHECKS.length);
   const box = $('#altrows'); clear(box);
   for (const c of CHECKS){
     const row = document.createElement('div'); row.className = 'altrow'; row.id = 'altrow' + c.mark;
@@ -1831,6 +1834,8 @@ function renderAlt(){
   const altInputs = [...box.querySelectorAll('input')];
   altInputs.forEach((inp, i) => { inp.enterKeyHint = i === altInputs.length - 1 ? 'done' : 'next'; });
   alerted.clear();
+  if (announced)
+    for (const mark of announced) if (CHECKS.some(c => c.mark === mark)) alerted.add(mark);
   refreshAlt();
 }
 
