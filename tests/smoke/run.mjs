@@ -146,7 +146,7 @@ try {
     // numpad plus both orientations. A real tap is used here because programmatic
     // focus does not consistently model a user gesture in mobile WebKit.
     if (engineName === 'webkit'){
-      const firstAto = page.locator('#tbl tbody input.ato').first();
+      const firstAto = page.locator('#tbl tbody input.ato:visible').first();
       await firstAto.tap();
       check(await page.locator('#numpad').evaluate(e => e.classList.contains('show')),
             'WebKit opens the custom numpad for an ATO field');
