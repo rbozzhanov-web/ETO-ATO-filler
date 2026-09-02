@@ -49,6 +49,9 @@ try {
     ];
     render(600, 785);
     renderAlt();
+    // The production Calculate handler reveals Step 3 after rendering. This
+    // test calls render() directly, so mirror that state before touch testing.
+    document.querySelector('#c3').classList.remove('hide');
   });
 
   for (const [name, width, height] of cases){
