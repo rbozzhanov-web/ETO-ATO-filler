@@ -68,6 +68,9 @@ try {
 
     const first = page.locator('#tbl tbody input.ato:visible').first();
     await first.tap();
+    // The keypad deliberately slides for 220 ms. Geometry measured before that
+    // transition finishes describes an animation frame, not the docked state.
+    await page.waitForTimeout(260);
     const pad = await page.locator('#numpad').evaluate(e => {
       const r = e.getBoundingClientRect();
       return { shown:e.classList.contains('show'), left:r.left, right:r.right, bottom:r.bottom,
@@ -77,6 +80,7 @@ try {
     check(pad.left >= -1 && pad.right <= pad.width + 1, `${name}: numpad stays within horizontal bounds`);
     check(Math.abs(pad.bottom - pad.height) <= 2, `${name}: numpad stays docked to viewport bottom`);
     await page.locator('#numpadHide').dispatchEvent('pointerdown');
+    await page.waitForTimeout(260);
   }
   check(errors.length === 0, 'viewport matrix produces no browser errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await page.close();
