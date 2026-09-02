@@ -102,7 +102,7 @@ test('network-first has a bounded 2.5 second startup wait', () => {
 
 test('page and scripts therefore cannot mix old and new app versions', () => {
   assert.match(SW, /const SCRIPTS = \['\.\/pdfmini\.js', '\.\/ofp-core\.js', '\.\/app\.js'/);
-  assert.doesNotMatch(SW, /script[\s\S]{0,120}cache-first/i);
+  assert.match(SW, /const script = scriptFor\(e\.request\);[\s\S]*?if \(script\)\{ e\.respondWith\(fresh\(e\.request, script\)\); return; \}/);
 });
 
 test('the UI waits for user acceptance before telling the worker to update', () => {
