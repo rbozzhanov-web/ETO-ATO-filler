@@ -23,17 +23,22 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
+
           p = Path('index.html')
           s = p.read_text()
           old = "    <p class=\"disc\">Times, fuel, altimeter readings and document fields are saved on this\n      device only — never sent anywhere — against the exact PDF they were entered for.\n      They are kept for 30 days, and only the 20 most recent flights are held. Clearing\n      keeps the flight open now and removes the rest.</p>\n    <div class=\"row\">\n      <button type=\"button\" class=\"ghost sm\" id=\"clearStored\">Clear other flights</button>\n      <span class=\"disc\" id=\"storedNote\"></span>\n    </div>\n"
           assert s.count(old) == 1, 'storage-history UI block not found exactly once'
           p.write_text(s.replace(old, ''))
+
           p = Path('app.js')
           s = p.read_text()
-          old = "$('#clearStored').onclick = async () => {"
-          new = "const clearStoredBtn = $('#clearStored');\nif (clearStoredBtn) clearStoredBtn.onclick = async () => {"
-          assert s.count(old) == 1, 'clearStored handler not found exactly once'
-          p.write_text(s.replace(old, new))
+          s, n = re.subn(r"function showStoredCount\(\)\{.*?\n\}", "function showStoredCount(){}", s, count=1, flags=re.S)
+          assert n == 1, 'showStoredCount function not found exactly once'
+          s, n = re.subn(r"\n\$\('#clearStored'\)\.onclick = async \(\) => \{.*?\n\};\n\n\$\('#reset'\)", "\n\n$('#reset')", s, count=1, flags=re.S)
+          assert n == 1, 'clearStored UI handler not found exactly once'
+          assert "#storedNote" not in s and "#clearStored" not in s
+          p.write_text(s)
           PY
       - name: Run tests
         run: npm test
