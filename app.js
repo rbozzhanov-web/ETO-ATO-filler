@@ -103,7 +103,7 @@ function npShow(el){
   numpad.classList.add('show');
   document.body.style.setProperty('--numpad-h', numpad.offsetHeight + 'px');
   document.body.classList.add('numpad-open');
-  setTimeout(() => { if (NP_TARGET === el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60);
+  requestAnimationFrame(() => { if (NP_TARGET === el) el.scrollIntoView({ block: 'center', behavior: 'auto' }); });
 }
 function npHide({ revealActuals = false } = {}){
   const el = NP_TARGET;
