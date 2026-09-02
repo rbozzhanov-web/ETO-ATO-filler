@@ -143,11 +143,11 @@ try {
     check(injected.chips === 1, 'the direct-to chip is shown');
 
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
-    // numpad plus both orientations. This is not a substitute for a real iPad,
-    // but it catches WebKit-only regressions before they reach one.
+    // numpad plus both orientations. A real tap is used here because programmatic
+    // focus does not consistently model a user gesture in mobile WebKit.
     if (engineName === 'webkit'){
       const firstAto = page.locator('#tbl tbody input.ato').first();
-      await firstAto.focus();
+      await firstAto.tap();
       check(await page.locator('#numpad').evaluate(e => e.classList.contains('show')),
             'WebKit opens the custom numpad for an ATO field');
       await page.setViewportSize({ width: 1366, height: 1024 });
