@@ -1,6 +1,6 @@
 {
   "name": "ofp-companion",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "private": true,
   "description": "Offline OFP companion and Journey Log — the app itself ships no dependencies; these scripts run its tests.",
   "scripts": {
