@@ -93,8 +93,16 @@ test('app keeps the open flight when Clear other flights is used', () => {
   assert.match(app, /clearStoredPlans\(KEY \|\| null\)/);
 });
 
-test('autosave and resume degrade safely when browser storage is unavailable', () => {
+test('autosave delegates cold-session persistence to the isolated storage module', () => {
   const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-  assert.match(app, /function writeState\(\)[\s\S]*?localStorage\.setItem\(KEY,[\s\S]*?catch\(e\)\{ \$\('#saved'\)\.textContent = 'storage unavailable'; \}/);
-  assert.match(app, /async function keepSession\([\s\S]*?try \{[\s\S]*?await idbSet\('last',[\s\S]*?catch\(e\)\{ \/\* quota or private mode — carry on without resume \*\/ \}/);
+  const storage = fs.readFileSync(path.join(__dirname, '..', 'storage.js'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
+  assert.match(app, /const digestOf = OFPStorage\.digestOf;/);
+  assert.match(app, /OFPStorage\.keepSession\(name, size, HASH, buf\)/);
+  assert.match(app, /OFPStorage\.resumeRecord\(\)/);
+  assert.match(storage, /catch\(e\)\{ \/\* quota\/private mode:/);
+  assert.match(storage, /if \(meta\.hash && rec\.hash && meta\.hash !== rec\.hash\)/);
+  assert.match(html, /ofp-core\.js[\s\S]*storage\.js[\s\S]*app\.js/);
+  assert.match(sw, /ofp-core\.js', '\.\/storage\.js', '\.\/app\.js/);
 });

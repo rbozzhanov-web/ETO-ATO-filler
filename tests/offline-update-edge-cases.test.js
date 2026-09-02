@@ -101,7 +101,7 @@ test('network-first has a bounded 2.5 second startup wait', () => {
 });
 
 test('page and scripts therefore cannot mix old and new app versions', () => {
-  assert.match(SW, /const SCRIPTS = \['\.\/pdfmini\.js', '\.\/ofp-core\.js', '\.\/app\.js'/);
+  assert.match(SW, /const SCRIPTS = \['\.\/pdfmini\.js', '\.\/ofp-core\.js', '\.\/storage\.js', '\.\/app\.js'/);
   assert.match(SW, /const script = scriptFor\(e\.request\);[\s\S]*?if \(script\)\{ e\.respondWith\(fresh\(e\.request, script\)\); return; \}/);
 });
 

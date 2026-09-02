@@ -4,7 +4,7 @@ const CACHE_PREFIX = 'ofp-companion-';
 const LEGACY_CACHE_PREFIX = 'eto-filler-v';
 const V = CACHE_PREFIX + 'rc1.3';
 const FILES = ['./', './index.html', './journey-log.html',
-               './pdfmini.js', './ofp-core.js', './app.js',
+               './pdfmini.js', './ofp-core.js', './storage.js', './app.js',
                './jl-pdf.js', './journey-log.js',
                './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const PAGES = ['./index.html', './journey-log.html'];
@@ -12,7 +12,7 @@ const PAGES = ['./index.html', './journey-log.html'];
 // page fetched fresh must never be paired with a stale script out of the cache.
 // So they are fetched the same way the pages are — network first, cache only as
 // the offline fallback.
-const SCRIPTS = ['./pdfmini.js', './ofp-core.js', './app.js',
+const SCRIPTS = ['./pdfmini.js', './ofp-core.js', './storage.js', './app.js',
                  './jl-pdf.js', './journey-log.js'];
 const NET_MS = 2500;            // give the network this long before falling back to the cache
 

@@ -2138,16 +2138,7 @@ $('#clearAct').onclick = () => {
 // ofp-core.js; only the device-side wiring is here.
 const RETAIN_DAYS = 30, MAX_PLANS = 20;
 
-async function digestOf(buf){
-  // crypto.subtle needs a secure context; over file:// there is none, and the
-  // app falls back to the old name-and-size identity rather than losing the
-  // save entirely. Everywhere the app is actually installed from is HTTPS.
-  try {
-    if (typeof crypto === 'undefined' || !crypto.subtle) return null;
-    const d = await crypto.subtle.digest('SHA-256', buf);
-    return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch(e){ return null; }
-}
+const digestOf = OFPStorage.digestOf;
 
 const storedPlanKeys = () => planKeysIn(localStorage);
 function readPlan(key){
@@ -2219,62 +2210,13 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) flush
    The form state fits in localStorage, the PDF does not — it goes to IndexedDB so
    a cold start can pick the flight up where it stopped instead of showing an empty
    drop zone. Every failure here is non-fatal: the app just loses the resume. */
-const LAST = 'etofill:last';
-function idb(){
-  return new Promise((res, rej) => {
-    const rq = indexedDB.open('etofill', 1);
-    rq.onupgradeneeded = () => rq.result.createObjectStore('pdf');
-    rq.onsuccess = () => res(rq.result);
-    rq.onerror = () => rej(rq.error);
-  });
-}
-async function idbSet(key, val){
-  const db = await idb();
-  await new Promise((res, rej) => {
-    const tx = db.transaction('pdf', 'readwrite');
-    tx.objectStore('pdf').put(val, key);
-    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
-  });
-  db.close();
-}
-async function idbGet(key){
-  const db = await idb();
-  const v = await new Promise((res, rej) => {
-    const rq = db.transaction('pdf', 'readonly').objectStore('pdf').get(key);
-    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
-  });
-  db.close();
-  return v;
-}
 async function keepSession(name, size, buf){
-  if (typeof indexedDB === 'undefined') return;
-  try {
-    await idbSet('last', { name, size, hash: HASH, buf });
-    localStorage.setItem(LAST, JSON.stringify({ name, size, hash: HASH, at: Date.now() }));
-  } catch(e){ /* quota or private mode — carry on without resume */ }
+  return OFPStorage.keepSession(name, size, HASH, buf);
 }
-async function dropSession(){
-  try { localStorage.removeItem(LAST); } catch(e){}
-  try { await idbSet('last', null); } catch(e){}
-}
+async function dropSession(){ return OFPStorage.dropSession(); }
 async function resumeSession(){
-  if (typeof indexedDB === 'undefined') return;
-  let meta;
-  try { meta = JSON.parse(localStorage.getItem(LAST) || 'null'); } catch(e){ return; }
-  if (!meta) return;
-  let rec;
-  try { rec = await idbGet('last'); } catch(e){ return; }
-  if (!rec || !rec.buf || rec.name !== meta.name || rec.size !== meta.size) return;
-  // The two stores can drift apart — a quota eviction, a half-finished write,
-  // a second tab. The digest says whether the bytes on hand are the ones the
-  // saved state was entered against; if they are not, the resume is dropped
-  // rather than pairing a flight's numbers with another flight's document.
-  if (meta.hash || rec.hash){
-    if (meta.hash && rec.hash && meta.hash !== rec.hash){ await dropSession(); return; }
-    const have = await digestOf(rec.buf);
-    if (have && have !== (meta.hash || rec.hash)){ await dropSession(); return; }
-  }
-  await loadBuffer(rec.name, rec.size, rec.buf, true);
+  const rec = await OFPStorage.resumeRecord();
+  if (rec) await loadBuffer(rec.name, rec.size, rec.buf, true);
 }
 pruneStoredPlans();
 showStoredCount();
