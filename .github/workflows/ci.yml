@@ -62,3 +62,5 @@ jobs:
         env:
           SMOKE_BROWSER: webkit
         run: npm run smoke
+      - name: Run iPhone and iPad viewport regression matrix
+        run: node tests/smoke/viewports.mjs
