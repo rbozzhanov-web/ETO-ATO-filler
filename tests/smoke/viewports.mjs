@@ -62,8 +62,8 @@ try {
     check(layout.bodyOverflow <= 2, `${name}: no document-level horizontal overflow`);
     check(layout.cardRight <= layout.width + 2, `${name}: cards stay inside the viewport`);
 
-    const first = page.locator('#tbl tbody input.ato').first();
-    await first.focus();
+    const first = page.locator('#tbl tbody input.ato:visible').first();
+    await first.tap();
     const pad = await page.locator('#numpad').evaluate(e => {
       const r = e.getBoundingClientRect();
       return { shown:e.classList.contains('show'), left:r.left, right:r.right, bottom:r.bottom,
