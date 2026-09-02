@@ -23,21 +23,11 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           p = Path('index.html')
           s = p.read_text()
-          old = '''    <p class="disc">Times, fuel, altimeter readings and document fields are saved on this
-      device only — never sent anywhere — against the exact PDF they were entered for.
-      They are kept for 30 days, and only the 20 most recent flights are held. Clearing
-      keeps the flight open now and removes the rest.</p>
-    <div class="row">
-      <button type="button" class="ghost sm" id="clearStored">Clear other flights</button>
-      <span class="disc" id="storedNote"></span>
-    </div>
-'''
+          old = "    <p class=\"disc\">Times, fuel, altimeter readings and document fields are saved on this\n      device only — never sent anywhere — against the exact PDF they were entered for.\n      They are kept for 30 days, and only the 20 most recent flights are held. Clearing\n      keeps the flight open now and removes the rest.</p>\n    <div class=\"row\">\n      <button type=\"button\" class=\"ghost sm\" id=\"clearStored\">Clear other flights</button>\n      <span class=\"disc\" id=\"storedNote\"></span>\n    </div>\n"
           assert s.count(old) == 1, 'storage-history UI block not found exactly once'
           p.write_text(s.replace(old, ''))
-
           p = Path('app.js')
           s = p.read_text()
           old = "$('#clearStored').onclick = async () => {"
