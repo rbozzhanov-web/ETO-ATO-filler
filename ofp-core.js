@@ -76,11 +76,37 @@ function hourlyChecks(result, t0){
    flown: the main-route waypoints still being overflown, in order.
    hasFuel(p): a fuel figure has been written against this waypoint.
    atTime(p, off): when the aeroplane actually passes it. */
+
+// A Direct-To leaves a visible hole in the original waypoint indexes: two
+// consecutive points in `flown` are no longer consecutive in the OFP. If the
+// left edge of such a hole falls inside this fuel window, waypoints earlier in
+// the same window were already behind the aircraft when the Direct was taken.
+// They must not become the newly assigned fuel-check box just because every
+// later waypoint before the half-hour mark was skipped.
+function fuelGapCut(flown, c, off){
+  const at = p => p.cum + off;
+  let cut = null;
+  for (let i = 1; i < flown.length; i++){
+    const left = flown[i - 1], right = flown[i];
+    const li = +left.i, ri = +right.i;
+    if (!Number.isFinite(li) || !Number.isFinite(ri) || ri <= li + 1) continue;
+    const t = at(left);
+    if (t > c.from && t <= c.to) cut = cut === null ? t : Math.max(cut, t);
+  }
+  return cut;
+}
+
 // Where a check can be written: the waypoints inside the window, or — when a
 // direct has cut them all out — the first one actually overflown after it.
 function fuelBox(flown, c, off){
+  // A fuel figure entered before a Direct remains a valid completed check. The
+  // placement logic below may have moved the unfilled box forward, so fuelChecks
+  // records that exceptional completed point on the window itself.
+  if (c.doneAt) return [c.doneAt];
   const at = p => p.cum + off;
-  const inw = flown.filter(p => at(p) > c.from && at(p) <= c.to);
+  const cut = fuelGapCut(flown, c, off);
+  const floor = cut === null ? c.from : Math.max(c.from, cut);
+  const inw = flown.filter(p => at(p) > floor && at(p) <= c.to);
   if (inw.length) return inw;
   const nxt = flown.find(p => at(p) > c.to);
   return nxt ? [nxt] : [];
@@ -107,8 +133,17 @@ function fuelChecks(flown, off, hasFuel, atTime){
     // on, so the time follows the ATOs as they are entered rather than standing on
     // a half-hour grid drawn at takeoff.
     c.due = atTime(box[box.length - 1], off);
+
+    // A Direct may move the still-unfilled box forward past the half-hour mark,
+    // but a fuel figure already recorded earlier in this same window still counts.
+    // Include both the original in-window points and the post-gap fallback box when
+    // looking for the entry that restarts the next thirty minutes.
+    const candidates = flown.filter(p => at(p) > c.from && at(p) <= c.to);
+    for (const p of box) if (!candidates.includes(p)) candidates.push(p);
+    const early = candidates.filter(hasFuel).sort((a, b) => at(a) - at(b))[0];
+    if (early && !box.includes(early)) c.doneAt = early;
+
     out.push(c);
-    const early = box.filter(hasFuel).sort((a, b) => at(a) - at(b))[0];
     anchor = early ? at(early) : c.to;
   }
   return out;
