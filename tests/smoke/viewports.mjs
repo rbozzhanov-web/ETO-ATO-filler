@@ -49,8 +49,9 @@ try {
     ];
     render(600, 785);
     renderAlt();
-    // The production Calculate handler reveals Step 3 after rendering. This
-    // test calls render() directly, so mirror that state before touch testing.
+    // This synthetic route bypasses the loaded-plan UI transition. Mirror the
+    // visible Step 3 parent plus its nested Actuals section before touch tests.
+    document.querySelector('#c2').classList.remove('hide');
     document.querySelector('#c3').classList.remove('hide');
   });
 
