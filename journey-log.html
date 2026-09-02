@@ -1,10 +1,13 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
 <!-- Journey Log / Задание на полет — a fillable facsimile of the Air Astana form.
      Geometry is taken straight off the printed document, in points, so what is on
      screen is what comes out of the printer. No libraries, no network. -->
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1c1f24">
+<meta name="theme-color" content="#0f1419">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -334,9 +337,11 @@ body.loaded #empty{display:none}
 body:not(.loaded) #stage,
 body:not(.loaded) #export,body:not(.loaded) #reset,body:not(.loaded) #remove{display:none}
 </style>
+</head>
+<body>
 <div id="bar">
   <div class="barhd">
-    <h1>Journey Log <span class="buildbadge" id="buildBadge">RC 1.3 · TEST · Build 20260902.3</span></h1>
+    <h1>Journey Log</h1>
     <div class="hdctl">
       <button id="export" class="ghost">Export PDF</button>
       <button id="reset" class="ghost">Clear entries</button>
@@ -413,3 +418,5 @@ body:not(.loaded) #export,body:not(.loaded) #reset,body:not(.loaded) #remove{dis
 
 <script src="jl-pdf.js"></script>
 <script src="journey-log.js"></script>
+</body>
+</html>

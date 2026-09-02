@@ -1119,7 +1119,7 @@ function applyTheme(){
   if(!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   document.documentElement.dataset.theme = t;
   const m = document.querySelector('meta[name=theme-color]');
-  if(m) m.content = t === 'light' ? '#ffffff' : '#1c1f24';
+  if(m) m.content = t === 'light' ? '#f2f5f8' : '#0f1419';
 }
 applyTheme();
 addEventListener('storage', e=>{ if(e.key === 'etofill:theme') applyTheme(); });
