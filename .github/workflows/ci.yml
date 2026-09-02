@@ -1,7 +1,6 @@
 # The app is deployed straight from main by GitHub Pages, so main is what has to
 # be right: every push and every pull request runs the whole suite before it can
-# get there. Turn on branch protection for main with these checks required —
-# CI cannot enforce that for itself.
+# get there. Task 17 enables branch protection using the stable check names below.
 name: CI
 
 on:
@@ -21,19 +20,43 @@ jobs:
   unit:
     name: Unit and structure tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      # No install step: the app ships no dependencies and the tests use only
-      # node:test and the platform APIs the browser gives the app itself.
-      - name: Run the test suite
+      # No install step: the app ships no runtime dependencies and the tests use
+      # node:test plus the platform APIs the browser gives the app itself.
+      - name: Run the complete test suite
         run: npm test
+
+  regression:
+    name: OFP regression gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Keep the operationally important scenarios visible as their own required
+      # check instead of hiding them among the broader structural suite.
+      - name: Run reference and flight-logic regressions
+        run: >-
+          node --test
+          tests/reference-ofps.test.js
+          tests/flight-workflow.test.js
+          tests/time-edge-cases.test.js
+          tests/direct-to-edge-cases.test.js
+          tests/fuel-edge-cases.test.js
+          tests/altimeter-edge-cases.test.js
+          tests/input-validation.test.js
 
   smoke-chromium:
     name: Chromium smoke test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -49,6 +72,7 @@ jobs:
   smoke-webkit:
     name: WebKit iPad-like smoke test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
