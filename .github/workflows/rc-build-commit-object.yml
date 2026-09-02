@@ -1,0 +1,105 @@
+name: Prepare RC badge commit object
+
+on:
+  push:
+    branches:
+      - rc/build-badge-20260902
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: rc/build-badge-20260902
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch visible RC build marker
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          BUILD = 'RC 1.3 · TEST · Build 20260902.1'
+
+          p = Path('index.html'); s = p.read_text()
+          a = '.sub{color:var(--dim);font-size:13px}\n'
+          css = '''.buildbadge{display:inline-flex;align-items:center;margin-top:5px;padding:2px 7px;\n  border:1px solid var(--warn);border-radius:999px;color:var(--warn);\n  font:700 10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;\n  letter-spacing:.35px;text-transform:uppercase;white-space:nowrap}\n'''
+          if '.buildbadge{' not in s:
+              if a not in s: raise SystemExit('index CSS anchor not found')
+              s = s.replace(a, a + css, 1)
+          a = '      <div class="sub">Operational flight plan — in flight</div>\n'
+          b = f'      <div class="buildbadge" id="buildBadge">{BUILD}</div>\n'
+          if 'id="buildBadge"' not in s:
+              if a not in s: raise SystemExit('index header anchor not found')
+              s = s.replace(a, a + b, 1)
+          p.write_text(s)
+
+          p = Path('journey-log.html'); s = p.read_text()
+          a = '#bar h1 span{color:var(--dim); font-size:13px; letter-spacing:0; font-weight:400}\n'
+          css = '''#bar h1 .buildbadge{display:inline-flex;vertical-align:2px;margin-left:8px;padding:2px 7px;\n  border:1px solid var(--warn);border-radius:999px;color:var(--warn);\n  font:700 10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;\n  letter-spacing:.35px;text-transform:uppercase;white-space:nowrap}\n'''
+          if '#bar h1 .buildbadge{' not in s:
+              if a not in s: raise SystemExit('journey CSS anchor not found')
+              s = s.replace(a, a + css, 1)
+          a = '    <h1>Journey Log</h1>\n'
+          b = f'    <h1>Journey Log <span class="buildbadge" id="buildBadge">{BUILD}</span></h1>\n'
+          if 'id="buildBadge"' not in s:
+              if a not in s: raise SystemExit('journey header anchor not found')
+              s = s.replace(a, b, 1)
+          p.write_text(s)
+
+          p = Path('sw.js'); s = p.read_text()
+          old = "const V = CACHE_PREFIX + 'rc1.3';"
+          new = "const V = CACHE_PREFIX + 'rc1.3-test-20260902.1';"
+          if old not in s and new not in s: raise SystemExit('SW version anchor not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Run unit and structure tests
+        run: npm test
+      - name: Create commit object on top of current main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="${GITHUB_REPOSITORY}"
+          MAIN_SHA=$(gh api "repos/$REPO/git/ref/heads/main" --jq '.object.sha')
+          MAIN_TREE=$(gh api "repos/$REPO/git/commits/$MAIN_SHA" --jq '.tree.sha')
+          INDEX_BLOB=$(gh api --method POST "repos/$REPO/git/blobs" -f encoding=utf-8 -f content="$(cat index.html)" --jq '.sha')
+          JOURNEY_BLOB=$(gh api --method POST "repos/$REPO/git/blobs" -f encoding=utf-8 -f content="$(cat journey-log.html)" --jq '.sha')
+          SW_BLOB=$(gh api --method POST "repos/$REPO/git/blobs" -f encoding=utf-8 -f content="$(cat sw.js)" --jq '.sha')
+          python3 - "$MAIN_TREE" "$INDEX_BLOB" "$JOURNEY_BLOB" "$SW_BLOB" <<'PY' > /tmp/tree.json
+          import json, sys
+          base, index, journey, sw = sys.argv[1:]
+          print(json.dumps({
+            'base_tree': base,
+            'tree': [
+              {'path':'index.html','mode':'100644','type':'blob','sha':index},
+              {'path':'journey-log.html','mode':'100644','type':'blob','sha':journey},
+              {'path':'sw.js','mode':'100644','type':'blob','sha':sw},
+            ]
+          }))
+          PY
+          TREE_SHA=$(gh api --method POST "repos/$REPO/git/trees" --input /tmp/tree.json --jq '.sha')
+          python3 - "$TREE_SHA" "$MAIN_SHA" <<'PY' > /tmp/commit.json
+          import json, sys
+          tree, parent = sys.argv[1:]
+          print(json.dumps({
+            'message':'RC 1.3: show test build identifier',
+            'tree':tree,
+            'parents':[parent]
+          }))
+          PY
+          COMMIT_SHA=$(gh api --method POST "repos/$REPO/git/commits" --input /tmp/commit.json --jq '.sha')
+          printf '%s\n' "$COMMIT_SHA" | tee commit-sha.txt
+          printf '%s\n' "$MAIN_SHA" > parent-sha.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rc-build-commit-object-20260902-1
+          path: |
+            commit-sha.txt
+            parent-sha.txt
