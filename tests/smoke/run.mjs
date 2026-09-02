@@ -111,6 +111,10 @@ try {
       ];
       render(130, 335);
       renderAlt();
+      // render() is called directly in this synthetic test. The real Calculate
+      // path opens Step 3 immediately afterwards, so mirror that state before
+      // asking WebKit to perform a real touch on an ATO field.
+      document.querySelector('#c3').classList.remove('hide');
       DCT.marks = [{ to: 3, skipped: [2] }];
       syncDct();
       renderDctChips();
