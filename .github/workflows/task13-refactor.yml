@@ -120,6 +120,12 @@ jobs:
           assert s.count(old) == 2
           p.write_text(s.replace(old, "'./ofp-core.js', './storage.js', './app.js'"))
 
+          p = Path('tests/offline-update-edge-cases.test.js'); s = p.read_text()
+          old = "assert.match(SW, /const SCRIPTS = \\['\\.\\/pdfmini\\.js', '\\.\\/ofp-core\\.js', '\\.\\/app\\.js'/);"
+          new = "assert.match(SW, /const SCRIPTS = \\['\\.\\/pdfmini\\.js', '\\.\\/ofp-core\\.js', '\\.\\/storage\\.js', '\\.\\/app\\.js'/);"
+          assert old in s
+          p.write_text(s.replace(old, new))
+
           p = Path('tests/storage-edge-cases.test.js'); s = p.read_text()
           start = s.index("test('autosave and resume degrade safely when browser storage is unavailable'")
           s = s[:start] + r'''test('autosave delegates cold-session persistence to the isolated storage module', () => {
