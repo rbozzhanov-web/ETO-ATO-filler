@@ -871,8 +871,10 @@ async function exportPdf(){
     await deliverPdf(new Blob([bytes], { type:'application/pdf' }), exportName());
     say('Completed PDF is ready.', 'ok');
   }catch(err){
-    if(!(err && err.name === 'AbortError'))
-      say('Could not export the PDF: ' + (err && err.message ? err.message : err), 'err');
+    if(!(err && err.name === 'AbortError')){
+      console.error('Journey Log export failed:', err);
+      say('The completed PDF could not be exported. Try Export PDF again.', 'err');
+    }
   }finally{
     button.disabled = false; button.textContent = 'Export PDF';
   }
@@ -1110,7 +1112,7 @@ async function loadPdf(file){
   document.getElementById('fname').textContent = file.name || '';
   say('Reading ' + (file.name || 'the PDF') + '…');
   if(typeof DecompressionStream === 'undefined'){
-    say('Browser too old: no DecompressionStream. Safari 16.4+ / iPadOS 16.4+ required.', 'err');
+    say('This browser is not supported. Journey Log requires Safari/iPadOS 16.4 or later.', 'err');
     return;
   }
   // Refused before anything is allocated for it, with a message that says what
@@ -1134,7 +1136,8 @@ async function loadPdf(file){
     say('', '');
     scrollTo(0, 0);
   }catch(err){
-    say('Could not read it: ' + (err && err.message ? err.message : err), 'err');
+    console.error('Journey Log PDF read failed:', err);
+    say('This PDF could not be read as a supported Journey Log. Choose the issued Journey Log PDF and try again.', 'err');
   }
 }
 

@@ -446,13 +446,10 @@ $('#paste').onclick = async () => {
       const blob = await item.getType(type);
       return loadBuffer('pasted.pdf', blob.size, await blob.arrayBuffer(), false);
     }
-    // Name what was actually offered, so a report of this carries evidence.
-    const had = [...new Set(items.flatMap(i => i.types))].join(', ');
-    msg('#m1', 'No PDF on the clipboard' + (had ? ' — it offered: ' + had : '')
-             + '. Use the box above to pick the file.', 'warn');
+    msg('#m1', 'No PDF was found on the clipboard. Use the box above to pick the file.', 'warn');
   } catch (err){
-    msg('#m1', 'The clipboard could not be read here (' + err.message
-             + '). Use the box above to pick the file.', 'warn');
+    console.warn('Clipboard read failed:', err);
+    msg('#m1', 'The clipboard could not be read. Use the box above to pick the file instead.', 'warn');
   }
 };
 
@@ -464,7 +461,7 @@ async function load(f){
 // iPadOS has evicted the app from memory.
 async function loadBuffer(name, size, buf, resumed){
   if (typeof DecompressionStream === 'undefined'){
-    msg('#m1', 'Browser too old: no DecompressionStream. Safari 16.4+ / iPadOS 16.4+ required.', 'err');
+    msg('#m1', 'This browser is not supported. OFP Companion requires Safari/iPadOS 16.4 or later.', 'err');
     return false;
   }
   // Refused before anything is allocated for it, and with a message that says
@@ -529,7 +526,8 @@ async function loadBuffer(name, size, buf, resumed){
     if (!resumed){ npSuppressNext(); $('#etd').focus({ preventScroll: true }); }
     return true;
   } catch (err){
-    msg('#m1', 'Could not parse the document: ' + err.message, 'err');
+    console.error('OFP parse failed:', err);
+    msg('#m1', 'This PDF could not be read as a supported flight-plan package. Try another OFP PDF.', 'err');
     return false;
   }
 }
@@ -2316,7 +2314,10 @@ $('#dl').onclick = async () => {
     a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
     msg('#m3', 'Saved: ' + name, 'ok');
-  } catch (e){ msg('#m3', 'Error: ' + e.message, 'err'); }
+  } catch (e){
+    console.error('OFP PDF save failed:', e);
+    msg('#m3', 'The completed OFP PDF could not be saved. Try Save PDF again.', 'err');
+  }
   finally { b.disabled = false; b.textContent = 'Save PDF'; }
 };
 
@@ -2327,7 +2328,10 @@ $('#open').onclick = () => {
     if (!w) msg('#m3', 'The browser blocked the preview tab — use “Save PDF” instead.', 'warn');
     else hide('#m3');
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-  } catch (e){ msg('#m3', 'Error: ' + e.message, 'err'); }
+  } catch (e){
+    console.error('OFP PDF preview failed:', e);
+    msg('#m3', 'The PDF preview could not be opened. Use Save PDF instead.', 'err');
+  }
 };
 
 $('#clearStored').onclick = async () => {
