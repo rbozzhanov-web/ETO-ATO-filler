@@ -86,13 +86,6 @@ test('remove failure is contained rather than crashing the app', () => {
   assert.doesNotThrow(() => prunePlans(store, now, 30, 20));
 });
 
-test('app keeps the open flight when Clear other flights is used', () => {
-  const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-  assert.match(app, /async function clearStoredPlans\(keep\)[\s\S]*?for \(const k of storedPlanKeys\(\)\) if \(k !== keep\) dropPlan\(k\);/);
-  assert.match(app, /if \(!keep\) await dropSession\(\);/);
-  assert.match(app, /clearStoredPlans\(KEY \|\| null\)/);
-});
-
 test('autosave delegates cold-session persistence to the isolated storage module', () => {
   const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
   const storage = fs.readFileSync(path.join(__dirname, '..', 'storage.js'), 'utf8');

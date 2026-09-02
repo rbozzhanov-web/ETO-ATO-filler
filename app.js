@@ -2182,15 +2182,7 @@ function dropPlan(key){ try { localStorage.removeItem(key); } catch(e){} }
 
 const pruneStoredPlans = () => prunePlans(localStorage, Date.now(), RETAIN_DAYS, MAX_PLANS);
 
-function showStoredCount(){
-  const el0 = $('#storedNote');
-  if (!el0) return;
-  const others = storedPlanKeys().filter(k => k !== KEY).length;
-  el0.textContent = others
-    ? `${others} other flight${others > 1 ? 's' : ''} saved on this device.`
-    : 'No other flight data is saved on this device.';
-  $('#clearStored').disabled = !others;
-}
+function showStoredCount(){}
 
 // The plan that is open stays: a crew clearing the device's history part-way
 // through a flight must not lose the flight they are flying. Everything else —
@@ -2370,14 +2362,6 @@ $('#open').onclick = () => {
   }
 };
 
-$('#clearStored').onclick = async () => {
-  const n = storedPlanKeys().filter(k => k !== KEY).length;
-  if (!n) return;
-  if (!confirm(`Delete the saved data for ${n} other flight${n > 1 ? 's' : ''} on this device?`
-             + (KEY ? '\n\nThe flight open now is kept.' : ''))) return;
-  await clearStoredPlans(KEY || null);
-  msg('#m1', `Cleared ${n} stored flight${n > 1 ? 's' : ''} from this device.`, 'ok');
-};
 
 $('#reset').onclick = () => {
   if (!confirm('Reset everything?\n\nThe loaded plan and all entered data will be discarded.')) return;

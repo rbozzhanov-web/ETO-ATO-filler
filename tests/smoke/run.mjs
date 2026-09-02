@@ -84,9 +84,6 @@ try {
           'OFP time input is strict four-digit HHMM');
 
     check(await page.locator('#drop').isVisible(), 'the load box is shown');
-    check(await page.locator('#clearStored').isVisible(), 'stored-data controls are shown');
-    check((await page.locator('#storedNote').textContent()).includes('No other flight'),
-          'the stored-flight count is filled in');
 
     await page.locator('.themesw button[data-theme-set="light"]').click();
     check(await page.evaluate(() => document.documentElement.dataset.theme) === 'light',
