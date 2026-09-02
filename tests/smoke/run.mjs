@@ -111,9 +111,10 @@ try {
       ];
       render(130, 335);
       renderAlt();
-      // render() is called directly in this synthetic test. The real Calculate
-      // path opens Step 3 immediately afterwards, so mirror that state before
-      // asking WebKit to perform a real touch on an ATO field.
+      // render() is called directly in this synthetic test. A real loaded plan
+      // has Step 3's parent card visible, and Calculate then opens the nested
+      // Actuals section, so mirror both states before a real WebKit touch.
+      document.querySelector('#c2').classList.remove('hide');
       document.querySelector('#c3').classList.remove('hide');
       DCT.marks = [{ to: 3, skipped: [2] }];
       syncDct();
