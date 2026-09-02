@@ -6,6 +6,7 @@
      screen is what comes out of the printer. No libraries, no network. -->
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<script src="theme-init.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f1419">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -58,7 +59,11 @@ body{
    same trailing gap where its theme switch sits. The button back to it then
    lands under the one that opens this page, and the two toggle on one spot. */
 #bar{
-  --statusbar:max(20px, env(safe-area-inset-top, 0px));
+  /* Matches the OFP companion's --topgap exactly (env(safe-area-inset-top) + 12px,
+     floored at 20px): that value drives .wrap's own top padding there, so this
+     page's header has to use the same formula, not just the same floor, or the
+     two pages' crossing buttons drift apart by 12px on any real status bar. */
+  --statusbar:max(20px, calc(env(safe-area-inset-top, 0px) + 12px));
   flex:0 0 auto; z-index:50;
   padding-top:var(--statusbar);
   /* The companion's header sits straight on the page colour, under a gold rule
@@ -214,6 +219,10 @@ html[data-theme=light]{--npbg:rgba(216,218,223,.82); --npkey:rgba(255,255,255,.9
    than one WebKit only spins up for the length of the slide transition — without
    it the backdrop-filter can end up sampling whichever layer happens to be
    composited behind it at the moment, rather than the page. */
+/* WebKit rebuilds compositing layers when a standalone web app returns from the
+   background. Keep the first settled frame still, so a resumed blur or a colour
+   transition cannot briefly show its old backing surface. */
+html.app-resuming body,html.app-resuming .numpad{transition:none!important}
 .numpad{position:fixed; left:0; right:0; bottom:0; z-index:80; background:var(--npbg);
   backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%);
   box-shadow:0 -1px 0 var(--npline); transform:translateY(100%) translateZ(0);

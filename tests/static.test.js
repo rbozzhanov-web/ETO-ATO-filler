@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 const PAGES = ['index.html', 'journey-log.html'];
-const SCRIPTS = ['pdfmini.js', 'ofp-core.js', 'app.js', 'jl-pdf.js', 'journey-log.js', 'sw.js'];
+const SCRIPTS = ['theme-init.js', 'pdfmini.js', 'ofp-core.js', 'app.js', 'jl-pdf.js', 'journey-log.js', 'sw.js'];
 
 // Comments say what the code does not do, so a word like innerHTML can appear in
 // one. Only the code itself is searched.

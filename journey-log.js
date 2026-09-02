@@ -290,6 +290,26 @@ function flushSave(){ if(saveTimer) saveNow(); }
 addEventListener('pagehide', flushSave);
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden) flushSave(); });
 
+// Updating a hidden standalone app forces WebKit to redraw fixed and blurred
+// layers (the numpad) just as it is being frozen. Leave that alone until the
+// page is visible again, then hold transitions off for one settled frame so
+// the resumed blur can't briefly show its old backing surface.
+let resumeFrame = 0;
+function settleAfterResume(){
+  if(document.hidden) return;
+  const root = document.documentElement;
+  root.classList.add('app-resuming');
+  if(resumeFrame) cancelAnimationFrame(resumeFrame);
+  resumeFrame = requestAnimationFrame(()=>{
+    resumeFrame = requestAnimationFrame(()=>{
+      root.classList.remove('app-resuming');
+      resumeFrame = 0;
+    });
+  });
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) settleAfterResume(); });
+addEventListener('pageshow', e=>{ if(e.persisted) settleAfterResume(); });
+
 function get(path){
   return path.split('.').reduce((o,k)=> o == null ? o : o[k], doc);
 }

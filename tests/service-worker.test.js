@@ -70,7 +70,7 @@ const ok = body => new Response(body, { status: 200 });
 test('install precaches every file the two apps are made of', async () => {
   const w = loadWorker({ network: async () => ok('net') });
   await fire(w.handlers, 'install', {});
-  for (const f of ['./', './index.html', './journey-log.html', './pdfmini.js',
+  for (const f of ['./', './index.html', './journey-log.html', './theme-init.js', './pdfmini.js',
                    './ofp-core.js', './app.js', './jl-pdf.js', './journey-log.js',
                    './manifest.webmanifest', './icon-192.png', './icon-512.png'])
     assert.ok(await w.caches.match(f), f + ' is not precached');
