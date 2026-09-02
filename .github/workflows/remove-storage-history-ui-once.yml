@@ -1,0 +1,57 @@
+name: Remove storage history UI once
+
+on:
+  push:
+    branches: [fix/remove-storage-history-ui-20260902]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: contains(github.event.head_commit.message, 'RUN_REMOVE_STORAGE_HISTORY_UI')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/remove-storage-history-ui-20260902
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Remove only the marked storage-history UI
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('index.html')
+          s = p.read_text()
+          old = '''    <p class="disc">Times, fuel, altimeter readings and document fields are saved on this
+      device only — never sent anywhere — against the exact PDF they were entered for.
+      They are kept for 30 days, and only the 20 most recent flights are held. Clearing
+      keeps the flight open now and removes the rest.</p>
+    <div class="row">
+      <button type="button" class="ghost sm" id="clearStored">Clear other flights</button>
+      <span class="disc" id="storedNote"></span>
+    </div>
+'''
+          assert s.count(old) == 1, 'storage-history UI block not found exactly once'
+          p.write_text(s.replace(old, ''))
+
+          p = Path('app.js')
+          s = p.read_text()
+          old = "$('#clearStored').onclick = async () => {"
+          new = "const clearStoredBtn = $('#clearStored');\nif (clearStoredBtn) clearStoredBtn.onclick = async () => {"
+          assert s.count(old) == 1, 'clearStored handler not found exactly once'
+          p.write_text(s.replace(old, new))
+          PY
+      - name: Run tests
+        run: npm test
+      - name: Commit the minimal UI removal
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html app.js
+          git diff --cached --check
+          git commit -m "Remove obsolete storage-history UI"
+          git push origin HEAD:fix/remove-storage-history-ui-20260902
