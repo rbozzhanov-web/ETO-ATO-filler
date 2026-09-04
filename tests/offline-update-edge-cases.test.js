@@ -93,16 +93,30 @@ test('activation claims clients after old app caches are removed', async () => {
   assert.equal(w.store.has('ofp-companion-obsolete'), false);
 });
 
-test('network-first has a bounded 2.5 second startup wait', () => {
-  assert.match(SW, /const NET_MS = 2500;/);
-  assert.match(SW, /const timer = setTimeout\(fallback, NET_MS\);/);
-  assert.match(SW, /if \(e\.request\.mode === 'navigate'\)\{ e\.respondWith\(fresh\(e\.request, pageFor\(e\.request\)\)\);/);
-  assert.match(SW, /if \(script\)\{ e\.respondWith\(fresh\(e\.request, script\)\);/);
+test('a cached navigation answers instantly even when the network never resolves', async () => {
+  let releaseNetwork;
+  const hang = new Promise(res => { releaseNetwork = res; });
+  const w = workerHarness({ network: async () => { await hang; return new Response('late'); } });
+  await fire(w.handlers, 'install');
+  const r = await fire(w.handlers, 'fetch', { request: request('/index.html') });
+  assert.equal(r.status, 200);
+  assert.match(await r.text(), /^cached /);
+  releaseNetwork();
+});
+
+test('a background fetch quietly refreshes the cache for the next launch', async () => {
+  const w = workerHarness({ network: async () => new Response('fresh page') });
+  await fire(w.handlers, 'install');
+  await fire(w.handlers, 'fetch', { request: request('/index.html') });
+  // The response above came straight from the install-time cache; give the
+  // background revalidation a turn of the event loop to land.
+  await new Promise(res => setTimeout(res, 0));
+  assert.equal(await (await w.caches.match('./index.html')).text(), 'fresh page');
 });
 
 test('page and scripts therefore cannot mix old and new app versions', () => {
   assert.match(SW, /const SCRIPTS = \['\.\/theme-init\.js', '\.\/pdfmini\.js', '\.\/ofp-core\.js', '\.\/storage\.js', '\.\/app\.js'/);
-  assert.match(SW, /const script = scriptFor\(e\.request\);[\s\S]*?if \(script\)\{ e\.respondWith\(fresh\(e\.request, script\)\); return; \}/);
+  assert.match(SW, /const script = scriptFor\(e\.request\);[\s\S]*?if \(script\)\{ e\.respondWith\(staleWhileRevalidate\(e\.request, script\)\); return; \}/);
 });
 
 test('the UI waits for user acceptance before telling the worker to update', () => {

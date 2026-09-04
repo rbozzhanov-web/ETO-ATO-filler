@@ -25,10 +25,12 @@ const flown = marks => {
 };
 
 function applyDirect(marks, currentIndex, targetIndex){
-  const skipped = skipSet(marks);
   const mark = {
     to: RESULT[targetIndex].i,
-    skipped: directSkips(RESULT, currentIndex, targetIndex, i => skipped.has(i))
+    // Each mark covers its own full range regardless of what other marks already
+    // own — otherwise deleting an earlier mark orphans the segment a later, still-
+    // active one silently depended on it for.
+    skipped: directSkips(RESULT, currentIndex, targetIndex, () => false)
   };
   return [...marks, mark];
 }
@@ -45,23 +47,23 @@ test('one direct can remove several consecutive waypoints', () => {
   assert.deepEqual(flown(marks).map(p => p.wp), ['DEP', 'TOC', 'WPT6', 'WPT7', 'DEST']);
 });
 
-test('repeated directs do not count an already skipped waypoint twice', () => {
-  let marks = applyDirect([], 1, 4);   // skip WPT2, WPT3
-  marks = applyDirect(marks, 1, 6);    // WPT2/WPT3 already skipped; only WPT4/WPT5 are new
+test('a later direct independently covers its own full range, overlap and all', () => {
+  let marks = applyDirect([], 1, 4);   // covers 2,3
+  marks = applyDirect(marks, 1, 6);    // covers 2..5 on its own, overlapping the first
 
   assert.deepEqual(marks[0].skipped, [2, 3]);
-  assert.deepEqual(marks[1].skipped, [4, 5]);
+  assert.deepEqual(marks[1].skipped, [2, 3, 4, 5]);
   assert.deepEqual([...skipSet(marks)], [2, 3, 4, 5]);
 });
 
-test('undoing one direct restores only the waypoints owned by that mark', () => {
-  let marks = applyDirect([], 1, 4);   // owns 2,3
-  marks = applyDirect(marks, 1, 6);    // owns 4,5
+test('undoing an earlier direct does not un-skip waypoints a later, still-active direct also covers', () => {
+  let marks = applyDirect([], 1, 4);   // covers 2,3
+  marks = applyDirect(marks, 1, 6);    // independently covers 2..5
 
   marks.splice(0, 1);                  // undo the first DIRECT
-  assert.deepEqual([...skipSet(marks)], [4, 5]);
+  assert.deepEqual([...skipSet(marks)], [2, 3, 4, 5]);
   assert.deepEqual(flown(marks).map(p => p.wp),
-                   ['DEP', 'TOC', 'WPT2', 'WPT3', 'WPT6', 'WPT7', 'DEST']);
+                   ['DEP', 'TOC', 'WPT6', 'WPT7', 'DEST']);
 });
 
 test('changing a direct by undoing and applying a nearer target leaves no stale skips', () => {
