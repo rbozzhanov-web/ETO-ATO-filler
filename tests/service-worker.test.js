@@ -76,11 +76,14 @@ test('install precaches every file the two apps are made of', async () => {
     assert.ok(await w.caches.match(f), f + ' is not precached');
 });
 
-test('a page comes from the network when there is one, and is cached', async () => {
+test('a page comes from the cache instantly, and the network quietly refreshes it', async () => {
   const w = loadWorker({ network: async () => ok('fresh page') });
   await fire(w.handlers, 'install', {});
   const r = await fire(w.handlers, 'fetch', { request: req('/journey-log.html', 'navigate') });
-  assert.equal(await r.text(), 'fresh page');
+  assert.equal(await r.text(), 'cached ./journey-log.html');
+  // The response above didn't wait on the network fetch — give it a turn of the
+  // event loop to land in the cache for the next launch.
+  await new Promise(res => setTimeout(res, 0));
   assert.equal(await (await w.caches.match('./journey-log.html')).text(), 'fresh page');
 });
 
@@ -98,7 +101,8 @@ test('the scripts a page loads are fetched the same way the page is', async () =
   const w = loadWorker({ network: async () => ok('fresh app.js') });
   await fire(w.handlers, 'install', {});
   const r = await fire(w.handlers, 'fetch', { request: req('/app.js') });
-  assert.equal(await r.text(), 'fresh app.js');
+  assert.equal(await r.text(), 'cached ./app.js');
+  await new Promise(res => setTimeout(res, 0));
   assert.equal(await (await w.caches.match('./app.js')).text(), 'fresh app.js');
 });
 

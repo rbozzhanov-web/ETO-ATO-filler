@@ -56,8 +56,8 @@ as code.
 4. Turn on airplane mode and launch the icon. If it opens, the offline cache is in place.
 
 To update: upload the changed files and bump the `V` constant in `sw.js`. The
-pages and the scripts they load are all fetched network-first, so a new page is
-never paired with a previous version's script.
+pages and the scripts they load are cached and refreshed together, so a page
+is never paired with a previous version's script.
 
 Release candidates use the following version scheme:
 
@@ -69,13 +69,14 @@ When a new version is ready, the app offers an **Update now** button. It never
 interrupts an open plan: update only when you choose it, and there is no need to
 remove and re-add the home-screen icon.
 
-The page is fetched from the network whenever there is one, so a new version is picked up on
-the next launch rather than waiting on a service-worker update check. If the network does not
-answer within 2.5 seconds the app starts from its cache instead, so a slow link never delays
-it, and everything other than the page stays cache-first. Should a replacement worker take
-over while the app is open, it reloads only when no plan is loaded; with a document open it
-says a new version is ready and leaves it for the next launch, so nothing you have entered
-moves under your hands.
+The page and its scripts are cache-first, like everything else: launching or
+returning to the app never waits on the network, which matters in flight where
+there usually isn't one. A fresh copy is fetched in the background on the same
+load and quietly replaces what's cached, so a new version is picked up on the
+next launch without ever delaying this one. Should a replacement worker take
+over while the app is open, it reloads only when no plan is loaded; with a
+document open it says a new version is ready and leaves it for the next
+launch, so nothing you have entered moves under your hands.
 
 Offline it never updates, which means the version you leave the ground with is the version you
 fly with.

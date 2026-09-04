@@ -2,19 +2,17 @@
    index.html is the OFP companion, journey-log.html the Journey Log form. */
 const CACHE_PREFIX = 'ofp-companion-';
 const LEGACY_CACHE_PREFIX = 'eto-filler-v';
-const V = CACHE_PREFIX + 'rc1.3.2-20260902';
+const V = CACHE_PREFIX + 'rc1.3.3-20260904';
 const FILES = ['./', './index.html', './journey-log.html',
                './theme-init.js', './pdfmini.js', './ofp-core.js', './storage.js', './app.js',
                './jl-pdf.js', './journey-log.js',
                './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const PAGES = ['./index.html', './journey-log.html'];
-// The pages carry no code of their own any more: it lives in these files, and a
-// page fetched fresh must never be paired with a stale script out of the cache.
-// So they are fetched the same way the pages are — network first, cache only as
-// the offline fallback.
+// The pages carry no code of their own any more: it lives in these files. They
+// go through the same cache-first, background-refreshed path as the pages
+// themselves, below.
 const SCRIPTS = ['./theme-init.js', './pdfmini.js', './ofp-core.js', './storage.js', './app.js',
                  './jl-pdf.js', './journey-log.js'];
-const NET_MS = 2500;            // give the network this long before falling back to the cache
 
 self.addEventListener('install', e => {
   // A new worker waits until the crew explicitly accepts it in the app. That
@@ -32,11 +30,11 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 
-// The page itself comes from the network when there is one, so a new version is
-// picked up on the next launch instead of waiting on a service-worker update
-// check. The scripts it loads go the same way, so a fresh page never runs an old
-// script. Everything else stays cache-first — it only changes with the page.
-// A slow link must not delay start-up, hence the race against NET_MS.
+// The page and the scripts it loads are served from the cache instantly, every
+// time — a crew reopening the app after iOS evicted it must never sit through a
+// network attempt that has nowhere to go. A fresh copy is fetched in the
+// background on the same request and quietly replaces what's cached, so the
+// next launch picks up a new version without ever blocking this one on it.
 // Which of the two pages a navigation is asking for. Anything else — the root
 // included — is the OFP companion, as it always was.
 function pageFor(req){
@@ -68,31 +66,27 @@ function cacheable(req, response){
     && new URL(req.url).origin === self.location.origin;
 }
 
-function fresh(req, key){
-  return new Promise(resolve => {
-    let done = false;
-    const fallback = async () => {
-      if (done) return;
-      done = true;
-      resolve(await caches.match(key) || offlineResponse());
-    };
-    const timer = setTimeout(fallback, NET_MS);
-    fetch(req).then(r => {
-      clearTimeout(timer);
-      if (!cacheable(req, r)){ fallback(); return; }
-      caches.open(V).then(c => c.put(key, r.clone())).catch(() => {});
-      if (done) return;
-      done = true;
-      resolve(r);
-    }).catch(() => { clearTimeout(timer); fallback(); });
+// Cache-first, refreshed in the background: a cached copy answers immediately
+// with no network wait at all, while a real fetch — started the same moment,
+// never blocking the response — quietly updates the cache for next time. Only
+// when there is no cached copy yet (first install's own navigation) does the
+// response actually wait on the network.
+function staleWhileRevalidate(req, key){
+  const revalidate = fetch(req).then(r => {
+    if (cacheable(req, r)) caches.open(V).then(c => c.put(key, r.clone())).catch(() => {});
+    return r;
+  }).catch(() => null);
+  return caches.match(key).then(cached => {
+    if (cached){ revalidate.catch(() => {}); return cached; }
+    return revalidate.then(r => r || offlineResponse());
   });
 }
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  if (e.request.mode === 'navigate'){ e.respondWith(fresh(e.request, pageFor(e.request))); return; }
+  if (e.request.mode === 'navigate'){ e.respondWith(staleWhileRevalidate(e.request, pageFor(e.request))); return; }
   const script = scriptFor(e.request);
-  if (script){ e.respondWith(fresh(e.request, script)); return; }
+  if (script){ e.respondWith(staleWhileRevalidate(e.request, script)); return; }
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true })
       .then(hit => hit || fetch(e.request).then(r => {

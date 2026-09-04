@@ -1650,10 +1650,20 @@ function applyDirect(target){
   const { ci } = progressIdx();
   if (n < 0) return;
   if (n <= ci){ msg('#m7', 'That waypoint is not ahead of you.', 'err'); return; }
-  DCT.marks.push({ to: RESULT[n].i, skipped: directSkips(RESULT, ci, n, isSkipped) });
+  // Each mark covers its own full range, not just what's left after other active
+  // marks' ranges are excluded — otherwise deleting an earlier direct orphans the
+  // segment a later, still-active one silently depended on it for.
+  DCT.marks.push({ to: RESULT[n].i, skipped: directSkips(RESULT, ci, n, () => false) });
   syncDct();
   setPick(false);
   afterDct();
+  // Land the crew on the waypoint the direct just put abeam, ready to log its
+  // time — usually there isn't one yet this early (a direct is normally cleared
+  // before its due time), so fall back to the one that will become abeam next.
+  const ab = abeamIdx(currentOffset());
+  const abIdx = ab.ci >= 0 ? ab.ci : ab.ni;
+  const abeamInput = abIdx >= 0 && rowOf(RESULT[abIdx].i)?.querySelector('input.ato');
+  if (abeamInput){ abeamInput.focus(); abeamInput.select(); }
 }
 
 function undoDirect(k){
@@ -1794,6 +1804,17 @@ addEventListener('pageshow', e => { if (e.persisted) settleAfterResume(); });
 function renderAlt(preserveAlerts = false){
   const announced = preserveAlerts ? new Set(alerted) : null;
   CHECKS = hourlyChecks(flown(), T0);
+  // A direct can change which waypoint a given hourly mark falls on. A reading or
+  // an "already alerted" flag recorded before that change belongs to the old
+  // waypoint, not the new one now sitting on the same mark — an untagged entry
+  // (saved before this check existed) is trusted until it is next edited.
+  for (const c of CHECKS){
+    const v = ALT[c.mark];
+    if (v && v.wp !== undefined && v.wp !== c.wp.i){
+      delete ALT[c.mark];
+      if (announced) announced.delete(c.mark);
+    }
+  }
   $('#c6').classList.toggle('hide', !CHECKS.length);
   const box = $('#altrows'); clear(box);
   for (const c of CHECKS){
@@ -1822,6 +1843,7 @@ function renderAlt(preserveAlerts = false){
       inp.oninput = () => {
         inp.value = inp.value.replace(/\D/g, '').slice(0, 5);
         ALT[c.mark] = ALT[c.mark] || {};
+        ALT[c.mark].wp = c.wp.i;
         ALT[c.mark][key] = inp.value;
         if (!ALT[c.mark].a1 && !ALT[c.mark].sb && !ALT[c.mark].a2) delete ALT[c.mark];
         refreshAlt(); save();
