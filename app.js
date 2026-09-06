@@ -467,6 +467,67 @@ $('#paste').onclick = async () => {
   }
 };
 
+/* ---- pasting a PDF from a Shortcut, on iPad/iPhone ----
+   iOS never hands a web page application/pdf however it asks, so the
+   companion Shortcut ("Import to OFP Viewer"-style: Base64 Encode, prefix,
+   Copy to Clipboard as Local Only) carries the PDF as plain text instead —
+   the one clipboard type Safari does expose to a page, on a deliberate tap. */
+if (APPLE_TOUCH) $('#shortcutBtn').classList.remove('hide');
+const SHORTCUT_PREFIX = 'OFPVIEWER-PDF-v1:';
+const SHORTCUT_MAX = 3 * 1024 * 1024;
+$('#shortcutBtn').onclick = async () => {
+  if (!navigator.clipboard || !navigator.clipboard.readText){
+    msg('#m1', 'Clipboard import is not available here.', 'err');
+    return;
+  }
+  let text;
+  try { text = await navigator.clipboard.readText(); }
+  catch (e){
+    msg('#m1', 'iPad did not allow clipboard access. Tap this button again, then choose Allow Paste.', 'warn');
+    return;
+  }
+  if (!text.startsWith(SHORTCUT_PREFIX)){
+    msg('#m1', 'Nothing from the Shortcut is waiting. Share the PDF to the import Shortcut first.', 'warn');
+    return;
+  }
+  // A Shortcut may insert a line break or coerce its result into a data URI —
+  // both carry the same bytes, so only that presentation is stripped here;
+  // no other MIME type is ever accepted.
+  const copied = text.slice(SHORTCUT_PREFIX.length).trim();
+  const b64 = copied
+    .replace(/^data:application\/pdf(?:;[^,]*)?;base64,/i, '')
+    .replace(/\s/g, '')
+    .replace(/-/g, '+').replace(/_/g, '/');
+  if (!b64 || !/^[A-Za-z0-9+/]*={0,2}$/.test(b64)){
+    msg('#m1', 'The Shortcut data is incomplete. Share the PDF again and retry.', 'err');
+    return;
+  }
+  const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0;
+  const bytes = Math.floor(b64.length * 3 / 4) - padding;
+  if (bytes > SHORTCUT_MAX){
+    msg('#m1', 'This PDF is ' + (bytes / 1048576).toFixed(1) + ' MB. Shortcut import is limited to 3 MB; use the picker for this one.', 'warn');
+    return;
+  }
+  let binary;
+  try { binary = atob(b64); }
+  catch (e){
+    msg('#m1', 'The Shortcut data could not be decoded. Share the PDF again and retry.', 'err');
+    return;
+  }
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+  if (String.fromCharCode(...out.subarray(0, 5)) !== '%PDF-'){
+    msg('#m1', 'The Shortcut did not contain a PDF.', 'err');
+    return;
+  }
+  const opened = await loadBuffer('OFP from Shortcut.pdf', out.byteLength, out.buffer, false);
+  if (opened){
+    // Best effort only: an iOS paste permission can expire mid-parse, and the
+    // plan is already read into memory regardless of whether this clears.
+    try { await navigator.clipboard.writeText(''); } catch (e){}
+  }
+};
+
 async function load(f){
   return loadBuffer(f.name, f.size, await f.arrayBuffer(), false);
 }
