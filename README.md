@@ -231,10 +231,13 @@ the box.
 
 On a computer it can be pasted as well, with **Paste a PDF** or straight into the page — the
 Journey Log page offers the same button, for the same document. That button is not shown on
-the iPad. Safari's clipboard hands a page `text/plain`, `text/html`, `text/uri-list`,
+the iPad: Safari's clipboard hands a page `text/plain`, `text/html`, `text/uri-list`,
 `image/png` and its own `web `-prefixed types — never `application/pdf` — and the paste event
-carries no files on iOS, so there is no route to a pasted PDF there however the page asks,
-including from a Shortcuts automation that placed one on the clipboard.
+carries no files on iOS, so there is no route to a pasted PDF *file* there however the page
+asks. **Paste OFP from Shortcut** covers that gap instead, on both pages: a companion Shortcut
+carries the PDF as plain Base64 text (the one clipboard type iOS does hand a web page), which
+the button decodes back into the document. Setup is a one-time Shortcut — see
+`SHORTCUT_IMPORT.md`.
 
 ## If iPadOS closes the app
 
