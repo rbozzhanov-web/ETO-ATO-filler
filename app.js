@@ -251,20 +251,34 @@ document.addEventListener('pointerdown', e => {
 // A real scroll — one following an actual touch or wheel gesture, not the
 // keypad's own scrollIntoView bringing the field above it into view — dismisses
 // it too, the way scrolling the content behind the system keyboard does.
-let NP_GESTURE = false;
+let NP_GESTURE = false, npGestureT = 0;
 // The keypad is a control, not a handle for the page behind it. On iPadOS a
 // vertical drag on this fixed panel can otherwise begin a document scroll; that
 // scroll is then correctly recognised below, but incorrectly dismisses the pad.
 // touch-action covers current browsers and preventDefault covers older WebKit.
 numpad.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
-const npGestureElsewhere = e => { if (!numpad.contains(e.target)) NP_GESTURE = true; };
+// A touch that never actually scrolls anything — a light touch under the scroll
+// threshold, or cockpit vibration jittering a resting finger — leaves no scroll
+// event to clear this flag, so it expires on its own shortly after instead of
+// staying armed indefinitely and dismissing the pad on some unrelated later
+// scroll, including this app's own (the table's "follow the flight" auto-scroll,
+// or the reflow scroll after the pad itself closes).
+const npGestureElsewhere = e => {
+  if (numpad.contains(e.target)) return;
+  NP_GESTURE = true;
+  clearTimeout(npGestureT);
+  npGestureT = setTimeout(() => { NP_GESTURE = false; }, 400);
+};
 addEventListener('touchmove', npGestureElsewhere, { passive: true });
 addEventListener('wheel', npGestureElsewhere, { passive: true });
 // Capturing: a scroll inside the waypoint table or the NOTAM list is its own
 // element and never bubbles, but the capture phase still reaches it on the way
-// down, so one listener here covers every scrollable box on the page.
-document.addEventListener('scroll', () => {
-  if (NP_GESTURE && NP_TARGET) npHideForce();
+// down, so one listener here covers every scrollable box on the page. The
+// table's own auto-scroll (centreRow, tracked via autoTarget for its own scroll
+// listener further down) is not a user gesture either and must not dismiss it.
+document.addEventListener('scroll', e => {
+  const ownTableScroll = autoTarget !== null && e.target === document.querySelector('.tblbox');
+  if (NP_GESTURE && NP_TARGET && !ownTableScroll) npHideForce();
   NP_GESTURE = false;
 }, { passive: true, capture: true });
 
@@ -869,11 +883,80 @@ async function paintChart(){
   img.src = c.url;                                  // a blob: URL this app made itself
   img.alt = `Chart on page ${c.page + 1}`;
   only(img);
+  chartZoomW = null;
   box.classList.remove('zoom');
+  img.style.width = '';
   img.onload = () => scrollHint(box);
   $('#chartZoom').textContent = 'Zoom';
   box.scrollTop = box.scrollLeft = 0;
 }
+
+/* ---- pinch-to-zoom, the same gesture Journey Log's sheet viewer uses ----
+   The page itself is held at one scale (maximum-scale=1 in the viewport
+   meta), so a chart pinch is caught here and turned into the image's own
+   size rather than competing with a native page-zoom. `chartZoomW` is the
+   image's explicit pixel width once zoomed past fit; `null` means fit,
+   the plain CSS default (.chartbox img{max-width:100%...}). */
+const CHART_ZOOM_MIN = 0.3, CHART_ZOOM_MAX = 6;   // multiples of the image's natural width
+let chartZoomW = null, chartPinch = null, chartLastTap = 0;
+const chartImg = () => document.querySelector('#chartBox img');
+function chartScaleW(){
+  const img = chartImg();
+  if (!img) return 0;
+  return chartZoomW != null ? chartZoomW : (img.getBoundingClientRect().width || img.naturalWidth);
+}
+function setChartZoom(w, anchor){
+  const img = chartImg(), box = $('#chartBox');
+  if (!img || !img.naturalWidth) return;
+  const before = chartScaleW();
+  if (w == null) chartZoomW = null;
+  else {
+    const min = img.naturalWidth * CHART_ZOOM_MIN, max = img.naturalWidth * CHART_ZOOM_MAX;
+    chartZoomW = Math.min(max, Math.max(min, w));
+  }
+  box.classList.toggle('zoom', chartZoomW != null);
+  img.style.width = chartZoomW != null ? chartZoomW + 'px' : '';
+  $('#chartZoom').textContent = chartZoomW != null ? 'Fit' : 'Zoom';
+  if (anchor){
+    // hold the point under the fingers still while the scale changes around it
+    const k = chartScaleW() / before;
+    box.scrollLeft = (box.scrollLeft + anchor.x) * k - anchor.x;
+    box.scrollTop  = (box.scrollTop  + anchor.y) * k - anchor.y;
+  }
+}
+const chartGap = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+const chartAnchor = t => {
+  const box = $('#chartBox'), r = box.getBoundingClientRect();
+  return { x: (t[0].clientX + t[1].clientX) / 2 - r.left + box.scrollLeft,
+           y: (t[0].clientY + t[1].clientY) / 2 - r.top + box.scrollTop };
+};
+$('#chartBox').addEventListener('touchstart', e => {
+  if (e.touches.length !== 2){ chartPinch = null; return; }
+  const t = [e.touches[0], e.touches[1]];
+  chartPinch = { d: chartGap(t) || 1, w: chartScaleW() };
+}, { passive: true });
+$('#chartBox').addEventListener('touchmove', e => {
+  if (!chartPinch || e.touches.length !== 2) return;
+  e.preventDefault();                      // ours to handle, not the scroller's
+  const t = [e.touches[0], e.touches[1]];
+  setChartZoom(chartPinch.w * chartGap(t) / chartPinch.d, chartAnchor(t));
+}, { passive: false });
+['touchend', 'touchcancel'].forEach(ev =>
+  $('#chartBox').addEventListener(ev, () => { chartPinch = null; }, { passive: true }));
+// A trackpad pinch arrives as a wheel with ctrl held; so does ⌘+scroll.
+$('#chartBox').addEventListener('wheel', e => {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  const box = $('#chartBox'), r = box.getBoundingClientRect();
+  setChartZoom(chartScaleW() * (1 - e.deltaY / 300),
+    { x: e.clientX - r.left + box.scrollLeft, y: e.clientY - r.top + box.scrollTop });
+}, { passive: false });
+// Two taps on the chart reset it to fit, the way Journey Log's sheet does.
+$('#chartBox').addEventListener('touchend', e => {
+  if (e.touches.length || e.changedTouches.length !== 1) return;
+  const now = Date.now();
+  if (now - chartLastTap < 320){ setChartZoom(null); chartLastTap = 0; } else chartLastTap = now;
+}, { passive: true });
 const openCharts = on => {
   $('#charts').classList.toggle('hide', !on);
   document.body.style.overflow = on ? 'hidden' : '';
@@ -885,8 +968,8 @@ $('#charts').onclick = e => { if (e.target === $('#charts')) openCharts(false); 
 $('#chartPrev').onclick = () => { if (chartAt > 0){ chartAt--; paintChart(); } };
 $('#chartNext').onclick = () => { if (chartAt < CHARTS.length - 1){ chartAt++; paintChart(); } };
 $('#chartZoom').onclick = () => {
-  const on = $('#chartBox').classList.toggle('zoom');
-  $('#chartZoom').textContent = on ? 'Fit' : 'Zoom';
+  const img = chartImg();
+  setChartZoom(chartZoomW == null && img ? img.naturalWidth : null);
   scrollHint($('#chartBox'));
 };
 
