@@ -587,9 +587,17 @@ document.addEventListener('pointerdown', e => {
 // keypad's own scrollIntoView bringing the field above it into view, and not the
 // sheet's own pinch-zoom pan — dismisses it too, the way scrolling the content
 // behind the system keyboard does.
-let NP_GESTURE = false;
-addEventListener('touchmove', () => { NP_GESTURE = true; }, { passive: true });
-addEventListener('wheel', () => { NP_GESTURE = true; }, { passive: true });
+// A touch that never actually scrolls anything leaves no scroll event to clear
+// this flag, so it expires on its own shortly after instead of staying armed
+// indefinitely and dismissing the pad on some unrelated later scroll.
+let NP_GESTURE = false, npGestureT = 0;
+const npGesture = () => {
+  NP_GESTURE = true;
+  clearTimeout(npGestureT);
+  npGestureT = setTimeout(() => { NP_GESTURE = false; }, 400);
+};
+addEventListener('touchmove', npGesture, { passive: true });
+addEventListener('wheel', npGesture, { passive: true });
 document.addEventListener('scroll', () => {
   if (NP_GESTURE && NP_TARGET) npHideForce();
   NP_GESTURE = false;
@@ -1239,6 +1247,43 @@ addEventListener('drop', e=>{
   const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
   if(f) loadPdf(f);
 });
+
+/* A PDF placed on the clipboard by a Shortcuts automation (or, on a Mac,
+   an ordinary Copy) can be pulled straight in without the file picker.
+   iOS Safari's clipboard never carries application/pdf, so the button is
+   hidden there — it would only ever answer "nothing found" — but the paste
+   event itself still works wherever the OS actually puts a PDF on it. */
+const pasteBtn = document.getElementById('paste');
+const APPLE_TOUCH = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (/Mac/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+if(APPLE_TOUCH) pasteBtn.hidden = true;
+const pdfOf = list => [...(list || [])].find(f => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name));
+document.addEventListener('paste', e=>{
+  const f = pdfOf(e.clipboardData && e.clipboardData.files);
+  if(!f) return;
+  e.preventDefault();
+  loadPdf(f);
+});
+pasteBtn.onclick = async ()=>{
+  if(!navigator.clipboard || !navigator.clipboard.read){
+    say('This browser cannot read the clipboard. Use the box above to pick the file instead.', 'warn');
+    return;
+  }
+  try{
+    const items = await navigator.clipboard.read();
+    for(const item of items){
+      const type = item.types.find(t => /pdf$/i.test(t));
+      if(!type) continue;
+      const blob = await item.getType(type);
+      loadPdf(new File([blob], 'pasted.pdf', { type: 'application/pdf' }));
+      return;
+    }
+    say('No PDF was found on the clipboard. Use the box above to pick the file.', 'warn');
+  }catch(err){
+    console.warn('Clipboard read failed:', err);
+    say('The clipboard could not be read. Use the box above to pick the file instead.', 'warn');
+  }
+};
 
 render();
 restoreSource();

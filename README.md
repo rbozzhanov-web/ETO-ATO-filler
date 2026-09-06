@@ -229,11 +229,12 @@ Tap the box and pick the file. On the iPad the PDF can also be **dragged out of 
 page: put Files alongside in Split View or Slide Over, press and hold the plan, and drop it on
 the box.
 
-On a computer it can be pasted as well, with **Paste a PDF** or straight into the page. That
-button is not shown on the iPad. Safari's clipboard hands a page `text/plain`, `text/html`,
-`text/uri-list`, `image/png` and its own `web `-prefixed types — never `application/pdf` — and
-the paste event carries no files on iOS, so there is no route to a pasted PDF there however the
-page asks.
+On a computer it can be pasted as well, with **Paste a PDF** or straight into the page — the
+Journey Log page offers the same button, for the same document. That button is not shown on
+the iPad. Safari's clipboard hands a page `text/plain`, `text/html`, `text/uri-list`,
+`image/png` and its own `web `-prefixed types — never `application/pdf` — and the paste event
+carries no files on iOS, so there is no route to a pasted PDF there however the page asks,
+including from a Shortcuts automation that placed one on the clipboard.
 
 ## If iPadOS closes the app
 
@@ -335,7 +336,10 @@ to whatever the device's fallback font makes of each.
 **Open charts** pages through the full-page pictures in the package on their own: the wind
 components / tropopause / MORA profile along the route, and the significant weather charts
 with the route drawn on them. Arrow keys or Prev / Next move between them, **Zoom** switches
-between fitting the whole sheet on screen and full size with scrolling, Escape closes.
+between fitting the whole sheet on screen and full size with scrolling, Escape closes. A chart
+can also be **pinched** to any size in between, the same gesture the Journey Log sheet uses —
+the page itself no longer zooms with it, so a pinch always lands on the chart rather than the
+whole screen.
 
 A page is taken for a chart when its whole content is one large image and it carries no body
 text beyond the header and footer — which is what these sheets are. The scanned paperwork at
