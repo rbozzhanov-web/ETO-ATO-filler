@@ -65,18 +65,21 @@ Release candidates use the following version scheme:
 - Bug fixes and small refinements use `RC1.1`, `RC1.1.2`, `RC1.2`, and so on.
 - Major changes move to `RC2`, `RC3`, and later release candidates until the final release.
 
-When a new version is ready, the app offers an **Update now** button. It never
-interrupts an open plan: update only when you choose it, and there is no need to
-remove and re-add the home-screen icon.
+When a new version is confirmed available, the app applies it itself — a quick
+reload, no button, no prompt — the moment it's found, whether that's on launch
+or while the app is already open. Nothing you've entered is at risk: any
+pending keystroke is flushed to local storage before the page unloads, the
+same way it already is for backgrounding, and the reload picks the document
+straight back up. There is no need to remove and re-add the home-screen icon.
 
 The page and its scripts are cache-first, like everything else: launching or
 returning to the app never waits on the network, which matters in flight where
 there usually isn't one. A fresh copy is fetched in the background on the same
-load and quietly replaces what's cached, so a new version is picked up on the
-next launch without ever delaying this one. Should a replacement worker take
-over while the app is open, it reloads only when no plan is loaded; with a
-document open it says a new version is ready and leaves it for the next
-launch, so nothing you have entered moves under your hands.
+load and quietly replaces what's cached. The service worker itself is checked
+explicitly on every launch and every time the app comes back from the
+background, rather than waiting on the browser's own check (which can be
+delayed up to a day) — so a version published minutes ago is normally found
+and applied the same session, not the next one.
 
 Offline it never updates, which means the version you leave the ground with is the version you
 fly with.

@@ -1349,5 +1349,40 @@ render();
 restoreSource();
 
 if('serviceWorker' in navigator){
-  addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  addEventListener('load', ()=>{
+    let reloading = false;
+    // A confirmed update — the browser has actually installed a newer worker,
+    // not merely a guess — applies itself: no tap, no waiting for a second
+    // launch. Any pending debounced save is already caught by the pagehide/
+    // flushSave handlers above, the same as any other navigation away from
+    // the page, so this can never lose an entry.
+    function applyUpdate(reg){
+      const worker = reg.waiting;
+      if(worker) worker.postMessage({ type: 'skip-waiting' });
+    }
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(reloading) return;
+      reloading = true;
+      location.reload();
+    });
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg=>{
+      applyUpdate(reg);                // an update found before this page loaded
+      reg.addEventListener('updatefound', ()=>{
+        const candidate = reg.installing;
+        if(!candidate) return;
+        candidate.addEventListener('statechange', ()=>{
+          if(candidate.state === 'installed' && navigator.serviceWorker.controller) applyUpdate(reg);
+        });
+      });
+      // The browser checks for a new sw.js on its own, but not more than once
+      // a day. Force a check now, and again whenever the app is reopened or
+      // comes back from the background, so a version published minutes ago is
+      // found this launch rather than up to a day later. A failed check
+      // (genuinely offline, the normal case in flight) is silent.
+      reg.update().catch(()=>{});
+      document.addEventListener('visibilitychange', ()=>{
+        if(!document.hidden) reg.update().catch(()=>{});
+      });
+    }).catch(()=>{});
+  });
 }

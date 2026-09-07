@@ -312,36 +312,37 @@ function scrollHint(el){
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
   let reloading = false;
-  function offerUpdate(reg){
+  // A confirmed update — the browser has actually installed a newer worker,
+  // not merely a guess — applies itself: no tap, no waiting for a second
+  // launch. Any keystroke mid-debounce is already caught by the pagehide/
+  // flushSave handlers below, the same as any other navigation away from
+  // the page, so this can never lose an entry.
+  function applyUpdate(reg){
     const worker = reg.waiting;
-    if (!worker) return;
-    const box = $('#mUpd');
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'sm'; btn.textContent = 'Update now';
-    btn.onclick = () => {
-      btn.disabled = true;
-      btn.textContent = 'Updating…';
-      worker.postMessage({ type: 'skip-waiting' });
-    };
-    box.className = 'msg show ok';
-    box.replaceChildren('A new version is ready. ', btn);
+    if (worker) worker.postMessage({ type: 'skip-waiting' });
   }
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    // This only follows an explicit tap on Update now. The page is then reloaded
-    // under the new worker whether or not an OFP is open; the app already keeps
-    // the document and entries locally for that purpose.
     if (reloading) return;
     reloading = true;
     location.reload();
   });
   navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
-    offerUpdate(reg);                  // an update found before this page loaded
+    applyUpdate(reg);                  // an update found before this page loaded
     reg.addEventListener('updatefound', () => {
       const candidate = reg.installing;
       if (!candidate) return;
       candidate.addEventListener('statechange', () => {
-        if (candidate.state === 'installed' && navigator.serviceWorker.controller) offerUpdate(reg);
+        if (candidate.state === 'installed' && navigator.serviceWorker.controller) applyUpdate(reg);
       });
+    });
+    // The browser checks for a new sw.js on its own, but not more than once a
+    // day. Force a check now, and again whenever the app is reopened or comes
+    // back from the background, so a version published minutes ago is found
+    // this launch rather than up to a day later. A failed check (genuinely
+    // offline, the normal case in flight) is silent and changes nothing.
+    reg.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) reg.update().catch(() => {});
     });
   }).catch(() => {});
 }
