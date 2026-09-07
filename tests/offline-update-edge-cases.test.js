@@ -119,8 +119,9 @@ test('page and scripts therefore cannot mix old and new app versions', () => {
   assert.match(SW, /const script = scriptFor\(e\.request\);[\s\S]*?if \(script\)\{ e\.respondWith\(staleWhileRevalidate\(e\.request, script\)\); return; \}/);
 });
 
-test('the UI waits for user acceptance before telling the worker to update', () => {
-  assert.match(APP, /btn\.textContent = 'Update now';/);
-  assert.match(APP, /btn\.onclick = \(\) => \{[\s\S]*?worker\.postMessage\(\{ type: 'skip-waiting' \}\);/);
+test('a confirmed update applies itself, and the worker is checked on every open and resume', () => {
+  assert.match(APP, /function applyUpdate\(reg\)\{[\s\S]*?worker\.postMessage\(\{ type: 'skip-waiting' \}\);/);
   assert.match(APP, /navigator\.serviceWorker\.addEventListener\('controllerchange',[\s\S]*?if \(reloading\) return;[\s\S]*?location\.reload\(\);/);
+  assert.match(APP, /reg\.update\(\)\.catch\(\(\) => \{\}\);/);
+  assert.match(APP, /document\.addEventListener\('visibilitychange', \(\) => \{[\s\S]*?reg\.update\(\)\.catch\(\(\) => \{\}\);/);
 });
