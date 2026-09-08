@@ -65,21 +65,26 @@ Release candidates use the following version scheme:
 - Bug fixes and small refinements use `RC1.1`, `RC1.1.2`, `RC1.2`, and so on.
 - Major changes move to `RC2`, `RC3`, and later release candidates until the final release.
 
-When a new version is confirmed available, the app applies it itself — a quick
-reload, no button, no prompt — the moment it's found, whether that's on launch
-or while the app is already open. Nothing you've entered is at risk: any
-pending keystroke is flushed to local storage before the page unloads, the
-same way it already is for backgrounding, and the reload picks the document
-straight back up. There is no need to remove and re-add the home-screen icon.
+A new version applies itself — a quick reload, no button, no prompt — but only
+on the ground and only between documents. It goes in when there is a network to
+find it on **and** no plan is loaded, which is the load screen you open onto
+anyway; there is no need to remove and re-add the home-screen icon. With a plan
+open it is downloaded and set aside, and goes in at the next launch instead:
+the version you leave the ground with is the version you fly with, and nothing
+takes the screen away from you in the middle of a sector.
 
 The page and its scripts are cache-first, like everything else: launching or
 returning to the app never waits on the network, which matters in flight where
-there usually isn't one. A fresh copy is fetched in the background on the same
-load and quietly replaces what's cached. The service worker itself is checked
-explicitly on every launch and every time the app comes back from the
-background, rather than waiting on the browser's own check (which can be
-delayed up to a day) — so a version published minutes ago is normally found
-and applied the same session, not the next one.
+there usually isn't one. On the ground a fresh copy is fetched in the background
+on the same load and quietly replaces what's cached, and the service worker
+itself is checked on every launch and every return from the background rather
+than on the browser's own schedule, which can be a day behind — so a version
+published minutes ago is normally in place by the next launch.
+
+In the air none of that runs at all. With the device reporting no network the
+app asks for nothing: no update check on opening or resuming, no background
+refresh behind the page, nothing to wait out. It reads from its cache and that
+is the whole of it.
 
 Offline it never updates, which means the version you leave the ground with is the version you
 fly with.

@@ -10,9 +10,9 @@ const SW = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const APP = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
 const ORIGIN = 'https://example.test';
 
-function workerHarness({ network = async () => { throw new Error('offline'); } } = {}){
+function workerHarness({ network = async () => { throw new Error('offline'); }, onLine } = {}){
   const handlers = new Map();
-  let skipWaitingCalls = 0, claimCalls = 0;
+  let skipWaitingCalls = 0, claimCalls = 0, fetchCalls = 0;
   const store = new Map();
   const keyOf = k => new URL(typeof k === 'string' ? k : k.url, ORIGIN + '/').href;
   const copy = r => r && r.clone();
@@ -44,13 +44,18 @@ function workerHarness({ network = async () => { throw new Error('offline'); } }
     skipWaiting: () => { skipWaitingCalls++; },
     clients: { claim: async () => { claimCalls++; } },
   };
-  const ctx = { self, caches, fetch: network, Response, URL, Promise, setTimeout, clearTimeout, console };
+  // Left off entirely unless a test asks for it, the way an older WorkerNavigator
+  // that cannot answer the question would.
+  if (onLine !== undefined) self.navigator = { onLine };
+  const counted = (...a) => { fetchCalls++; return network(...a); };
+  const ctx = { self, caches, fetch: counted, Response, URL, Promise, setTimeout, clearTimeout, console };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   vm.runInContext(SW, ctx);
   return { handlers, caches, store,
            get skipWaitingCalls(){ return skipWaitingCalls; },
-           get claimCalls(){ return claimCalls; } };
+           get claimCalls(){ return claimCalls; },
+           get fetchCalls(){ return fetchCalls; } };
 }
 
 async function fire(h, type, event = {}){
@@ -119,9 +124,46 @@ test('page and scripts therefore cannot mix old and new app versions', () => {
   assert.match(SW, /const script = scriptFor\(e\.request\);[\s\S]*?if \(script\)\{ e\.respondWith\(staleWhileRevalidate\(e\.request, script\)\); return; \}/);
 });
 
-test('a confirmed update applies itself, and the worker is checked on every open and resume', () => {
-  assert.match(APP, /function applyUpdate\(reg\)\{[\s\S]*?worker\.postMessage\(\{ type: 'skip-waiting' \}\);/);
+test('a confirmed update applies itself, but never offline and never over a loaded plan', () => {
+  // The bug this guards: in the air every launch and every resume spent itself
+  // on an update check that could not succeed, and the reload it could lead to
+  // took the screen away mid-flight.
+  assert.match(APP, /const offline = \(\) => navigator\.onLine === false;/);
+  assert.match(APP, /function applyUpdate\(reg\)\{[\s\S]*?if \(worker && !offline\(\) && !PLAN\) worker\.postMessage\(\{ type: 'skip-waiting' \}\);/);
+  assert.match(APP, /const poll = \(\) => \{\s*if \(offline\(\)\) return;\s*reg\.update\(\)\.catch\(\(\) => \{\}\);\s*applyUpdate\(reg\);/);
   assert.match(APP, /navigator\.serviceWorker\.addEventListener\('controllerchange',[\s\S]*?if \(reloading\) return;[\s\S]*?location\.reload\(\);/);
-  assert.match(APP, /reg\.update\(\)\.catch\(\(\) => \{\}\);/);
-  assert.match(APP, /document\.addEventListener\('visibilitychange', \(\) => \{[\s\S]*?reg\.update\(\)\.catch\(\(\) => \{\}\);/);
+  // The check runs on launch and again on every resume — both go through poll.
+  assert.match(APP, /\n {4}poll\(\);\n {4}document\.addEventListener\('visibilitychange', \(\) => \{ if \(!document\.hidden\) poll\(\); \}\);/);
+});
+
+test('the Journey Log page stands its worker down offline and over a loaded log too', () => {
+  const JL = fs.readFileSync(path.join(ROOT, 'journey-log.js'), 'utf8');
+  assert.match(JL, /const offline = \(\)=> navigator\.onLine === false;/);
+  assert.match(JL, /if\(worker && !offline\(\) && !document\.body\.classList\.contains\('loaded'\)\)/);
+  assert.match(JL, /const poll = \(\)=>\{\s*if\(offline\(\)\) return;/);
+});
+
+test('a cached page offline is served without a request being made at all', async () => {
+  // Not merely "the request fails harmlessly": in the air it is started, queued
+  // and waited out, once for the page and once for every script behind it.
+  const w = workerHarness({ network: async () => new Response('net'), onLine: false });
+  await fire(w.handlers, 'install');
+  const before = w.fetchCalls;
+  const r = await fire(w.handlers, 'fetch', { request: request('/index.html') });
+  assert.match(await r.text(), /^cached /);
+  assert.equal(w.fetchCalls, before, 'offline navigation still reached for the network');
+});
+
+test('offline with nothing cached still says so rather than hanging', async () => {
+  const w = workerHarness({ network: async () => new Response('net'), onLine: false });
+  const r = await fire(w.handlers, 'fetch', { request: request('/index.html') });
+  assert.equal(r.status, 503);
+});
+
+test('with a network the page is still refreshed in the background as before', async () => {
+  const w = workerHarness({ network: async () => new Response('fresh page'), onLine: true });
+  await fire(w.handlers, 'install');
+  await fire(w.handlers, 'fetch', { request: request('/index.html') });
+  await new Promise(res => setTimeout(res, 0));
+  assert.equal(await (await w.caches.match('./index.html')).text(), 'fresh page');
 });
