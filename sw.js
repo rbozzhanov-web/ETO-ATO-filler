@@ -2,7 +2,7 @@
    index.html is the OFP companion, journey-log.html the Journey Log form. */
 const CACHE_PREFIX = 'ofp-companion-';
 const LEGACY_CACHE_PREFIX = 'eto-filler-v';
-const V = CACHE_PREFIX + 'rc1.7-20260906';
+const V = CACHE_PREFIX + 'rc1.7.1-20260906';
 const FILES = ['./', './index.html', './journey-log.html',
                './theme-init.js', './pdfmini.js', './ofp-core.js', './storage.js', './app.js',
                './jl-pdf.js', './journey-log.js',
@@ -73,6 +73,12 @@ function cacheable(req, response){
 // when there is no cached copy yet (first install's own navigation) does the
 // response actually wait on the network.
 function staleWhileRevalidate(req, key){
+  // Airborne there is nothing to revalidate against, and a request that cannot
+  // succeed is not free: it is started, queued and waited out, once for the page
+  // and once for every script behind it, on every launch of the day. So when the
+  // device says there is no network at all, none is asked for.
+  if (self.navigator && self.navigator.onLine === false)
+    return caches.match(key).then(cached => cached || offlineResponse());
   const revalidate = fetch(req).then(r => {
     if (cacheable(req, r)) caches.open(V).then(c => c.put(key, r.clone())).catch(() => {});
     return r;

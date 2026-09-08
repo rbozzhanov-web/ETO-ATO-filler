@@ -1351,14 +1351,20 @@ restoreSource();
 if('serviceWorker' in navigator){
   addEventListener('load', ()=>{
     let reloading = false;
+    // None of this goes near the network unless there is one. In the air there
+    // is not, and a check that cannot succeed still has to be waited out —
+    // which is the app hesitating at exactly the moment it is being used.
+    const offline = ()=> navigator.onLine === false;
     // A confirmed update — the browser has actually installed a newer worker,
-    // not merely a guess — applies itself: no tap, no waiting for a second
-    // launch. Any pending debounced save is already caught by the pagehide/
-    // flushSave handlers above, the same as any other navigation away from
-    // the page, so this can never lose an entry.
+    // not merely a guess — applies itself, no tap needed. But never over a
+    // loaded log: the reload costs nothing and loses nothing, the document and
+    // the entries both being on the device already, and it still takes the
+    // screen away from whoever is working it. With a log open it waits for the
+    // next launch, which opens on the load screen where it disturbs no one.
     function applyUpdate(reg){
       const worker = reg.waiting;
-      if(worker) worker.postMessage({ type: 'skip-waiting' });
+      if(worker && !offline() && !document.body.classList.contains('loaded'))
+        worker.postMessage({ type: 'skip-waiting' });
     }
     navigator.serviceWorker.addEventListener('controllerchange', ()=>{
       if(reloading) return;
@@ -1366,7 +1372,15 @@ if('serviceWorker' in navigator){
       location.reload();
     });
     navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg=>{
-      applyUpdate(reg);                // an update found before this page loaded
+      // The browser checks for a new sw.js on its own, but not more than once
+      // a day. Ask now, and again whenever the app comes back from the
+      // background, so a version published minutes ago is found this launch
+      // rather than up to a day later — and pick up anything already waiting.
+      const poll = ()=>{
+        if(offline()) return;
+        reg.update().catch(()=>{});
+        applyUpdate(reg);
+      };
       reg.addEventListener('updatefound', ()=>{
         const candidate = reg.installing;
         if(!candidate) return;
@@ -1374,15 +1388,8 @@ if('serviceWorker' in navigator){
           if(candidate.state === 'installed' && navigator.serviceWorker.controller) applyUpdate(reg);
         });
       });
-      // The browser checks for a new sw.js on its own, but not more than once
-      // a day. Force a check now, and again whenever the app is reopened or
-      // comes back from the background, so a version published minutes ago is
-      // found this launch rather than up to a day later. A failed check
-      // (genuinely offline, the normal case in flight) is silent.
-      reg.update().catch(()=>{});
-      document.addEventListener('visibilitychange', ()=>{
-        if(!document.hidden) reg.update().catch(()=>{});
-      });
+      poll();
+      document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) poll(); });
     }).catch(()=>{});
   });
 }
