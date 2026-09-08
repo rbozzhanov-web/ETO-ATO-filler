@@ -2,7 +2,7 @@
    index.html is the OFP companion, journey-log.html the Journey Log form. */
 const CACHE_PREFIX = 'ofp-companion-';
 const LEGACY_CACHE_PREFIX = 'eto-filler-v';
-const V = CACHE_PREFIX + 'rc1.6-20260906';
+const V = CACHE_PREFIX + 'rc1.7-20260906';
 const FILES = ['./', './index.html', './journey-log.html',
                './theme-init.js', './pdfmini.js', './ofp-core.js', './storage.js', './app.js',
                './jl-pdf.js', './journey-log.js',
@@ -15,8 +15,9 @@ const SCRIPTS = ['./theme-init.js', './pdfmini.js', './ofp-core.js', './storage.
                  './jl-pdf.js', './journey-log.js'];
 
 self.addEventListener('install', e => {
-  // A new worker waits until the crew explicitly accepts it in the app. That
-  // makes an update visible without moving the open OFP under their hands.
+  // A new worker never takes over on its own: it waits to be told, by the page,
+  // once the whole of it is cached and an update is therefore complete rather
+  // than half landed. The page sends that word as soon as it sees one waiting.
   e.waitUntil(caches.open(V).then(c => c.addAll(FILES)));
 });
 self.addEventListener('message', e => {

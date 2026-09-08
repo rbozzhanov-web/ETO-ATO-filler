@@ -212,22 +212,7 @@ function revealActualsAfterNumpad(el){
   if (!el || !el.matches('#tbl input')) return;
   // Wait until the panel and the input focus are both gone. Scrolling any sooner
   // competes with WebKit's focus restoration and can leave the section half-hidden.
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    const card = $('#c2'), table = card?.querySelector('.tblbox');
-    if (!card || !table) return;
-    table.style.removeProperty('max-height');
-    // The table is already its own scroller. If the complete Step 3 card cannot
-    // fit after the keypad closes, shorten that inner viewport just enough for the
-    // whole card — takeoff time, Actuals, and the table — to remain on screen.
-    const room = innerHeight - 32;
-    if (card.getBoundingClientRect().height > room){
-      const chrome = card.getBoundingClientRect().height - table.getBoundingClientRect().height;
-      table.style.maxHeight = Math.max(160, Math.floor(room - chrome)) + 'px';
-    }
-    const height = card.getBoundingClientRect().height;
-    const top = Math.max(0, scrollY + card.getBoundingClientRect().top - Math.max(0, (innerHeight - height) / 2));
-    scrollTo({ top, behavior: 'smooth' });
-  }));
+  requestAnimationFrame(() => requestAnimationFrame(fitStep3));
 }
 function npHideForce(){
   const el = NP_TARGET;
@@ -237,6 +222,55 @@ function npHideForce(){
 addEventListener('orientationchange', () => setTimeout(() => {
   if (!matchMedia('(orientation: portrait)').matches) $('#c3 .tblbox')?.style.removeProperty('max-height');
 }, 0));
+
+/* ---- Step 3 back on screen ----
+   The takeoff time, the actuals and the table are one card, and it is where the
+   flight is worked. This puts the whole of it back, centred, measured against
+   whatever room the viewport actually has so it holds in either orientation
+   rather than assuming one of them. Used when the keypad closes over it, and on
+   the idle timer below. */
+function fitStep3(){
+  const card = $('#c2'), table = card?.querySelector('.tblbox');
+  if (!card || !table || card.classList.contains('hide')) return;
+  table.style.removeProperty('max-height');
+  // The table is already its own scroller. If the complete card cannot fit,
+  // shorten that inner viewport just enough for the whole of it — takeoff time,
+  // Actuals, and the table — to remain on screen.
+  const room = innerHeight - 32;
+  if (card.getBoundingClientRect().height > room){
+    const chrome = card.getBoundingClientRect().height - table.getBoundingClientRect().height;
+    table.style.maxHeight = Math.max(160, Math.floor(room - chrome)) + 'px';
+  }
+  const height = card.getBoundingClientRect().height;
+  const top = Math.max(0, scrollY + card.getBoundingClientRect().top - Math.max(0, (innerHeight - height) / 2));
+  scrollTo({ top, behavior: 'smooth' });
+}
+
+/* ---- back to Step 3 when the hands come off ----
+   Everything else on the page — the plan, the checks, the weather, the charts —
+   is looked at and left. So after a spell with nothing touched at all, the app
+   puts Step 3 back by itself, and returning to it costs no scrolling however far
+   the reading went. Anything the crew does resets the wait, and it never lands on
+   top of them: a keypad up means an entry is in hand, and an open chart or guide
+   is being read on purpose. */
+const IDLE_RECENTRE_MS = 35000;
+let idleT = null;
+function idleRecentre(){
+  if (document.hidden || NP_TARGET) return;
+  if (!$('#charts').classList.contains('hide')) return;
+  if (!$('#guide').classList.contains('hide')) return;
+  fitStep3();                        // no-ops until Step 3 is on the page at all
+}
+function idlePoke(){
+  clearTimeout(idleT);
+  idleT = setTimeout(idleRecentre, IDLE_RECENTRE_MS);
+}
+// Capturing, so a scroll inside the table or the NOTAM list counts as a touch
+// too: those never bubble, and reading a long list is not being idle.
+for (const ev of ['pointerdown', 'keydown', 'input', 'wheel', 'touchmove', 'scroll'])
+  document.addEventListener(ev, idlePoke, { passive: true, capture: true });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) idlePoke(); });
+idlePoke();
 $('#numpadHide').addEventListener('pointerdown', e => {
   e.preventDefault(); npClick(); npHideForce();
 });
@@ -1719,15 +1753,21 @@ let DCT = { marks: [] }, DCTSKIP = new Set(), dctPick = false;
 const syncDct = () => { DCTSKIP = new Set(DCT.marks.flatMap(m => m.skipped)); };
 const isSkipped = i => DCTSKIP.has(+i);
 
+// The time written against a waypoint, or null where there is none to read.
+const atoOf = p => {
+  const a = ACT[p.i];
+  return a && a.ato ? parseTime(a.ato) : null;
+};
+
 // How far the flight is actually running from the plan, from the most recent
-// waypoint with an ATO entered. Applied to the comparison times only.
+// waypoint with an ATO entered. Applied to the comparison times only. Abeam
+// points are left out of it: a direct cuts the corner, so passing one happens
+// earlier than its printed time and says nothing about the plan's own drift.
 function currentOffset(){
   for (let n = RESULT.length - 1; n >= 0; n--){
     const p = RESULT[n];
     if (isSkipped(p.i)) continue;
-    const a = ACT[p.i];
-    if (!a || !a.ato) continue;
-    const t = parseTime(a.ato);
+    const t = atoOf(p);
     if (t !== null) return wrapMin(t - norm(p.t));
   }
   return 0;
@@ -1750,9 +1790,12 @@ function progressIdx(){
   const { ci, ni } = scanIdx(p => !isSkipped(p.i), off);
   return { ci, ni, off };
 }
-// A direct takes waypoints out of the route, not out of the sky: the aeroplane
-// still goes past them, so they keep their place on the clock as abeam positions.
-const abeamIdx = off => scanIdx(p => isSkipped(p.i), off);
+// The abeam positions a direct leaves behind, and which of them the crew is on:
+// the rule itself is in ofp-core.js, alongside the rest of the flight arithmetic.
+const abeamIdx = off => abeamAt(RESULT,
+  p => isSkipped(p.i),
+  p => atoOf(p) !== null,
+  p => sinceDue(p.t + off) >= 0);
 
 function paintDct(i){
   const tr = rowOf(i);
@@ -1802,12 +1845,13 @@ function applyDirect(target){
   syncDct();
   setPick(false);
   afterDct();
-  // Land the crew on the waypoint the direct just put abeam, ready to log its
-  // time — usually there isn't one yet this early (a direct is normally cleared
-  // before its due time), so fall back to the one that will become abeam next.
+  // Land the crew on the first waypoint the direct puts abeam — the next time
+  // they will have to write down — and never on the waypoint the direct runs to,
+  // which is a long way ahead and has nothing owing on it yet. refreshProgress
+  // has just centred that same row, so the two agree rather than fight.
   const ab = abeamIdx(currentOffset());
-  const abIdx = ab.ci >= 0 ? ab.ci : ab.ni;
-  const abeamInput = abIdx >= 0 && rowOf(RESULT[abIdx].i)?.querySelector('input.ato');
+  const abAt = ab.ci >= 0 ? ab.ci : ab.ni;
+  const abeamInput = abAt >= 0 && rowOf(RESULT[abAt].i)?.querySelector('input.ato');
   if (abeamInput){ abeamInput.focus(); abeamInput.select(); }
 }
 
@@ -1897,11 +1941,16 @@ function refreshProgress(){
   // and not within twenty seconds of the crew scrolling the box or typing in it.
   // Focus itself is no test — Enter steps to the next field, so a box stays focused
   // for the rest of the flight and the table would never follow again.
-  const box = document.querySelector('.tblbox');
-  if (next && next.i !== lastNext
+  // While a direct still has an abeam point to be written up, that point is the
+  // work: the waypoint the direct runs to is a long way off and keeps its own row
+  // waiting. So the table follows the abeam point until the last of them is
+  // logged, and only then goes back to following the route.
+  const abAt = ab.ci >= 0 ? ab.ci : ab.ni;
+  const follow = abAt >= 0 ? RESULT[abAt] : next;
+  if (follow && follow.i !== lastNext
       && Date.now() - scrolledAt > 20000 && Date.now() - typedAt > 20000){
-    lastNext = next.i;
-    centreRow(rowOf(next.i));
+    lastNext = follow.i;
+    centreRow(rowOf(follow.i));
   }
 }
 {

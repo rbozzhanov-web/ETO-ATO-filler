@@ -160,6 +160,26 @@ function directSkips(result, ci, n, isSkipped){
   return skipped;
 }
 
+/* Which of those abeam positions the crew is working on, as indexes into result:
+   ci the one being passed now, ni the one still ahead, -1 for neither. It follows
+   the times actually written down rather than the clock — a direct cuts a corner,
+   so an abeam point is passed earlier than its printed time and the clock would
+   go on pointing at one already logged. A point with a time against it is behind
+   the aeroplane, so the one to attend to is the first still without one; the
+   clock then only says whether that one is being passed now or is still ahead,
+   and once any of them has been logged the aeroplane is demonstrably in among
+   them. With every one of them written up there is nothing abeam left to watch. */
+function abeamAt(result, isSkipped, hasTime, passed){
+  let cur = -1, logged = false;
+  result.forEach((p, n) => {
+    if (!isSkipped(p)) return;
+    if (hasTime(p)){ logged = true; return; }
+    if (cur < 0) cur = n;
+  });
+  if (cur < 0) return { ci: -1, ni: -1 };
+  return (logged || passed(result[cur])) ? { ci: cur, ni: -1 } : { ci: -1, ni: cur };
+}
+
 /* ---------- stored flight data ----------
    A plan's saved state is keyed by the PDF's own SHA-256, so two files share a
    key only if they are the same file. legacyKeyFor is the name-and-size key
@@ -212,5 +232,5 @@ function prunePlans(store, now, retainDays, maxPlans){
 // Under Node — the test runner — it is a CommonJS module, and this is its export.
 if (typeof module !== 'undefined' && module.exports)
   module.exports = { norm, fmt, hhmm, parseTime, validFuelEntry, wrapMin, sinceDueAt, computeResult,
-                     hourlyChecks, fuelBox, fuelChecks, directSkips,
+                     hourlyChecks, fuelBox, fuelChecks, directSkips, abeamAt,
                      PLAN_PREFIX, SETTING_KEYS, legacyKeyFor, planKeyFor, planKeysIn, prunePlans };

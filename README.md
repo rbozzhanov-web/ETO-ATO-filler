@@ -147,6 +147,14 @@ contexts, so everything works on either.
    still for twenty seconds after you scroll it or type in it. Focus is not what
    stops it: Enter steps from one box to the next, so a box stays focused for the
    rest of the flight.
+   Step 3 is also where the app puts itself back when the hands come off. Thirty-five
+   seconds with nothing touched — no typing, no tapping, no scrolling — and the whole
+   card comes back on screen, centred and complete, in whichever orientation the iPad
+   is being held; the table's own viewport is shortened if that is what it takes to
+   fit. Reading the NOTAMs or a chart therefore never costs a scroll back afterwards.
+   Anything you do resets the wait, and it never lands on top of you: with the keypad
+   up an entry is in hand, and an open chart or the guide is being read on purpose,
+   so in either case it stays where it is.
    The highlight follows the plan rather than your typing, so it stays right when
    the actuals are a few points behind.
    Watch the **fuel check** figure above the table. Company rule is a fuel check
@@ -258,9 +266,16 @@ the paper form, because that is where the ATOs are written — and the target is
 The live highlight steps over the skipped ones.
 
 They are not gone from the sky, though: the aeroplane still goes past them, so they keep their own
-place on the clock. The one you are level with is shaded and marked **ABEAM**, the one after it is
-shaded more faintly still, and both are quieter than the live route so the two can never be read
-for each other. Undoing the direct takes the marks away with it.
+place on the clock. The one you are level with is shaded and marked **ABEAM**, the one still ahead
+is shaded more faintly, and both are quieter than the live route so the two can never be read for
+each other. Undoing the direct takes the marks away with it.
+
+Taking the direct puts you straight on the first of those abeam positions — the next time you have
+to write down — rather than on the waypoint the clearance ran to, which is a long way ahead and has
+nothing owing on it yet. From there the marker follows the times you enter rather than the clock: a
+direct cuts a corner, so an abeam position is passed earlier than its printed time, and writing one
+up moves the marker to the next one whether or not that time has come round. Once the last of them
+is written up the marker clears and the table goes back to following the route.
 
 Nothing about this reaches the document and no ETO is rewritten; it only moves the highlight.
 The chip in the toolbar undoes it, and each direct remembers exactly which waypoints it cut out,

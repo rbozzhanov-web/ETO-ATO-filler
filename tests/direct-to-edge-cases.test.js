@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  computeResult, directSkips, fuelChecks, fuelBox, hourlyChecks
+  computeResult, directSkips, fuelChecks, fuelBox, hourlyChecks, abeamAt
 } = require('../ofp-core.js');
 
 const PLAN = [
@@ -120,4 +120,48 @@ test('undoing the direct restores the original altimeter waypoint mapping', () =
 
   marks = [];
   assert.equal(hourlyChecks(flown(marks), 600)[0].wp.wp, 'WPT3');
+});
+
+/* ------------------------------------------------------- which point is abeam
+   The bug this guards: the abeam pointer used to run off the clock alone. A
+   direct cuts a corner, so an abeam point is passed earlier than its printed
+   time — the pointer would sit on one the crew had already written up, and the
+   Direct To that created it would leave the crew looking at the waypoint the
+   clearance ran to, minutes away, instead of the position they had to time. */
+const abeamOf = (marks, logged, passed = () => false) => {
+  const skipped = skipSet(marks);
+  const at = abeamAt(RESULT, p => skipped.has(p.i), p => logged.has(p.wp), passed);
+  return { now: at.ci >= 0 ? RESULT[at.ci].wp : null,
+           next: at.ni >= 0 ? RESULT[at.ni].wp : null };
+};
+
+test('the first abeam point is the one to attend to, not the waypoint the direct ran to', () => {
+  const marks = applyDirect([], 1, 6);           // after TOC, direct WPT6
+  // Nothing logged and nothing passed on the clock yet: WPT2 is next up, and
+  // WPT6 — the direct's own target — is never what the pointer names.
+  assert.deepEqual(abeamOf(marks, new Set()), { now: null, next: 'WPT2' });
+});
+
+test('a time written against an abeam point moves the pointer on, whatever the clock says', () => {
+  const marks = applyDirect([], 1, 6);
+  // WPT2's own printed time has still not come round — the corner was cut — but
+  // the crew has written it up, so it is behind the aeroplane.
+  assert.deepEqual(abeamOf(marks, new Set(['WPT2'])), { now: 'WPT3', next: null });
+  assert.deepEqual(abeamOf(marks, new Set(['WPT2', 'WPT3'])), { now: 'WPT4', next: null });
+});
+
+test('the clock still promotes the first abeam point once its time has come', () => {
+  const marks = applyDirect([], 1, 6);
+  const passed = p => p.wp === 'WPT2';
+  assert.deepEqual(abeamOf(marks, new Set(), passed), { now: 'WPT2', next: null });
+});
+
+test('with every abeam point written up there is nothing abeam left to watch', () => {
+  const marks = applyDirect([], 1, 6);           // covers WPT2..WPT5
+  assert.deepEqual(abeamOf(marks, new Set(['WPT2', 'WPT3', 'WPT4', 'WPT5'])),
+                   { now: null, next: null });
+});
+
+test('with no direct at all there is no abeam point', () => {
+  assert.deepEqual(abeamOf([], new Set()), { now: null, next: null });
 });
