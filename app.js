@@ -1847,11 +1847,21 @@ function applyDirect(target){
   // Land the crew on the first waypoint the direct puts abeam — the next time
   // they will have to write down — and never on the waypoint the direct runs to,
   // which is a long way ahead and has nothing owing on it yet. refreshProgress
-  // has just scrolled that same row to the top, so the two agree rather than fight.
+  // has just scrolled that same row to the top. preventScroll keeps focus() from
+  // pulling it back off, but select() has no such option, and the browser applies
+  // its own scroll-into-view a frame later rather than inside the call itself — a
+  // correction issued straight after select() lands before that and gets overrun
+  // by it regardless. Asking again next frame, once the browser has had its say,
+  // is what actually keeps scrollRowToTop's own call the last word.
   const ab = abeamIdx(currentOffset());
   const abAt = ab.ci >= 0 ? ab.ci : ab.ni;
-  const abeamInput = abAt >= 0 && rowOf(RESULT[abAt].i)?.querySelector('input.ato');
-  if (abeamInput){ abeamInput.focus(); abeamInput.select(); }
+  const abeamRow = abAt >= 0 && rowOf(RESULT[abAt].i);
+  const abeamInput = abeamRow && abeamRow.querySelector('input.ato');
+  if (abeamInput){
+    abeamInput.focus({ preventScroll: true });
+    abeamInput.select();
+    requestAnimationFrame(() => scrollRowToTop(abeamRow));
+  }
 }
 
 function undoDirect(k){

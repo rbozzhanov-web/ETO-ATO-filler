@@ -691,6 +691,7 @@ td.diff{text-align:right;font-weight:700}
           <li>A new direct now replaces the one before it outright, measured from where the flight actually is, instead of combining with it.</li>
           <li>Fixed: the highlight used to stall on the first waypoint a direct cut out until its ATO was written, even as the flight moved well past it. It now keeps advancing with the clock through a direct exactly as it does without one.</li>
           <li>Fixed: an ATO logged out of order could make an earlier waypoint — even takeoff itself — read as still ahead of the flight. Anything the flight has demonstrably already reached now counts as passed regardless.</li>
+          <li>Fixed: taking a direct could leave the tracked row partway down the table instead of at the top — the box auto-focused for the abeam waypoint's ATO was pulling the scroll position back off it.</li>
           <li>The first altimeter cross-check is now always raised at TOC on every flight, not only on short sectors — the hourly checks then continue from there.</li>
           <li>Removed the takeoff-time shortcut that filled in the plan's ETD — that's off-block time, not takeoff, so it's typed in directly now.</li>
         </ul>
@@ -746,7 +747,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.4 &nbsp;·&nbsp; Build 20260909.5 &nbsp;·&nbsp; 9 Sep 2026</span></p>
+      <span class="build">RC1.8.5 &nbsp;·&nbsp; Build 20260909.6 &nbsp;·&nbsp; 9 Sep 2026</span></p>
 
     </div>
   </div>
