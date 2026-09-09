@@ -261,6 +261,71 @@ try {
     check(focusScroll.rowTopInBox > 2,
           'the tracked row clears the header overlay rather than sitting flush under it');
 
+    /* The bug this guards: the table's own row-refocus used to hold off only on
+       a scroll or keystroke inside the table itself — a touch anywhere else on
+       the page (a NOTAM, a chart, a document field) went unnoticed and the
+       table would yank itself to a new row while the crew's hand was busy
+       somewhere else on the same page. Any touch on the page now counts. */
+    const idleGate = await page.evaluate(async () => {
+      for (const k in ACT) delete ACT[k];
+      DCT.marks = []; syncDct();
+      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+      const t0 = now - 50;
+      const names = [], cums = [];
+      for (let i = 0; i < 20; i++){ names.push('WPT' + i); cums.push(i * 15); }
+      T0 = t0;
+      RESULT = names.map((wp, i) => ({
+        i, sec: 1, wp, et: i ? 15 : 0, cum: cums[i],
+        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
+      }));
+      document.querySelector('#c2').classList.remove('hide');
+      document.querySelector('#c3').classList.remove('hide');
+      const box = document.querySelector('.tblbox');
+      box.style.maxHeight = '260px';
+      render(t0, t0 + cums[cums.length - 1]);
+      const nextWp = () => RESULT.find(p => rowOf(p.i)?.classList.contains('next'))?.wp || null;
+      const settle = async () => {
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        await new Promise(r => setTimeout(r, 400));
+      };
+
+      refreshProgress();   // page load: nothing has touched the page yet, so this may scroll
+      await settle();
+      const initialTarget = nextWp();
+      const scrollAfterInitial = box.scrollTop;
+
+      const RealDate = Date;
+      const fake = mins => class extends RealDate {
+        constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + mins * 60000); }
+        static now(){ return RealDate.now() + mins * 60000; }
+      };
+
+      // A touch elsewhere on the page — not the table — while the clock moves
+      // far enough for a new waypoint to become 'next'.
+      window.Date = fake(46);
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      refreshProgress();
+      window.Date = RealDate;
+      await settle();
+      const heldTarget = nextWp();
+      const scrollWhileHeld = box.scrollTop;
+
+      // The same target, twenty-one seconds after that touch: now it may follow.
+      window.Date = fake(46 + 21 / 60);
+      refreshProgress();
+      window.Date = RealDate;
+      await settle();
+      const scrollAfterRelease = box.scrollTop;
+
+      return { initialTarget, heldTarget, scrollAfterInitial, scrollWhileHeld, scrollAfterRelease };
+    });
+    check(idleGate.heldTarget !== idleGate.initialTarget,
+          'the tracked waypoint actually changes once the clock moves on');
+    check(idleGate.scrollWhileHeld === idleGate.scrollAfterInitial,
+          'a touch anywhere on the page holds the carousel refocus back, not just a touch on the table');
+    check(idleGate.scrollAfterRelease !== idleGate.scrollWhileHeld,
+          'the carousel follows again once twenty seconds have actually passed since that touch');
+
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
     // numpad plus both orientations. A real tap is used here because programmatic
     // focus does not consistently model a user gesture in mobile WebKit.

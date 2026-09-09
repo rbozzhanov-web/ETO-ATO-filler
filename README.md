@@ -155,9 +155,9 @@ contexts, so everything works on either.
    entered gets no tint of its own — the number sitting in the box is the only
    record of it, so the table is never confused for a summary of what has and
    hasn't been done yet. Only the table scrolls — the page stays where you left
-   it — and it holds still for twenty seconds after you scroll it or type in it.
-   Focus is not what stops it: Enter steps from one box to the next, so a box
-   stays focused for the rest of the flight.
+   it — and it holds still for twenty seconds after any touch on the page at
+   all, not only on the table itself. Focus is not what stops it: Enter steps
+   from one box to the next, so a box stays focused for the rest of the flight.
    Step 3 is also where the app puts itself back when the hands come off. Thirty-five
    seconds with nothing touched — no typing, no tapping, no scrolling — and the whole
    card comes back on screen, centred and complete, in whichever orientation the iPad
