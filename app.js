@@ -344,49 +344,9 @@ function scrollHint(el){
   upd();
 }
 
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
-  let reloading = false;
-  // None of this goes near the network unless there is one. In the air there is
-  // not, and a check that cannot succeed still has to be waited out — which is
-  // the app hesitating at exactly the moment it is being used. Airborne, the
-  // whole of it stands down: no check, nothing to apply, nothing to reload for.
-  const offline = () => navigator.onLine === false;
-  // A confirmed update — the browser has actually installed a newer worker, not
-  // merely a guess — applies itself, no tap needed. But never over a loaded
-  // plan: the reload costs nothing and loses nothing, the entries and the
-  // document both being on the device already, and it still takes the screen
-  // away from whoever is working it. With a plan open it waits for the next
-  // launch, which opens on the load screen where it disturbs no one.
-  function applyUpdate(reg){
-    const worker = reg.waiting;
-    if (worker && !offline() && !PLAN) worker.postMessage({ type: 'skip-waiting' });
-  }
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) return;
-    reloading = true;
-    location.reload();
-  });
-  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
-    // The browser checks for a new sw.js on its own, but not more than once a
-    // day. Ask now, and again whenever the app comes back from the background,
-    // so a version published minutes ago is found this launch rather than up to
-    // a day later — and pick up anything already waiting from a previous one.
-    const poll = () => {
-      if (offline()) return;
-      reg.update().catch(() => {});
-      applyUpdate(reg);
-    };
-    reg.addEventListener('updatefound', () => {
-      const candidate = reg.installing;
-      if (!candidate) return;
-      candidate.addEventListener('statechange', () => {
-        if (candidate.state === 'installed' && navigator.serviceWorker.controller) applyUpdate(reg);
-      });
-    });
-    poll();
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
-  }).catch(() => {});
-}
+// watchForUpdates lives in offline-update.js, loaded before this file. A plan
+// counts as "open" for as long as one is loaded, whatever step the crew is on.
+watchForUpdates(() => !!PLAN, { navigator, document, location });
 
 /* ================= theme ================= */
 const hex2rgb = h => { const n = parseInt(h.slice(1), 16);

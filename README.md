@@ -26,8 +26,11 @@ Everything required sits in the root of this repository:
 ```
 index.html            the OFP companion
 journey-log.html      the Journey Log form
+theme-init.js         applies the remembered light/dark theme before first paint
 pdfmini.js            the PDF reader and incremental writer
 ofp-core.js           the flight-plan arithmetic
+storage.js            per-PDF saved state and the resume copy of the loaded document
+offline-update.js     checks for and applies a new version, shared by both pages
 app.js                the OFP companion itself
 jl-pdf.js             the Journey Log's PDF reader, writer and export geometry
 journey-log.js        the Journey Log form itself

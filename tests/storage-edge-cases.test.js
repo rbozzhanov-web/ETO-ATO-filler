@@ -97,5 +97,5 @@ test('autosave delegates cold-session persistence to the isolated storage module
   assert.match(storage, /catch\(e\)\{ \/\* quota\/private mode:/);
   assert.match(storage, /if \(meta\.hash && rec\.hash && meta\.hash !== rec\.hash\)/);
   assert.match(html, /ofp-core\.js[\s\S]*storage\.js[\s\S]*app\.js/);
-  assert.match(sw, /ofp-core\.js', '\.\/storage\.js', '\.\/app\.js/);
+  assert.match(sw, /ofp-core\.js', '\.\/storage\.js',\s*\n\s*'\.\/offline-update\.js', '\.\/app\.js/);
 });
