@@ -286,10 +286,12 @@ currently the one to write down is marked **ABEAM**, so it can never be read for
 
 Taking the direct lands the highlight on the first of those abeam positions — the next time you
 have to write down — rather than on the waypoint the clearance ran to, which is a long way ahead and
-has nothing owing on it yet. From there the marker follows the times you enter rather than the
-clock: a direct cuts a corner, so an abeam position is passed earlier than its printed time, and
-writing one up moves the marker on to the next one whether or not that time has come round. Once
-the last of them is written up the marker clears and the table goes back to following the route.
+has nothing owing on it yet. From there the marker keeps moving with the clock exactly as it would
+without a direct, so it is never left stalled on one waypoint waiting for its ATO — but writing one
+up can move the marker on sooner than the clock would: a direct cuts a corner, so an abeam position
+is often passed well before its printed time, and logging it counts as passing it whether or not
+that time has come round. Once the last of them is behind the marker — logged, overtaken by the
+clock, or both — it clears and the table goes back to following the route.
 
 Only one direct is ever tracked. A second clearance does not layer onto the first — it replaces it
 outright, and the waypoints it cuts out are worked out fresh from wherever the flight actually is
