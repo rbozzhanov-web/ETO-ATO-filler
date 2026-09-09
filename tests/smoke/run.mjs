@@ -184,6 +184,39 @@ try {
     check(tracking.after40Min === 'WPT4',
           'tracking keeps advancing with the clock through a direct instead of freezing');
 
+    /* The bug this guards: the offset an ATO implies used to be applied to
+       every waypoint alike, including ones before the one it was drawn from.
+       An ATO logged late against a waypoint further down the route could then
+       make waypoints already necessarily flown through — even the takeoff
+       itself — read as still ahead, because the shifted clock comparison said
+       so on its own. Anything at or before the waypoint the offset came from
+       must count as passed outright; only what comes after it is judged
+       against the shifted clock. */
+    const causality = await page.evaluate(() => {
+      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+      const t0 = now - 50;
+      const cums = [0, 20, 45, 70, 95, 120, 150, 180, 220];
+      const names = ['DEP', 'TOC', 'WPT2', 'WPT3', 'WPT4', 'WPT5', 'WPT6', 'WPT7', 'DEST'];
+      T0 = t0;
+      RESULT = names.map((wp, i) => ({
+        i, sec: 1, wp, et: i ? cums[i] - cums[i - 1] : 0, cum: cums[i],
+        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
+      }));
+      render(t0, t0 + 220);
+      document.querySelector('#c2').classList.remove('hide');
+      document.querySelector('#c3').classList.remove('hide');
+      const nextWp = () => RESULT.find(p => rowOf(p.i)?.classList.contains('next'))?.wp || null;
+
+      applyDirect(6);   // direct WPT2 -> WPT6, cutting out WPT3/WPT4/WPT5
+      // WPT6's own printed ETO is t0+150; logging it 250 minutes late must not
+      // read as DEP itself — logged over three hours earlier — still being ahead.
+      const inp6 = document.querySelector('#tbl tbody tr[data-i="6"] input.ato');
+      inp6.value = fmt(t0 + 400); inp6.dispatchEvent(new Event('input'));
+      return { target: nextWp() };
+    });
+    check(causality.target === 'WPT7',
+          'a late ATO logged further down the route never reads as an earlier waypoint still being ahead');
+
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
     // numpad plus both orientations. A real tap is used here because programmatic
     // focus does not consistently model a user gesture in mobile WebKit.

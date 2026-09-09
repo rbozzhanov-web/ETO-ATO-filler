@@ -1730,21 +1730,23 @@ const atoOf = p => {
   return a && a.ato ? parseTime(a.ato) : null;
 };
 
-// How far the flight is actually running from the plan, from the most recent
-// waypoint with an ATO entered. This is worked out in the background and never
-// touches the ETO column printed in the table — it exists only so the highlight
-// can tell which waypoint is next. Abeam points are left out of it: a direct cuts
-// the corner, so passing one happens earlier than its printed time and says
-// nothing about the plan's own drift.
-function currentOffset(){
+// How far the flight is actually running from the plan, and the waypoint that
+// figure is drawn from: the most recent one with an ATO entered, searching
+// backward past anything a direct has cut out. This is worked out in the
+// background and never touches the ETO column printed in the table — it
+// exists only so the highlight can tell which waypoint is next. Abeam points
+// are left out of it: a direct cuts the corner, so passing one happens
+// earlier than its printed time and says nothing about the plan's own drift.
+function offsetSource(){
   for (let n = RESULT.length - 1; n >= 0; n--){
     const p = RESULT[n];
     if (isSkipped(p.i)) continue;
     const t = atoOf(p);
-    if (t !== null) return wrapMin(t - norm(p.t));
+    if (t !== null) return { idx: n, off: wrapMin(t - norm(p.t)) };
   }
-  return 0;
+  return { idx: -1, off: 0 };
 }
+const currentOffset = () => offsetSource().off;
 
 // The last row whose time has come and the first whose has not, over whichever
 // rows satisfy `want`.
@@ -1766,14 +1768,21 @@ const routeIdx = off => scanIdx(() => true, off);
 // Where the flight actually is, over every waypoint in printed order — a
 // direct's cut-out ones included, since the aeroplane still goes past them and
 // tracking has to keep moving through them rather than stall on the first one
-// left unwritten. A cut-out waypoint counts as passed once the clock reaches
-// its own printed time, exactly like any other, but an ATO logged against it
-// counts too, and can make that happen early: a direct cuts a corner, so the
-// aeroplane can be abeam one well before its printed time.
-function trackIdx(off){
+// left unwritten. Everything up to and including the waypoint the running
+// offset is drawn from counts as passed outright: an ATO logged against a
+// waypoint means everything before it was necessarily flown through too,
+// whatever the shifted clock comparison alone would say about them — an entry
+// made out of order, or one that is simply wrong, must not read as the flight
+// not having reached waypoints it demonstrably has. Only what comes after that
+// waypoint is judged against the clock, shifted by how far the entry says the
+// flight is running from the plan. A cut-out waypoint also counts as passed
+// once its own ATO is logged, which can happen well before its printed time:
+// a direct cuts a corner.
+function trackIdx(){
+  const { idx: srcIdx, off } = offsetSource();
   let ci = -1, ni = -1;
   RESULT.forEach((p, n) => {
-    const passed = sinceDue(p.t + off) >= 0 || (isSkipped(p.i) && atoOf(p) !== null);
+    const passed = n <= srcIdx || sinceDue(p.t + off) >= 0 || (isSkipped(p.i) && atoOf(p) !== null);
     if (passed) ci = n; else if (ni < 0) ni = n;
   });
   return { ci, ni };
@@ -1910,7 +1919,7 @@ function markAbeam(row, want){
 function refreshProgress(){
   if (!RESULT.length) return;
   const off = currentOffset();
-  const { ni: trackAt } = trackIdx(off);
+  const { ni: trackAt } = trackIdx();
   const target = trackAt >= 0 ? RESULT[trackAt] : null;
   const isAbeam = !!target && isSkipped(target.i);
 
