@@ -100,26 +100,30 @@ test('fuel windows after a direct never assign a check to a skipped waypoint', (
 });
 
 test('altimeter mapping can be recomputed against the flown route after a direct', () => {
-  // Without the direct, +1:00 maps to WPT3 (70 min). Direct WPT6 removes WPT3,
-  // so the first flown waypoint at/after +1:00 is WPT6 instead. The hourly mark
-  // itself remains +1:00; only the place where the crew records it moves.
+  // The first check is always TOC, untouched by any of this. Without the direct,
+  // +1:00 maps to WPT3 (70 min). Direct WPT6 removes WPT3, so the first flown
+  // waypoint at/after +1:00 is WPT6 instead. The hourly mark itself remains
+  // +1:00; only the place where the crew records it moves.
   const normal = hourlyChecks(RESULT, 600);
-  assert.equal(normal[0].label, '+1:00');
-  assert.equal(normal[0].wp.wp, 'WPT3');
+  assert.equal(normal[0].label, 'TOC');
+  assert.equal(normal[0].wp.wp, 'TOC');
+  assert.equal(normal[1].label, '+1:00');
+  assert.equal(normal[1].wp.wp, 'WPT3');
 
   const marks = applyDirect([], 1, 6);
   const afterDirect = hourlyChecks(flown(marks), 600);
-  assert.equal(afterDirect[0].label, '+1:00');
-  assert.equal(afterDirect[0].wp.wp, 'WPT6');
-  assert.ok(!skipSet(marks).has(afterDirect[0].wp.i));
+  assert.equal(afterDirect[0].wp.wp, 'TOC');
+  assert.equal(afterDirect[1].label, '+1:00');
+  assert.equal(afterDirect[1].wp.wp, 'WPT6');
+  assert.ok(!skipSet(marks).has(afterDirect[1].wp.i));
 });
 
 test('undoing the direct restores the original altimeter waypoint mapping', () => {
   let marks = applyDirect([], 1, 6);
-  assert.equal(hourlyChecks(flown(marks), 600)[0].wp.wp, 'WPT6');
+  assert.equal(hourlyChecks(flown(marks), 600)[1].wp.wp, 'WPT6');
 
   marks = [];
-  assert.equal(hourlyChecks(flown(marks), 600)[0].wp.wp, 'WPT3');
+  assert.equal(hourlyChecks(flown(marks), 600)[1].wp.wp, 'WPT3');
 });
 
 /* ------------------------------------------------------- which point is abeam

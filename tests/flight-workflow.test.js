@@ -59,12 +59,13 @@ test('one flight survives the complete operational workflow', () => {
   const skipSet = new Set(skipped);
   const flown = computed.rows.filter(p => p.sec === 1 && !skipSet.has(p.i));
 
-  // 4) hourly altimeter checks remain anchored to the plan and are present for
-  // a flight of this duration.
+  // 4) the first altimeter check is always at TOC, then hourly checks remain
+  // anchored to the plan and are present for a flight of this duration.
   const altChecks = hourlyChecks(computed.rows, t0);
-  assert.deepEqual(altChecks.map(c => c.mark), [60, 120]);
-  assert.equal(altChecks[0].wp.wp, 'ABDAR');
-  assert.equal(altChecks[1].wp.wp, 'KEGOL');
+  assert.deepEqual(altChecks.map(c => c.mark), [20, 60, 120]);
+  assert.equal(altChecks[0].wp.wp, 'TOC');
+  assert.equal(altChecks[1].wp.wp, 'ABDAR');
+  assert.equal(altChecks[2].wp.wp, 'KEGOL');
 
   // 5) fuel checks follow the actually flown route. Record an early check at
   // ABDAR; the next 30-minute window then starts from that actual check point.

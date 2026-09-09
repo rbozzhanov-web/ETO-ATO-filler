@@ -19,6 +19,14 @@ test('skipped TOC does not invent a short-flight fallback', () => {
   assert.deepEqual(hourlyChecks([row(0, 'DEP', 0), row(2, 'DEST', 95)], 600), []);
 });
 
+test('TOC is always the first check, on a long flight too', () => {
+  const c = hourlyChecks([row(0, 'DEP', 0), row(1, 'TOC', 22), row(2, 'W1', 90),
+                           row(3, 'W2', 150), row(4, 'DEST', 210)], 600);
+  assert.deepEqual(c.map(x => x.label), ['TOC', '+1:00', '+2:00']);
+  assert.deepEqual(c.map(x => x.wp.wp), ['TOC', 'W1', 'W2']);
+  assert.equal(c[0].due, 622);
+});
+
 test('hourly checks stop inside the final hour', () => {
   const make = total => {
     const a = [row(0, 'DEP', 0)];

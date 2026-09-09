@@ -50,24 +50,25 @@ function computeResult(plan, t0, withAltn){
 }
 
 /* ---------- altimeter cross-checks ----------
-   One an hour from takeoff. */
+   The first check is always taken at the top of climb, on every flight — the
+   moment the aeroplane actually levels into cruise, rather than wherever the
+   hourly grid next happens to fall. Every OFP's own waypoint table carries a
+   TOC line. After that, one an hour from takeoff. */
 function hourlyChecks(result, t0){
   const main = result.filter(p => p.sec === 1);
   if (!main.length) return [];
   const total = main[main.length - 1].cum, out = [];
+  const toc = main.find(p => /^TOC$/i.test(p.wp));
+  if (toc) out.push({ mark: toc.cum, wp: toc, due: t0 + toc.cum, label: 'TOC' });
   // A check falling inside the last hour before arrival is not raised — by then the
   // descent is under way and the reading would be taken on approach anyway.
   for (let mark = 60; total - mark >= 60; mark += 60){
+    // Already covered by the TOC check above — a climb running past the first
+    // hourly mark must not raise a second check for the same stretch of it.
+    if (toc && mark <= toc.cum) continue;
     const wp = main.find(p => p.cum >= mark);
     if (!wp || out.some(c => c.wp === wp)) continue;
     out.push({ mark, wp, due: t0 + mark, label: `+${mark / 60}:00` });
-  }
-  // Under two hours the grid above never fires, yet a check is still owed — the
-  // OFP's own waypoint table always carries a TOC line, and that is the natural
-  // point of levelling into cruise the hourly grid is standing in for anyway.
-  if (!out.length){
-    const toc = main.find(p => /^TOC$/i.test(p.wp));
-    if (toc) out.push({ mark: toc.cum, wp: toc, due: t0 + toc.cum, label: 'TOC' });
   }
   return out;
 }

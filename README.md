@@ -186,17 +186,19 @@ contexts, so everything works on either.
    thirty from there rather than leaving the next window due on the old half-hour
    mark: overfly a waypoint and record fuel on it, and the clock the company rule
    actually means restarts at that moment, the same as it would on paper.
-4. Record the hourly altimeter cross-checks. The app works out which waypoint
-   falls on each full hour after takeoff and lists one row per hour; enter
-   ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly
-   under that waypoint, so the time is read off the ETO/ATO right above it.
+4. Record the altimeter cross-checks. Every flight's first one is raised at
+   TOC — the OFP's own waypoint table always carries that line, and that is the
+   actual moment the aeroplane levels into cruise, rather than wherever the hourly
+   grid next happens to fall. The app then works out which waypoint falls on each
+   full hour after takeoff and lists one row per hour after that, skipping any
+   mark the climb has already run past; enter ALTM1 / STBY / ALTM2 and the reading
+   is printed on the blank line directly under that waypoint, so the time is read
+   off the ETO/ATO right above it.
    Each row tracks its own due time against the device clock in UTC and turns
    red once the check is overdue, with a short tone when it first falls due
    (switch it off with the checkbox — the choice is remembered, and tapping the
    clock beside it no longer knocks it off). No check is raised inside the last
-   hour before arrival. On a sector under two hours, where the hourly grid never
-   falls, one check is raised at TOC instead — the OFP's own waypoint table
-   always carries that line. Saving the PDF with checks still missing asks for
+   hour before arrival. Saving the PDF with checks still missing asks for
    confirmation first.
 5. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
    or send it to ForeFlight.
