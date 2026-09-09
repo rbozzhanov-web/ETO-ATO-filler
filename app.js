@@ -1763,8 +1763,26 @@ function scanIdx(want, off){
 // building on it.
 const routeIdx = off => scanIdx(() => true, off);
 
-// The abeam positions a direct leaves behind, and which of them the crew is on:
-// the rule itself is in ofp-core.js, alongside the rest of the flight arithmetic.
+// Where the flight actually is, over every waypoint in printed order — a
+// direct's cut-out ones included, since the aeroplane still goes past them and
+// tracking has to keep moving through them rather than stall on the first one
+// left unwritten. A cut-out waypoint counts as passed once the clock reaches
+// its own printed time, exactly like any other, but an ATO logged against it
+// counts too, and can make that happen early: a direct cuts a corner, so the
+// aeroplane can be abeam one well before its printed time.
+function trackIdx(off){
+  let ci = -1, ni = -1;
+  RESULT.forEach((p, n) => {
+    const passed = sinceDue(p.t + off) >= 0 || (isSkipped(p.i) && atoOf(p) !== null);
+    if (passed) ci = n; else if (ni < 0) ni = n;
+  });
+  return { ci, ni };
+}
+
+// Which of a direct's abeam positions to put the crew straight onto right
+// after taking it — the rule itself is in ofp-core.js, alongside the rest of
+// the flight arithmetic. Only used for that one moment: ongoing tracking
+// follows trackIdx above instead, which keeps moving on its own.
 const abeamIdx = off => abeamAt(RESULT,
   p => isSkipped(p.i),
   p => atoOf(p) !== null,
@@ -1847,14 +1865,15 @@ $('#dctBtn').onclick = () => setPick(!dctPick);
 
 /* ---- where the flight has got to ----------------------------------------------
    Exactly one row is ever highlighted: the waypoint the crew has to write down
-   next. Ordinarily that is the next one on the route whose time has not come
-   round yet; while a direct still has abeam positions waiting to be logged, it is
-   the first of those instead, marked ABEAM. Nothing else in the table is tinted —
-   an ATO or a fuel figure already entered is shown by the number in the box and
-   by nothing else, and the waypoints a direct cuts out are left looking like any
-   other row. Kept out of refreshAlt because that one returns early when the plan
-   is shorter than an hour and has no checks — the table still needs its
-   highlight. */
+   next, found by trackIdx above and never stalled — a direct's cut-out waypoints
+   keep moving with the clock exactly like any other, so tracking never sits
+   waiting on one write-up that never comes. Whichever row that lands on is
+   marked ABEAM if it happens to be one of those cut out. Nothing else in the
+   table is tinted — an ATO or a fuel figure already entered is shown by the
+   number in the box and by nothing else, and the waypoints a direct cuts out
+   are otherwise left looking like any other row. Kept out of refreshAlt because
+   that one returns early when the plan is shorter than an hour and has no
+   checks — the table still needs its highlight. */
 let scrolledAt = 0, typedAt = 0, autoTarget = null, autoT = null, lastNext = null;
 
 // Centring is done on the box's own scrollTop rather than with scrollIntoView,
@@ -1891,13 +1910,9 @@ function markAbeam(row, want){
 function refreshProgress(){
   if (!RESULT.length) return;
   const off = currentOffset();
-  const ab = abeamIdx(off);
-  // The abeam position being worked on, if a direct has left one waiting;
-  // failing that, the next waypoint still ahead on the route as it now stands.
-  const abAt = ab.ci >= 0 ? ab.ci : ab.ni;
-  const isAbeam = abAt >= 0;
-  const trackAt = isAbeam ? abAt : scanIdx(p => !isSkipped(p.i), off).ni;
+  const { ni: trackAt } = trackIdx(off);
   const target = trackAt >= 0 ? RESULT[trackAt] : null;
+  const isAbeam = !!target && isSkipped(target.i);
 
   RESULT.forEach((p, n) => {
     const row = rowOf(p.i);

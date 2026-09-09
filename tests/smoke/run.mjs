@@ -146,6 +146,44 @@ try {
     check(injected.checks === 3, 'the altimeter checks are laid out');   // TOC, then +1:00 and +2:00
     check(injected.chips === 1, 'the direct-to chip is shown');
 
+    /* The bug this guards: progress tracking used to pin itself on the first
+       waypoint a Direct-To cut out and never move again unless the crew wrote
+       an ATO against that exact one — the highlight looked frozen for the rest
+       of the flight. It has to keep advancing with the clock like any other
+       waypoint, an ATO logged early aside. */
+    const tracking = await page.evaluate(() => {
+      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+      const t0 = now - 50;   // DEP/TOC/WPT2 already due; WPT3 onward still ahead
+      const cums = [0, 20, 45, 70, 95, 120, 150, 180, 220];
+      const names = ['DEP', 'TOC', 'WPT2', 'WPT3', 'WPT4', 'WPT5', 'WPT6', 'WPT7', 'DEST'];
+      T0 = t0;
+      RESULT = names.map((wp, i) => ({
+        i, sec: 1, wp, et: i ? cums[i] - cums[i - 1] : 0, cum: cums[i],
+        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
+      }));
+      render(t0, t0 + 220);
+      document.querySelector('#c2').classList.remove('hide');
+      document.querySelector('#c3').classList.remove('hide');
+      const nextWp = () => RESULT.find(p => rowOf(p.i)?.classList.contains('next'))?.wp || null;
+
+      applyDirect(6);   // direct WPT2 -> WPT6, cutting out WPT3/WPT4/WPT5
+      const rightAfter = nextWp();
+
+      const RealDate = Date;
+      class FakeDate extends RealDate {
+        constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + 40 * 60000); }
+        static now(){ return RealDate.now() + 40 * 60000; }
+      }
+      window.Date = FakeDate;
+      refreshProgress();
+      const after40Min = nextWp();
+      window.Date = RealDate;
+      return { rightAfter, after40Min };
+    });
+    check(tracking.rightAfter === 'WPT3', 'a fresh direct tracks the first abeam waypoint');
+    check(tracking.after40Min === 'WPT4',
+          'tracking keeps advancing with the clock through a direct instead of freezing');
+
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
     // numpad plus both orientations. A real tap is used here because programmatic
     // focus does not consistently model a user gesture in mobile WebKit.
