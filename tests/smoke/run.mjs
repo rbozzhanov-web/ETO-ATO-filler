@@ -217,6 +217,50 @@ try {
     check(causality.target === 'WPT7',
           'a late ATO logged further down the route never reads as an earlier waypoint still being ahead');
 
+    /* The bug this guards: applyDirect() auto-focuses and selects the first
+       abeam waypoint's ATO box right after taking a direct. select() has no
+       preventScroll option, and drags the table to wherever the browser's own
+       default reveals the input a frame later — overrunning the deliberate
+       scroll-to-top refreshProgress() had just done, and landing partway down
+       the box instead of with the row at the top. */
+    const focusScroll = await page.evaluate(async () => {
+      // Clean slate: the causality check above left its own ATO and direct
+      // behind on this same page, and reusing those waypoint indexes here
+      // would silently feed them into this scenario's own offset.
+      for (const k in ACT) delete ACT[k];
+      DCT.marks = []; syncDct();
+      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+      const t0 = now - 50;
+      const names = [], cums = [];
+      for (let i = 0; i < 20; i++){ names.push('WPT' + i); cums.push(i * 15); }
+      T0 = t0;
+      RESULT = names.map((wp, i) => ({
+        i, sec: 1, wp, et: i ? 15 : 0, cum: cums[i],
+        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
+      }));
+      document.querySelector('#c2').classList.remove('hide');
+      document.querySelector('#c3').classList.remove('hide');
+      document.querySelector('.tblbox').style.maxHeight = '260px';   // force an actual scroller
+      render(t0, t0 + cums[cums.length - 1]);
+      applyDirect(6);   // WPT2 -> WPT6: the crew is put straight onto WPT4, the first abeam point
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise(r => setTimeout(r, 500));   // let the (possibly twice-restarted) smooth scroll settle
+      const box = document.querySelector('.tblbox');
+      const head = box.querySelector('thead');
+      const target = RESULT.find(p => rowOf(p.i)?.classList.contains('next'));
+      const row = rowOf(target.i);
+      const prevRow = row.previousElementSibling;
+      const topOf = el => el.getBoundingClientRect().top - box.getBoundingClientRect().top - head.offsetHeight;
+      return { target: target.wp, prevTopInBox: prevRow && topOf(prevRow), rowTopInBox: topOf(row) };
+    });
+    check(focusScroll.target === 'WPT4', 'the crew is put straight onto the first abeam waypoint');
+    // The tracked row is anchored one row past the header on purpose, clear of
+    // its fade-and-chevron overlay — the row before it sits under that instead.
+    check(Math.abs(focusScroll.prevTopInBox) < 2,
+          'auto-focusing the abeam box after a direct does not pull the scroll off its anchor');
+    check(focusScroll.rowTopInBox > 2,
+          'the tracked row clears the header overlay rather than sitting flush under it');
+
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
     // numpad plus both orientations. A real tap is used here because programmatic
     // focus does not consistently model a user gesture in mobile WebKit.
