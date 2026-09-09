@@ -7,8 +7,50 @@ const vm = require('node:vm');
 
 const ROOT = path.join(__dirname, '..');
 const SW = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-const APP = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+const { watchForUpdates } = require('../offline-update.js');
 const ORIGIN = 'https://example.test';
+
+/* A fake enough browser to drive watchForUpdates without one: a registration
+   that fires the same two events the real one does (updatefound, and its own
+   installing worker's statechange), a navigator whose serviceWorker fires
+   controllerchange, and a document whose visibilitychange the periodic check
+   rides on. Every call the code under test makes is counted, so a test reads
+   as an assertion on behaviour rather than on this file's own source text. */
+function fakeEnv({ onLine = true, protocol = 'https:', controller } = {}){
+  const swHandlers = new Map(), docHandlers = new Map(), regHandlers = new Map();
+  const installing = { state: 'installing', handlers: new Map(),
+    addEventListener(type, fn){ this.handlers.set(type, fn); },
+    fire(type){ const fn = this.handlers.get(type); if (fn) fn(); } };
+  let updateCalls = 0;
+  const reg = {
+    waiting: null, installing: null,
+    addEventListener(type, fn){ regHandlers.set(type, fn); },
+    fire(type){ const fn = regHandlers.get(type); if (fn) fn(); },
+    update: async () => { updateCalls++; },
+  };
+  let registerCalls = 0, reloadCalls = 0;
+  const navigator = {
+    onLine,
+    serviceWorker: {
+      controller,
+      addEventListener(type, fn){ swHandlers.set(type, fn); },
+      register: () => { registerCalls++; return Promise.resolve(reg); },
+    },
+  };
+  const document = { hidden: false, addEventListener(type, fn){ docHandlers.set(type, fn); } };
+  const location = { protocol, reload(){ reloadCalls++; } };
+  return {
+    navigator, document, location, reg, installing,
+    startInstall(){ reg.installing = installing; reg.fire('updatefound'); },
+    finishInstall(){ installing.state = 'installed'; installing.fire('statechange'); },
+    fireControllerChange(){ swHandlers.get('controllerchange')(); },
+    resume(){ document.hidden = false; docHandlers.get('visibilitychange')(); },
+    get updateCalls(){ return updateCalls; },
+    get registerCalls(){ return registerCalls; },
+    get reloadCalls(){ return reloadCalls; },
+  };
+}
+const waiting = () => { const calls = []; return { postMessage: m => calls.push(m), calls }; };
 
 function workerHarness({ network = async () => { throw new Error('offline'); }, onLine } = {}){
   const handlers = new Map();
@@ -120,27 +162,96 @@ test('a background fetch quietly refreshes the cache for the next launch', async
 });
 
 test('page and scripts therefore cannot mix old and new app versions', () => {
-  assert.match(SW, /const SCRIPTS = \['\.\/theme-init\.js', '\.\/pdfmini\.js', '\.\/ofp-core\.js', '\.\/storage\.js', '\.\/app\.js'/);
+  assert.match(SW, /const SCRIPTS = \['\.\/theme-init\.js', '\.\/pdfmini\.js', '\.\/ofp-core\.js', '\.\/storage\.js',\s*\n\s*'\.\/offline-update\.js', '\.\/app\.js'/);
   assert.match(SW, /const script = scriptFor\(e\.request\);[\s\S]*?if \(script\)\{ e\.respondWith\(staleWhileRevalidate\(e\.request, script\)\); return; \}/);
 });
 
-test('a confirmed update applies itself, but never offline and never over a loaded plan', () => {
-  // The bug this guards: in the air every launch and every resume spent itself
-  // on an update check that could not succeed, and the reload it could lead to
-  // took the screen away mid-flight.
-  assert.match(APP, /const offline = \(\) => navigator\.onLine === false;/);
-  assert.match(APP, /function applyUpdate\(reg\)\{[\s\S]*?if \(worker && !offline\(\) && !PLAN\) worker\.postMessage\(\{ type: 'skip-waiting' \}\);/);
-  assert.match(APP, /const poll = \(\) => \{\s*if \(offline\(\)\) return;\s*reg\.update\(\)\.catch\(\(\) => \{\}\);\s*applyUpdate\(reg\);/);
-  assert.match(APP, /navigator\.serviceWorker\.addEventListener\('controllerchange',[\s\S]*?if \(reloading\) return;[\s\S]*?location\.reload\(\);/);
-  // The check runs on launch and again on every resume — both go through poll.
-  assert.match(APP, /\n {4}poll\(\);\n {4}document\.addEventListener\('visibilitychange', \(\) => \{ if \(!document\.hidden\) poll\(\); \}\);/);
+/* watchForUpdates (offline-update.js) is what both app.js and journey-log.js
+   call into now — one implementation, driven directly rather than matched
+   against either page's own source text. The bug all of this guards: in the
+   air every launch and every resume used to spend itself on an update check
+   that could not succeed, and the reload it could lead to took the screen
+   away mid-flight, or over a loaded plan or log on the ground. */
+test('nothing happens without service-worker support or off the http(s) origin', () => {
+  const noSwEnv = fakeEnv();
+  assert.equal(watchForUpdates(() => false, { ...noSwEnv, navigator: {} }), null);
+  assert.equal(noSwEnv.registerCalls, 0);
+
+  const fileEnv = fakeEnv({ protocol: 'file:' });
+  assert.equal(watchForUpdates(() => false, fileEnv), null);
+  assert.equal(fileEnv.registerCalls, 0);
 });
 
-test('the Journey Log page stands its worker down offline and over a loaded log too', () => {
-  const JL = fs.readFileSync(path.join(ROOT, 'journey-log.js'), 'utf8');
-  assert.match(JL, /const offline = \(\)=> navigator\.onLine === false;/);
-  assert.match(JL, /if\(worker && !offline\(\) && !document\.body\.classList\.contains\('loaded'\)\)/);
-  assert.match(JL, /const poll = \(\)=>\{\s*if\(offline\(\)\) return;/);
+test('the check runs on launch and again on every resume, never offline', async () => {
+  const env = fakeEnv({ onLine: true });
+  await watchForUpdates(() => false, env);
+  assert.equal(env.updateCalls, 1, 'launch did not check for an update');
+
+  env.resume();
+  assert.equal(env.updateCalls, 2, 'coming back from the background did not check again');
+
+  const offlineEnv = fakeEnv({ onLine: false });
+  await watchForUpdates(() => false, offlineEnv);
+  offlineEnv.resume();
+  assert.equal(offlineEnv.updateCalls, 0, 'an update was checked for while offline');
+});
+
+test('a confirmed update applies itself once online with nothing open', async () => {
+  const env = fakeEnv({ onLine: true });
+  await watchForUpdates(() => false, env);
+  env.reg.waiting = waiting();
+  env.resume();   // the next poll finds the now-waiting worker
+  assert.deepEqual(env.reg.waiting.calls, [{ type: 'skip-waiting' }]);
+});
+
+test('a confirmed update never applies itself offline', async () => {
+  const env = fakeEnv({ onLine: false });
+  await watchForUpdates(() => false, env);
+  env.reg.waiting = waiting();
+  env.resume();
+  assert.deepEqual(env.reg.waiting.calls, []);
+});
+
+test('a confirmed update never applies itself over an open plan or log', async () => {
+  const env = fakeEnv({ onLine: true });
+  await watchForUpdates(() => true, env);   // something is open
+  env.reg.waiting = waiting();
+  env.resume();
+  assert.deepEqual(env.reg.waiting.calls, [], 'an update applied itself over an open document');
+});
+
+test('installing a new worker behind an open document applies nothing until it is checked again', async () => {
+  const env = fakeEnv({ onLine: true, controller: {} });
+  let open = true;
+  await watchForUpdates(() => open, env);
+  env.startInstall();
+  env.reg.waiting = waiting();
+  env.finishInstall();   // the browser's own updatefound -> installed path
+  assert.deepEqual(env.reg.waiting.calls, [], 'applied itself while the document was still open');
+
+  open = false;
+  env.resume();
+  assert.deepEqual(env.reg.waiting.calls, [{ type: 'skip-waiting' }]);
+});
+
+test('a fresh install with no controller yet is not treated as an update', async () => {
+  // The very first install of the worker has nothing to reload away from —
+  // there is no previous page a controllerchange would be replacing.
+  const env = fakeEnv({ onLine: true, controller: undefined });
+  await watchForUpdates(() => false, env);
+  env.startInstall();
+  env.reg.waiting = waiting();
+  env.finishInstall();
+  assert.deepEqual(env.reg.waiting.calls, []);
+});
+
+test('the page reloads exactly once when the new worker takes over, however often it fires', () => {
+  const env = fakeEnv();
+  watchForUpdates(() => false, env);
+  env.fireControllerChange();
+  env.fireControllerChange();
+  env.fireControllerChange();
+  assert.equal(env.reloadCalls, 1);
 });
 
 test('a cached page offline is served without a request being made at all', async () => {

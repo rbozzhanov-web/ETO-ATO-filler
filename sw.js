@@ -2,17 +2,17 @@
    index.html is the OFP companion, journey-log.html the Journey Log form. */
 const CACHE_PREFIX = 'ofp-companion-';
 const LEGACY_CACHE_PREFIX = 'eto-filler-v';
-const V = CACHE_PREFIX + 'rc1.8.0-20260909';
+const V = CACHE_PREFIX + 'rc1.8.1-20260909';
 const FILES = ['./', './index.html', './journey-log.html',
-               './theme-init.js', './pdfmini.js', './ofp-core.js', './storage.js', './app.js',
-               './jl-pdf.js', './journey-log.js',
+               './theme-init.js', './pdfmini.js', './ofp-core.js', './storage.js',
+               './offline-update.js', './app.js', './jl-pdf.js', './journey-log.js',
                './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const PAGES = ['./index.html', './journey-log.html'];
 // The pages carry no code of their own any more: it lives in these files. They
 // go through the same cache-first, background-refreshed path as the pages
 // themselves, below.
-const SCRIPTS = ['./theme-init.js', './pdfmini.js', './ofp-core.js', './storage.js', './app.js',
-                 './jl-pdf.js', './journey-log.js'];
+const SCRIPTS = ['./theme-init.js', './pdfmini.js', './ofp-core.js', './storage.js',
+                 './offline-update.js', './app.js', './jl-pdf.js', './journey-log.js'];
 
 self.addEventListener('install', e => {
   // A new worker never takes over on its own: it waits to be told, by the page,
