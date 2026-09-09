@@ -249,11 +249,17 @@ try {
       const head = box.querySelector('thead');
       const target = RESULT.find(p => rowOf(p.i)?.classList.contains('next'));
       const row = rowOf(target.i);
-      return { target: target.wp, rowTopInBox: row.getBoundingClientRect().top - box.getBoundingClientRect().top - head.offsetHeight };
+      const prevRow = row.previousElementSibling;
+      const topOf = el => el.getBoundingClientRect().top - box.getBoundingClientRect().top - head.offsetHeight;
+      return { target: target.wp, prevTopInBox: prevRow && topOf(prevRow), rowTopInBox: topOf(row) };
     });
     check(focusScroll.target === 'WPT4', 'the crew is put straight onto the first abeam waypoint');
-    check(Math.abs(focusScroll.rowTopInBox) < 2,
-          'auto-focusing the abeam box after a direct does not pull the tracked row back off the top');
+    // The tracked row is anchored one row past the header on purpose, clear of
+    // its fade-and-chevron overlay — the row before it sits under that instead.
+    check(Math.abs(focusScroll.prevTopInBox) < 2,
+          'auto-focusing the abeam box after a direct does not pull the scroll off its anchor');
+    check(focusScroll.rowTopInBox > 2,
+          'the tracked row clears the header overlay rather than sitting flush under it');
 
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
     // numpad plus both orientations. A real tap is used here because programmatic

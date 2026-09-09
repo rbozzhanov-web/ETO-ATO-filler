@@ -1902,12 +1902,19 @@ let scrolledAt = 0, typedAt = 0, autoTarget = null, autoT = null, lastNext = nul
 // under them — the first one clear of the header — rather than centred in
 // what they leave visible: with the row at the top, the waypoints still ahead
 // read down the table in order below it.
+// Anchored one row earlier than the tracked one, not on it: the header carries
+// its own fade-and-chevron overlay for however much is scrolled past, and that
+// covers the first stretch right below it — landing the tracked row there read
+// as obscured rather than highlighted. The row before it takes that spot
+// instead, so the tracked row itself sits just clear, as the first fully
+// legible one.
 function scrollRowToTop(row){
   const box = document.querySelector('.tblbox');
   if (!box || !row) return;
   const head = box.querySelector('thead');
   const headH = head ? head.offsetHeight : 0;
-  const rel = row.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+  const anchor = row.previousElementSibling || row;
+  const rel = anchor.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
   const top = rel - headH;
   const want = Math.round(Math.max(0, Math.min(top, box.scrollHeight - box.clientHeight)));
   if (Math.abs(want - box.scrollTop) < 2) return;
