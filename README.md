@@ -150,7 +150,8 @@ contexts, so everything works on either.
    not mistaken for a time read off the plan, and the figures above the table name
    the waypoint you are running to.
    Exactly one row is ever highlighted: the waypoint you are running to, brought to
-   the middle of the table as the flight moves on. An ATO or a fuel figure already
+   the top of the table as the flight moves on, so everything still ahead reads down
+   from it in order. An ATO or a fuel figure already
    entered gets no tint of its own — the number sitting in the box is the only
    record of it, so the table is never confused for a summary of what has and
    hasn't been done yet. Only the table scrolls — the page stays where you left
@@ -281,7 +282,7 @@ row: nothing is struck through or faded. Only the target itself is marked, with 
 
 They are not gone from the sky, though: the aeroplane still goes past them, so they keep their own
 place on the clock, and tracking and highlighting carry on exactly as before — one row highlighted,
-brought to the middle of the table — with one addition: whichever of the cut-out waypoints is
+brought to the top of the table — with one addition: whichever of the cut-out waypoints is
 currently the one to write down is marked **ABEAM**, so it can never be read for the live route.
 
 Taking the direct lands the highlight on the first of those abeam positions — the next time you

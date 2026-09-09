@@ -308,8 +308,9 @@ addEventListener('wheel', npGestureElsewhere, { passive: true });
 // Capturing: a scroll inside the waypoint table or the NOTAM list is its own
 // element and never bubbles, but the capture phase still reaches it on the way
 // down, so one listener here covers every scrollable box on the page. The
-// table's own auto-scroll (centreRow, tracked via autoTarget for its own scroll
-// listener further down) is not a user gesture either and must not dismiss it.
+// table's own auto-scroll (scrollRowToTop, tracked via autoTarget for its own
+// scroll listener further down) is not a user gesture either and must not
+// dismiss it.
 document.addEventListener('scroll', e => {
   const ownTableScroll = autoTarget !== null && e.target === document.querySelector('.tblbox');
   if (NP_GESTURE && NP_TARGET && !ownTableScroll) npHideForce();
@@ -1846,7 +1847,7 @@ function applyDirect(target){
   // Land the crew on the first waypoint the direct puts abeam — the next time
   // they will have to write down — and never on the waypoint the direct runs to,
   // which is a long way ahead and has nothing owing on it yet. refreshProgress
-  // has just centred that same row, so the two agree rather than fight.
+  // has just scrolled that same row to the top, so the two agree rather than fight.
   const ab = abeamIdx(currentOffset());
   const abAt = ab.ci >= 0 ? ab.ci : ab.ni;
   const abeamInput = abAt >= 0 && rowOf(RESULT[abAt].i)?.querySelector('input.ato');
@@ -1885,18 +1886,19 @@ $('#dctBtn').onclick = () => setPick(!dctPick);
    checks — the table still needs its highlight. */
 let scrolledAt = 0, typedAt = 0, autoTarget = null, autoT = null, lastNext = null;
 
-// Centring is done on the box's own scrollTop rather than with scrollIntoView,
-// which walks every scrollable ancestor and used to drag the whole page with it.
-// The sticky column headings cover the top of the box, so the row is centred in
-// what they leave visible: a half-heading was being added where it had to be
-// taken off, which put every centred row 34px high.
-function centreRow(row){
+// Scrolled to the box's own scrollTop rather than with scrollIntoView, which
+// walks every scrollable ancestor and used to drag the whole page with it. The
+// sticky column headings cover the top of the box, so the row is placed right
+// under them — the first one clear of the header — rather than centred in
+// what they leave visible: with the row at the top, the waypoints still ahead
+// read down the table in order below it.
+function scrollRowToTop(row){
   const box = document.querySelector('.tblbox');
   if (!box || !row) return;
   const head = box.querySelector('thead');
   const headH = head ? head.offsetHeight : 0;
   const rel = row.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
-  const top = rel - headH - (box.clientHeight - headH - row.offsetHeight) / 2;
+  const top = rel - headH;
   const want = Math.round(Math.max(0, Math.min(top, box.scrollHeight - box.clientHeight)));
   if (Math.abs(want - box.scrollTop) < 2) return;
   // Marked by target rather than by a stopwatch: a smooth scroll takes as long as
@@ -1948,7 +1950,7 @@ function refreshProgress(){
   if (target && target.i !== lastNext
       && Date.now() - scrolledAt > 20000 && Date.now() - typedAt > 20000){
     lastNext = target.i;
-    centreRow(rowOf(target.i));
+    scrollRowToTop(rowOf(target.i));
   }
 }
 {
