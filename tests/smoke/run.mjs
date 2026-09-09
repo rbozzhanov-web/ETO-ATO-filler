@@ -143,7 +143,7 @@ try {
     check(injected.notam === PAYLOAD, 'the NOTAM text is shown as the text it is');
     check(injected.rows === 5, 'the table has a row per waypoint');
     check(injected.inputs === 5, 'each row carries its ATO box');
-    check(injected.checks === 2, 'the altimeter checks are laid out');
+    check(injected.checks === 3, 'the altimeter checks are laid out');   // TOC, then +1:00 and +2:00
     check(injected.chips === 1, 'the direct-to chip is shown');
 
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom

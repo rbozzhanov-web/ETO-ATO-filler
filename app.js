@@ -1629,10 +1629,6 @@ function showFpl(){
     el0.appendChild(document.createTextNode((i ? ' · ' : '') + k + ' '));
     el0.appendChild(mk('b', null, v));
   });
-  const b = document.createElement('button');
-  b.type = 'button'; b.className = 'pill'; b.textContent = 'Use ' + FPL.ETD;
-  b.onclick = () => { $('#etd').value = FPL.ETD; $('#calc').click(); };
-  el0.appendChild(b);
   const n = document.createElement('span');
   n.style.fontSize = '12px';
   n.textContent = 'ETD is off-block time — takeoff is normally later';
@@ -1752,10 +1748,18 @@ function refreshAlt(){
 $('#altAlert').onchange = save;
 /* ---- Direct To ----------------------------------------------------------------
    ATC shortcuts the route and the paper form no longer matches what is being
-   flown. Nothing here reaches the PDF and no ETO is rewritten: the point is only
-   that the highlight should stop pointing at waypoints the aircraft will not
-   cross. Each direct remembers the rows it cut out, so undoing one restores
-   exactly those and leaves any other direct alone. */
+   flown. Nothing here reaches the PDF and no ETO is rewritten — the point is only
+   to keep the highlight on the waypoint that is actually next to write down.
+
+   Only one direct is ever tracked: a fresh clearance replaces whatever was there
+   before rather than stacking onto it, and its own skipped range is measured from
+   wherever the flight actually is on the plain route right now — not from
+   whatever edge the direct being replaced happened to leave behind.
+
+   The waypoints a direct cuts out are not gone from the sky — the aeroplane still
+   goes past them, so they keep their own place on the clock as abeam positions.
+   They are left looking like any other row; the only mark is the ABEAM badge on
+   whichever one is currently the thing to write down. */
 let DCT = { marks: [] }, DCTSKIP = new Set(), dctPick = false;
 const syncDct = () => { DCTSKIP = new Set(DCT.marks.flatMap(m => m.skipped)); };
 const isSkipped = i => DCTSKIP.has(+i);
@@ -1767,9 +1771,11 @@ const atoOf = p => {
 };
 
 // How far the flight is actually running from the plan, from the most recent
-// waypoint with an ATO entered. Applied to the comparison times only. Abeam
-// points are left out of it: a direct cuts the corner, so passing one happens
-// earlier than its printed time and says nothing about the plan's own drift.
+// waypoint with an ATO entered. This is worked out in the background and never
+// touches the ETO column printed in the table — it exists only so the highlight
+// can tell which waypoint is next. Abeam points are left out of it: a direct cuts
+// the corner, so passing one happens earlier than its printed time and says
+// nothing about the plan's own drift.
 function currentOffset(){
   for (let n = RESULT.length - 1; n >= 0; n--){
     const p = RESULT[n];
@@ -1780,8 +1786,8 @@ function currentOffset(){
   return 0;
 }
 
-// The last point whose time has come and the first whose has not, over whichever
-// rows are asked for — the flown route, or the ones a direct has put abeam.
+// The last row whose time has come and the first whose has not, over whichever
+// rows satisfy `want`.
 function scanIdx(want, off){
   let ci = -1, ni = -1;
   RESULT.forEach((p, n) => {
@@ -1791,12 +1797,12 @@ function scanIdx(want, off){
   });
   return { ci, ni };
 }
+// Position on the plain route, ignoring any direct in effect — where the flight
+// would be judged to be if the one currently active were thrown away. A fresh
+// direct is measured from here, since it replaces the old one rather than
+// building on it.
+const routeIdx = off => scanIdx(() => true, off);
 
-function progressIdx(){
-  const off = currentOffset();
-  const { ci, ni } = scanIdx(p => !isSkipped(p.i), off);
-  return { ci, ni, off };
-}
 // The abeam positions a direct leaves behind, and which of them the crew is on:
 // the rule itself is in ofp-core.js, alongside the rest of the flight arithmetic.
 const abeamIdx = off => abeamAt(RESULT,
@@ -1807,7 +1813,6 @@ const abeamIdx = off => abeamAt(RESULT,
 function paintDct(i){
   const tr = rowOf(i);
   if (!tr) return;
-  tr.classList.toggle('skipped', isSkipped(i));
   const cell = tr.cells[0], want = DCT.marks.some(m => m.to === +i);
   const badge = cell.querySelector('.dctbadge');
   if (want && !badge){
@@ -1842,13 +1847,12 @@ function setPick(on){
 
 function applyDirect(target){
   const n = RESULT.findIndex(p => p.i === +target);
-  const { ci } = progressIdx();
   if (n < 0) return;
+  // A new direct always replaces whatever was there before, so it is measured
+  // from the plain route rather than from any skip the old one left behind.
+  const { ci } = routeIdx(currentOffset());
   if (n <= ci){ msg('#m7', 'That waypoint is not ahead of you.', 'err'); return; }
-  // Each mark covers its own full range, not just what's left after other active
-  // marks' ranges are excluded — otherwise deleting an earlier direct orphans the
-  // segment a later, still-active one silently depended on it for.
-  DCT.marks.push({ to: RESULT[n].i, skipped: directSkips(RESULT, ci, n, () => false) });
+  DCT.marks = [{ to: RESULT[n].i, skipped: directSkips(RESULT, ci, n, () => false) }];
   syncDct();
   setPick(false);
   afterDct();
@@ -1881,9 +1885,16 @@ function afterDct(){
 
 $('#dctBtn').onclick = () => setPick(!dctPick);
 
-/* ---- where the flight has got to ----
-   Kept out of refreshAlt because that one returns early when the plan is shorter
-   than an hour and has no checks — the table still needs its highlight. */
+/* ---- where the flight has got to ----------------------------------------------
+   Exactly one row is ever highlighted: the waypoint the crew has to write down
+   next. Ordinarily that is the next one on the route whose time has not come
+   round yet; while a direct still has abeam positions waiting to be logged, it is
+   the first of those instead, marked ABEAM. Nothing else in the table is tinted —
+   an ATO or a fuel figure already entered is shown by the number in the box and
+   by nothing else, and the waypoints a direct cuts out are left looking like any
+   other row. Kept out of refreshAlt because that one returns early when the plan
+   is shorter than an hour and has no checks — the table still needs its
+   highlight. */
 let scrolledAt = 0, typedAt = 0, autoTarget = null, autoT = null, lastNext = null;
 
 // Centring is done on the box's own scrollTop rather than with scrollIntoView,
@@ -1919,45 +1930,41 @@ function markAbeam(row, want){
 
 function refreshProgress(){
   if (!RESULT.length) return;
-  const { ci, ni, off } = progressIdx();
+  const off = currentOffset();
   const ab = abeamIdx(off);
-  const next = ni >= 0 ? RESULT[ni] : null;
+  // The abeam position being worked on, if a direct has left one waiting;
+  // failing that, the next waypoint still ahead on the route as it now stands.
+  const abAt = ab.ci >= 0 ? ab.ci : ab.ni;
+  const isAbeam = abAt >= 0;
+  const trackAt = isAbeam ? abAt : scanIdx(p => !isSkipped(p.i), off).ni;
+  const target = trackAt >= 0 ? RESULT[trackAt] : null;
+
   RESULT.forEach((p, n) => {
     const row = rowOf(p.i);
     if (!row) return;
-    const skipped = isSkipped(p.i);
-    row.classList.toggle('past', !skipped && n < ci);
-    row.classList.toggle('now', !skipped && n === ci);
-    row.classList.toggle('next', !skipped && n === ni);
-    // The cut-out ones keep their own highlight so the table still says where the
-    // aeroplane is against them; quieter than the live route, and labelled, so the
-    // two can never be read for each other.
-    row.classList.toggle('abeam-now', skipped && n === ab.ci);
-    row.classList.toggle('abeam-next', skipped && n === ab.ni);
-    markAbeam(row, skipped && n === ab.ci);
+    const on = n === trackAt;
+    row.classList.toggle('next', on);
+    markAbeam(row, on && isAbeam);
   });
+
   const st = $('#stNext');
   if (st){
-    const mins = next ? -sinceDue(next.t + off) : null;
-    st.querySelector('b').textContent = next ? next.wp : '—';
-    st.querySelector('span').textContent = next
-      ? `Next · ${fmt(next.t)} · in ${mins} min` + (off ? ` · ${off > 0 ? '+' : ''}${off} on plan` : '')
+    const mins = target ? -sinceDue(target.t + off) : null;
+    st.querySelector('b').textContent = target ? target.wp : '—';
+    st.querySelector('span').textContent = target
+      ? `Next · ${fmt(target.t)} · in ${mins} min`
+        + (isAbeam ? ' · ABEAM' : '')
+        + (off ? ` · ${off > 0 ? '+' : ''}${off} on plan` : '')
       : 'All waypoints passed';
   }
   // Follow the flight, but never fight the hands: only on a change of target row,
   // and not within twenty seconds of the crew scrolling the box or typing in it.
-  // Focus itself is no test — Enter steps to the next field, so a box stays focused
-  // for the rest of the flight and the table would never follow again.
-  // While a direct still has an abeam point to be written up, that point is the
-  // work: the waypoint the direct runs to is a long way off and keeps its own row
-  // waiting. So the table follows the abeam point until the last of them is
-  // logged, and only then goes back to following the route.
-  const abAt = ab.ci >= 0 ? ab.ci : ab.ni;
-  const follow = abAt >= 0 ? RESULT[abAt] : next;
-  if (follow && follow.i !== lastNext
+  // Focus itself is no test — Enter steps to the next field, so a box stays
+  // focused for the rest of the flight and the table would never follow again.
+  if (target && target.i !== lastNext
       && Date.now() - scrolledAt > 20000 && Date.now() - typedAt > 20000){
-    lastNext = follow.i;
-    centreRow(rowOf(follow.i));
+    lastNext = target.i;
+    centreRow(rowOf(target.i));
   }
 }
 {
@@ -2232,8 +2239,6 @@ function paint(i){
     td.textContent = (d > 0 ? '+' : '') + d;
     td.style.color = onScreen(d === 0 ? C.fuel : d > 0 ? C.pos : C.neg);
   }
-  const tr = rowOf(i);
-  if (tr) tr.classList.toggle('filled', !!(a.ato || a.fuel));
 }
 function countFilled(){
   const n = RESULT.filter(p => { const a = ACT[p.i]; return a && (a.ato || a.fuel); }).length;

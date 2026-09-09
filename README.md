@@ -132,12 +132,13 @@ contexts, so everything works on either.
    box — `PLANNED BLKF (29647)` — read off the same line of the form, where it is
    printed just left of the blank. It stays visible while you type, so the figure you enter can
    be compared against the planned one, and it is never written into the document.
-3. Enter the takeoff (airborne) time in UTC, four digits: `0210`.
-   The button next to it fills in the ETD from the plan — but that is off-block
-   time and takeoff is normally later, so check it. The **UTC now** clock sits beside
-   Calculate on the same row, laid out like the box itself — label above, figure
-   below — and ticks from the moment the plan loads, so the time you need in order
-   to fill the box is next to the box.
+3. Enter the takeoff (airborne) time in UTC, four digits: `0210`. The **UTC now**
+   clock sits beside Calculate on the same row, laid out like the box itself —
+   label above, figure below — and ticks from the moment the plan loads, so the
+   time you need in order to fill the box is next to the box.
+   Calculate walks every waypoint's ET against the plan's own T/T and inserts the
+   whole ETO column from that — a mismatch between the two raises a warning rather
+   than being silently trusted.
    The card then opens underneath
    into the waypoint table: entering the time and reading what it produces is one
    job, so it is one card.
@@ -145,13 +146,14 @@ contexts, so everything works on either.
    field. Everything is saved automatically. The clock is shown in gold so it is
    not mistaken for a time read off the plan, and the figures above the table name
    the waypoint you are running to.
-   The table follows the clock: passed
-   points fade back, the last one passed is shaded and the one you are running to
-   is highlighted, and the table brings that row to its middle as the flight moves
-   on. Only the table scrolls — the page stays where you left it — and it holds
-   still for twenty seconds after you scroll it or type in it. Focus is not what
-   stops it: Enter steps from one box to the next, so a box stays focused for the
-   rest of the flight.
+   Exactly one row is ever highlighted: the waypoint you are running to, brought to
+   the middle of the table as the flight moves on. An ATO or a fuel figure already
+   entered gets no tint of its own — the number sitting in the box is the only
+   record of it, so the table is never confused for a summary of what has and
+   hasn't been done yet. Only the table scrolls — the page stays where you left
+   it — and it holds still for twenty seconds after you scroll it or type in it.
+   Focus is not what stops it: Enter steps from one box to the next, so a box
+   stays focused for the rest of the flight.
    Step 3 is also where the app puts itself back when the hands come off. Thirty-five
    seconds with nothing touched — no typing, no tapping, no scrolling — and the whole
    card comes back on screen, centred and complete, in whichever orientation the iPad
@@ -160,8 +162,10 @@ contexts, so everything works on either.
    Anything you do resets the wait, and it never lands on top of you: with the keypad
    up an entry is in hand, and an open chart or the guide is being read on purpose,
    so in either case it stays where it is.
-   The highlight follows the plan rather than your typing, so it stays right when
-   the actuals are a few points behind.
+   Every ATO you enter is used, in the background, to work out how far the flight
+   is actually running from the plan — never to rewrite the ETO column itself,
+   only to tell which row the highlight belongs on, so it stays right when the
+   actuals are a few points behind.
    Watch the **fuel check** figure above the table. Company rule is a fuel check
    on overflying a waypoint, or at least every 30 minutes, and it is watched on
    the waypoint card itself because the record it needs — the fuel column — is
@@ -182,17 +186,19 @@ contexts, so everything works on either.
    thirty from there rather than leaving the next window due on the old half-hour
    mark: overfly a waypoint and record fuel on it, and the clock the company rule
    actually means restarts at that moment, the same as it would on paper.
-4. Record the hourly altimeter cross-checks. The app works out which waypoint
-   falls on each full hour after takeoff and lists one row per hour; enter
-   ALTM1 / STBY / ALTM2 and the reading is printed on the blank line directly
-   under that waypoint, so the time is read off the ETO/ATO right above it.
+4. Record the altimeter cross-checks. Every flight's first one is raised at
+   TOC — the OFP's own waypoint table always carries that line, and that is the
+   actual moment the aeroplane levels into cruise, rather than wherever the hourly
+   grid next happens to fall. The app then works out which waypoint falls on each
+   full hour after takeoff and lists one row per hour after that, skipping any
+   mark the climb has already run past; enter ALTM1 / STBY / ALTM2 and the reading
+   is printed on the blank line directly under that waypoint, so the time is read
+   off the ETO/ATO right above it.
    Each row tracks its own due time against the device clock in UTC and turns
    red once the check is overdue, with a short tone when it first falls due
    (switch it off with the checkbox — the choice is remembered, and tapping the
    clock beside it no longer knocks it off). No check is raised inside the last
-   hour before arrival. On a sector under two hours, where the hourly grid never
-   falls, one check is raised at TOC instead — the OFP's own waypoint table
-   always carries that line. Saving the PDF with checks still missing asks for
+   hour before arrival. Saving the PDF with checks still missing asks for
    confirmation first.
 5. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
    or send it to ForeFlight.
@@ -266,30 +272,33 @@ find the file again. Cross-checks that have already sounded do not sound a secon
 ## Direct to a waypoint
 
 When ATC shortcuts the route, press **Direct to…** and tap the waypoint you are cleared to. The
-waypoints cut out stay where they are, struck through and faded — the order has to keep matching
-the paper form, because that is where the ATOs are written — and the target is marked **DCT**.
-The live highlight steps over the skipped ones.
+order in the table does not change — it has to keep matching the paper form, because that is where
+the ATOs are written — and the waypoints the clearance cuts out are left looking like any other
+row: nothing is struck through or faded. Only the target itself is marked, with **DCT**.
 
 They are not gone from the sky, though: the aeroplane still goes past them, so they keep their own
-place on the clock. The one you are level with is shaded and marked **ABEAM**, the one still ahead
-is shaded more faintly, and both are quieter than the live route so the two can never be read for
-each other. Undoing the direct takes the marks away with it.
+place on the clock, and tracking and highlighting carry on exactly as before — one row highlighted,
+brought to the middle of the table — with one addition: whichever of the cut-out waypoints is
+currently the one to write down is marked **ABEAM**, so it can never be read for the live route.
 
-Taking the direct puts you straight on the first of those abeam positions — the next time you have
-to write down — rather than on the waypoint the clearance ran to, which is a long way ahead and has
-nothing owing on it yet. From there the marker follows the times you enter rather than the clock: a
-direct cuts a corner, so an abeam position is passed earlier than its printed time, and writing one
-up moves the marker to the next one whether or not that time has come round. Once the last of them
-is written up the marker clears and the table goes back to following the route.
+Taking the direct lands the highlight on the first of those abeam positions — the next time you
+have to write down — rather than on the waypoint the clearance ran to, which is a long way ahead and
+has nothing owing on it yet. From there the marker follows the times you enter rather than the
+clock: a direct cuts a corner, so an abeam position is passed earlier than its printed time, and
+writing one up moves the marker on to the next one whether or not that time has come round. Once
+the last of them is written up the marker clears and the table goes back to following the route.
 
-Nothing about this reaches the document and no ETO is rewritten; it only moves the highlight.
-The chip in the toolbar undoes it, and each direct remembers exactly which waypoints it cut out,
-so undoing one leaves any other alone.
+Only one direct is ever tracked. A second clearance does not layer onto the first — it replaces it
+outright, and the waypoints it cuts out are worked out fresh from wherever the flight actually is
+at the moment it is entered, not from whatever the direct it replaces left behind. The chip in the
+toolbar undoes the one direct in effect.
 
-The highlight also follows the **ATO** figures you enter: the most recent one sets how far the
-flight is running from the plan, and every later waypoint is judged against that, shown as, for
-example, `-12 on plan`. A fuel window left with nothing to overfly after a direct is dropped
-rather than sitting red for the rest of the flight.
+Nothing about any of this reaches the document and no ETO is rewritten; it only moves the highlight.
+
+The highlight also follows the **ATO** figures you enter, worked out in the background and never
+shown as such: the most recent one sets how far the flight is running from the plan, and every
+later waypoint is judged against that, shown as, for example, `-12 on plan`. A fuel window left with
+nothing to overfly after a direct is dropped rather than sitting red for the rest of the flight.
 
 ## Weather and NOTAMs
 

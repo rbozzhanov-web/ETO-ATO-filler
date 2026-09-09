@@ -75,12 +75,28 @@ test('an ETO past midnight keeps counting and prints folded', () => {
 });
 
 /* -------------------------------------------------- altimeter cross-checks */
-test('one altimeter check an hour, and none in the last hour', () => {
+test('the first check is always at TOC, then one an hour, none in the last hour', () => {
   const { rows } = computeResult(PLAN, 130, false);       // 3h25 en route
   const checks = hourlyChecks(rows, 130);
-  assert.deepEqual(checks.map(c => c.label), ['+1:00', '+2:00']);
-  assert.deepEqual(checks.map(c => c.wp.wp), ['ABDAR', 'KEGOL']);
-  assert.equal(fmt(checks[0].due), '0310');
+  assert.deepEqual(checks.map(c => c.label), ['TOC', '+1:00', '+2:00']);
+  assert.deepEqual(checks.map(c => c.wp.wp), ['TOC', 'ABDAR', 'KEGOL']);
+  assert.equal(fmt(checks[0].due), '0230');
+  assert.equal(fmt(checks[1].due), '0310');
+});
+
+test('an hourly mark the climb has already run past is not raised a second time', () => {
+  // TOC falls at 65 minutes, past the first hourly mark at 60 — that mark must
+  // not raise its own check on top of the TOC one already covering it.
+  const plan = [
+    { i: 0, sec: 1, wp: 'ALA', cum: 0 },
+    { i: 1, sec: 1, wp: 'TOC', cum: 65 },
+    { i: 2, sec: 1, wp: 'W1',  cum: 130 },
+    { i: 3, sec: 1, wp: 'DEST', cum: 190 }
+  ];
+  const { rows } = computeResult(plan, 600, false);
+  const checks = hourlyChecks(rows, 600);
+  assert.deepEqual(checks.map(c => c.label), ['TOC', '+2:00']);
+  assert.deepEqual(checks.map(c => c.wp.wp), ['TOC', 'W1']);
 });
 
 test('a short flight still owes a check, taken at TOC', () => {

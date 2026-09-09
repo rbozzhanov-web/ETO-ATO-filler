@@ -356,23 +356,14 @@ td.eto{font-weight:700;color:var(--c-eto)}
 td.num{text-align:right;color:var(--dim)}
 tr.hdr td{background:var(--hdr);color:var(--dim);font-size:11px;letter-spacing:.8px;
   text-transform:uppercase;font-weight:700;padding:8px}
-tr.filled{background:color-mix(in srgb,var(--ok) 8%,transparent)}
-tr.past td{opacity:.45}
-tr.now td{background:color-mix(in srgb,var(--dim) 12%,transparent)}
-tr.next td{background:color-mix(in srgb,var(--acc) 16%,transparent);font-weight:700;opacity:1}
+/* Exactly one row carries a highlight at a time: the waypoint that is next to
+   write down, whether that is the next one on the route or, while a direct still
+   has abeam positions waiting to be logged, the first of those. An ATO or a fuel
+   figure already entered gets no tint of its own — the number in the box is the
+   only hint — and a direct's cut-out waypoints are left looking like any other
+   row but for the ABEAM badge on whichever one is currently being tracked. */
+tr.next td{background:color-mix(in srgb,var(--acc) 16%,transparent);font-weight:700}
 tr.next td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
-/* A direct cuts waypoints out of the flight but not out of the form, so the rows
-   stay in place — struck through, and after .past so they win on opacity. */
-tr.skipped td{opacity:.3}
-tr.skipped td:first-child{text-decoration:line-through}
-/* The aeroplane still goes past them, so they keep their place on the clock. Lifted
-   well clear of the .3 so they can actually be read — that was the complaint — but
-   without the live route's bold and with a dashed rule rather than its solid one,
-   so an abeam position can never be taken for one you are flying to. */
-tr.skipped.abeam-now td{opacity:.8;background:color-mix(in srgb,var(--dim) 16%,transparent)}
-tr.skipped.abeam-next td{opacity:.75;background:color-mix(in srgb,var(--acc) 12%,transparent)}
-tr.skipped.abeam-now td:first-child,
-tr.skipped.abeam-next td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--dim) 55%,transparent)}
 .abbadge{display:inline-block;margin-left:8px;padding:1px 5px;border-radius:4px;
   background:color-mix(in srgb,var(--dim) 28%,transparent);color:var(--txt);text-decoration:none;
   font:700 9.5px/1.5 -apple-system,system-ui,sans-serif;letter-spacing:.5px;vertical-align:1px}

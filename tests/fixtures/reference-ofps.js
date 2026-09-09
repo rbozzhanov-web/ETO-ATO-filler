@@ -25,7 +25,7 @@ module.exports = [
       { i:2, sec:1, wp:'P10',  cum:65 },
       { i:3, sec:1, wp:'BBBB', cum:120 }
     ],
-    expected: { arrival:'1210', altimeter:[{ mark:60, wp:'P10', label:'+1:00' }] }
+    expected: { arrival:'1210', altimeter:[{ mark:20, wp:'TOC', label:'TOC' }, { mark:60, wp:'P10', label:'+1:00' }] }
   },
   {
     name: 'three hour sector raises two hourly checks',
@@ -37,7 +37,7 @@ module.exports = [
       { i:3, sec:1, wp:'P21',  cum:128 },
       { i:4, sec:1, wp:'BBBB', cum:180 }
     ],
-    expected: { arrival:'1715', altimeter:[{ mark:60, wp:'P20', label:'+1:00' }, { mark:120, wp:'P21', label:'+2:00' }] }
+    expected: { arrival:'1715', altimeter:[{ mark:22, wp:'TOC', label:'TOC' }, { mark:60, wp:'P20', label:'+1:00' }, { mark:120, wp:'P21', label:'+2:00' }] }
   },
   {
     name: 'arrival wraps through midnight',
@@ -49,7 +49,7 @@ module.exports = [
       { i:3, sec:1, wp:'P31',  cum:145 },
       { i:4, sec:1, wp:'BBBB', cum:205 }
     ],
-    expected: { arrival:'0235', altimeter:[{ mark:60, wp:'P30', label:'+1:00' }, { mark:120, wp:'P31', label:'+2:00' }] }
+    expected: { arrival:'0235', altimeter:[{ mark:25, wp:'TOC', label:'TOC' }, { mark:60, wp:'P30', label:'+1:00' }, { mark:120, wp:'P31', label:'+2:00' }] }
   },
   {
     name: 'alternate starts at destination arrival',
@@ -65,7 +65,7 @@ module.exports = [
     expected: {
       arrival:'2255',
       alternate:[{ wp:'A40', eto:'2313' }, { wp:'CCCC', eto:'2337' }],
-      altimeter:[{ mark:60, wp:'P40', label:'+1:00' }]
+      altimeter:[{ mark:20, wp:'TOC', label:'TOC' }, { mark:60, wp:'P40', label:'+1:00' }]
     }
   },
   {
@@ -100,6 +100,7 @@ module.exports = [
     expected: {
       arrival:'0940',
       altimeter:[
+        { mark:24, wp:'TOC', label:'TOC' },
         { mark:60, wp:'P60', label:'+1:00' },
         { mark:120, wp:'P61', label:'+2:00' },
         { mark:180, wp:'P62', label:'+3:00' },
@@ -119,7 +120,7 @@ module.exports = [
       { i:5, sec:1, wp:'P73',  cum:123 },
       { i:6, sec:1, wp:'BBBB', cum:190 }
     ],
-    expected: { arrival:'1215', altimeter:[{ mark:60, wp:'P71', label:'+1:00' }, { mark:120, wp:'P73', label:'+2:00' }] }
+    expected: { arrival:'1215', altimeter:[{ mark:16, wp:'TOC', label:'TOC' }, { mark:60, wp:'P71', label:'+1:00' }, { mark:120, wp:'P73', label:'+2:00' }] }
   },
   {
     name: 'direct reference skips every intermediate waypoint',
@@ -136,7 +137,7 @@ module.exports = [
     expected: {
       arrival:'1015',
       directSkipped:[2,3,4],
-      altimeter:[{ mark:60, wp:'P81', label:'+1:00' }]
+      altimeter:[{ mark:20, wp:'TOC', label:'TOC' }, { mark:60, wp:'P81', label:'+1:00' }]
     }
   },
   {
@@ -154,7 +155,7 @@ module.exports = [
     expected: {
       arrival:'1910',
       directSkipped:[2,4],
-      altimeter:[{ mark:60, wp:'P91', label:'+1:00' }]
+      altimeter:[{ mark:18, wp:'TOC', label:'TOC' }, { mark:60, wp:'P91', label:'+1:00' }]
     }
   }
 ];
