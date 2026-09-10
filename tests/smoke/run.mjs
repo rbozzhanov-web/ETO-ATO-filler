@@ -368,15 +368,12 @@ try {
     check(advanceEntry.targetOnceReached === 'EKSUN',
           'once the clock reaches an advance entry, a waypoint logged the same instant does not stall tracking behind it');
 
-    /* The bug this guards: the table's own row-refocus used to hold off for
-       twenty seconds after any touch on the page, on the theory that a target
-       change mid-touch might just be idle background noise. But there are
-       only two ways the tracked row ever changes — an ATO or fuel figure just
-       logged, or the clock catching up to one already reached — and neither
-       is noise: both are real flight progress, and holding either back for a
-       count read as the tracking having stopped working. A touch elsewhere on
-       the page must not hold back a genuine clock-driven jump. */
-    const clockJump = await page.evaluate(async () => {
+    /* The bug this guards: the table's own row-refocus used to hold off only on
+       a scroll or keystroke inside the table itself — a touch anywhere else on
+       the page (a NOTAM, a chart, a document field) went unnoticed and the
+       table would yank itself to a new row while the crew's hand was busy
+       somewhere else on the same page. Any touch on the page now counts. */
+    const idleGate = await page.evaluate(async () => {
       for (const k in ACT) delete ACT[k];
       DCT.marks = []; syncDct();
       const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
@@ -404,144 +401,37 @@ try {
       const initialTarget = nextWp();
       const scrollAfterInitial = box.scrollTop;
 
-      // A touch elsewhere on the page, right as the clock's own periodic check
-      // (tick, not a direct call) finds a new waypoint has become 'next' — this
-      // must follow immediately, not wait on the touch to be twenty seconds cold.
       const RealDate = Date;
-      class FakeDate extends RealDate {
-        constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + 46 * 60000); }
-        static now(){ return RealDate.now() + 46 * 60000; }
-      }
-      window.Date = FakeDate;
-      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));   // touch, this same instant
-      tick();
-      window.Date = RealDate;
-      await settle();
-      const jumpTarget = nextWp();
-      const scrollAfterJump = box.scrollTop;
-
-      return { initialTarget, jumpTarget, scrollAfterInitial, scrollAfterJump };
-    });
-    check(clockJump.jumpTarget !== clockJump.initialTarget,
-          'the tracked waypoint actually changes once the clock moves on');
-    check(clockJump.scrollAfterJump !== clockJump.scrollAfterInitial,
-          'a touch elsewhere on the page does not hold back a genuine flight-progress jump');
-
-    /* The other half of the same fix: logging an ATO moves the tracked row on
-       at once, on the very call that processes the entry — not after any
-       further wait. */
-    const entryJump = await page.evaluate(async () => {
-      for (const k in ACT) delete ACT[k];
-      DCT.marks = []; syncDct();
-      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
-      const t0 = now - 5;   // almost nothing is due by the clock alone
-      const names = [], cums = [];
-      for (let i = 0; i < 20; i++){ names.push('WPT' + i); cums.push(i * 15); }
-      T0 = t0;
-      RESULT = names.map((wp, i) => ({
-        i, sec: 1, wp, et: i ? 15 : 0, cum: cums[i],
-        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
-      }));
-      document.querySelector('#c2').classList.remove('hide');
-      document.querySelector('#c3').classList.remove('hide');
-      const box = document.querySelector('.tblbox');
-      box.style.maxHeight = '260px';
-      render(t0, t0 + cums[cums.length - 1]);
-      const nextWp = () => RESULT.find(p => rowOf(p.i)?.classList.contains('next'))?.wp || null;
-      const settle = async () => {
-        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-        await new Promise(r => setTimeout(r, 400));
+      const fake = mins => class extends RealDate {
+        constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + mins * 60000); }
+        static now(){ return RealDate.now() + mins * 60000; }
       };
 
-      refreshProgress();
-      await settle();
-      const initialTarget = nextWp();
-      const scrollAfterInitial = box.scrollTop;
-
-      // Logged against WPT5, reached the instant it's typed in (now, not some
-      // future prediction) — everything up to it, including WPT1..4, counts
-      // as passed alongside it.
-      const inp = document.querySelector('#tbl tbody tr[data-i="5"] input.ato');
-      inp.value = fmt(now); inp.dispatchEvent(new Event('input'));
-      await settle();
-      const entryTarget = nextWp();
-      const scrollAfterEntry = box.scrollTop;
-
-      return { initialTarget, entryTarget, scrollAfterInitial, scrollAfterEntry };
-    });
-    check(entryJump.entryTarget === 'WPT6',
-          'logging an ATO against a later waypoint moves tracking straight past it');
-    check(entryJump.scrollAfterEntry !== entryJump.scrollAfterInitial,
-          'the carousel follows an ATO entry immediately, with no wait at all');
-
-    /* Those two are the only named exceptions. Any other call that lands on
-       refreshProgress() with a genuinely new target — a direct taken or
-       undone, a full table rebuild — does not set followNow, so it still
-       goes through the original twenty-second wait rather than chasing the
-       row onto screen mid-touch. Reusing entryJump's own scenario (logging
-       an ATO moves the target from WPT1 to WPT6) but writing ACT directly
-       instead of going through the real input box isolates exactly that: the
-       same underlying target change, through a call site that does not
-       claim followNow. */
-    const gatedJump = await page.evaluate(async () => {
-      for (const k in ACT) delete ACT[k];
-      DCT.marks = []; syncDct();
-      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
-      const t0 = now - 5;
-      const names = [], cums = [];
-      for (let i = 0; i < 20; i++){ names.push('WPT' + i); cums.push(i * 15); }
-      T0 = t0;
-      RESULT = names.map((wp, i) => ({
-        i, sec: 1, wp, et: i ? 15 : 0, cum: cums[i],
-        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
-      }));
-      document.querySelector('#c2').classList.remove('hide');
-      document.querySelector('#c3').classList.remove('hide');
-      const box = document.querySelector('.tblbox');
-      box.style.maxHeight = '260px';
-      render(t0, t0 + cums[cums.length - 1]);
-      const nextWp = () => RESULT.find(p => rowOf(p.i)?.classList.contains('next'))?.wp || null;
-      const settle = async () => {
-        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-        await new Promise(r => setTimeout(r, 400));
-      };
-
-      refreshProgress();   // page load: nothing has touched the page yet
-      await settle();
-      const initialTarget = nextWp();
-      const scrollAfterInitial = box.scrollTop;
-
-      // A touch on the page, then straight away the same target change
-      // entryJump makes — but through a raw refreshProgress() call, the way
-      // afterDct() or render() reach it, neither of which sets followNow.
+      // A touch elsewhere on the page — not the table — while the clock moves
+      // far enough for a new waypoint to become 'next'.
+      window.Date = fake(46);
       document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
-      ACT[5] = { ato: fmt(now) };
-      refreshProgress();
-      await settle();
-      const jumpTarget = nextWp();
-      const scrollAfterJump = box.scrollTop;
-
-      // Only once the page has actually gone quiet for twenty seconds does
-      // the carousel catch up to the target that already changed underneath it.
-      const RealDate = Date;
-      class FakeDate extends RealDate {
-        constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + 46 * 60000); }
-        static now(){ return RealDate.now() + 46 * 60000; }
-      }
-      window.Date = FakeDate;
       refreshProgress();
       window.Date = RealDate;
       await settle();
-      const scrollAfterQuiet = box.scrollTop;
+      const heldTarget = nextWp();
+      const scrollWhileHeld = box.scrollTop;
 
-      return { initialTarget, jumpTarget, scrollAfterInitial, scrollAfterJump, scrollAfterQuiet };
+      // The same target, twenty-one seconds after that touch: now it may follow.
+      window.Date = fake(46 + 21 / 60);
+      refreshProgress();
+      window.Date = RealDate;
+      await settle();
+      const scrollAfterRelease = box.scrollTop;
+
+      return { initialTarget, heldTarget, scrollAfterInitial, scrollWhileHeld, scrollAfterRelease };
     });
-    check(gatedJump.jumpTarget !== gatedJump.initialTarget,
-          'the tracked target itself changes at once, with no gate on the classification');
-    check(gatedJump.scrollAfterJump === gatedJump.scrollAfterInitial,
-          'a target change right after a touch, reached without followNow, does not drag the carousel mid-touch');
-    check(gatedJump.scrollAfterQuiet !== gatedJump.scrollAfterInitial,
-          'the carousel does catch up once the page has gone quiet for twenty seconds');
+    check(idleGate.heldTarget !== idleGate.initialTarget,
+          'the tracked waypoint actually changes once the clock moves on');
+    check(idleGate.scrollWhileHeld === idleGate.scrollAfterInitial,
+          'a touch anywhere on the page holds the carousel refocus back, not just a touch on the table');
+    check(idleGate.scrollAfterRelease !== idleGate.scrollWhileHeld,
+          'the carousel follows again once twenty seconds have actually passed since that touch');
 
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
     // numpad plus both orientations. A real tap is used here because programmatic
