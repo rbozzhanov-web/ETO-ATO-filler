@@ -98,12 +98,13 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 /* Step 3 is where the flight is actually worked — takeoff time, then the
    waypoint carousel opening inside it — so its card carries a faint wash of
    the accent already used for the tracked row, just enough to read as the
-   working card among the plainer ones around it. That wash is the frame, not
-   the content: the takeoff-time entry and the carousel's own scrollable
-   table are each their own plain window cut into it, left exactly as they
-   were, so the colour separates the two rather than sitting behind them. */
-.card#c2{background:color-mix(in srgb, var(--acc) 9%, var(--panel))}
-.card#c2 .win{background:var(--panel);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+   working card among the plainer ones around it. Only the carousel's own
+   scrollable table is cut out of it as its own plain window; everywhere
+   else — the takeoff-time row, the stats summary — the wash shows straight
+   through, with the controls sitting on it keeping their own look (the HHMM
+   box, Calculate, the checkbox) exactly as they already did. */
+.card#c2{--tint:color-mix(in srgb, var(--acc) 9%, var(--panel));background:var(--tint)}
+.card#c2 .stats{background:var(--tint)}
 .step{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.8px;
   text-transform:uppercase;color:var(--dim);margin-bottom:10px}
 /* A second part of the same card, opened once the step above it is done: a rule
@@ -571,7 +572,7 @@ td.diff{text-align:right;font-weight:700}
 
   <div class="card hide" id="c2">
     <div class="step"><i>3</i> Takeoff time (airborne), UTC</div>
-    <div class="row win">
+    <div class="row">
       <div><label>HHMM</label><input type="text" id="etd" class="big numkey" placeholder="----" maxlength="5"
         inputmode="none" pattern="[0-9]*" autocomplete="off" autocorrect="off" spellcheck="false"
         enterkeyhint="go"></div>
