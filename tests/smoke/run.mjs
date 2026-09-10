@@ -499,10 +499,20 @@ try {
       const wouldBeTopPin = Math.round(Math.max(0, Math.min(rel - headH, box.scrollHeight - box.clientHeight)));
 
       const nextWp = () => RESULT.find(p => rowOf(p.i)?.classList.contains('next'))?.wp || null;
-      return {
+      const result = {
         entryTarget: nextWp(), scrollAfterFocus, scrollAfterEntry, scrollAfterQuiet, wouldBeTopPin,
         stillEditing: document.activeElement === inp
       };
+      // Unlike every other test here, this one leaves a real box focused with
+      // the keypad genuinely open throughout -- closing it now, rather than
+      // leaving that for the next test to trip over, matches every other
+      // scenario's clean finish (WebKit's own numpad test right after this
+      // one taps a fresh field and checks the keypad opens for it; a keypad
+      // already open here left the outside-tap dismiss-and-reopen sequence
+      // to run mid-gesture instead).
+      npHideForce();
+      await settle();
+      return result;
     });
     check(centerAfterGate.entryTarget === 'WPT6',
           'tracking still advances past the waypoint just logged, entry left open or not');
