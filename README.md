@@ -155,11 +155,14 @@ contexts, so everything works on either.
    entered gets no tint of its own — the number sitting in the box is the only
    record of it, so the table is never confused for a summary of what has and
    hasn't been done yet. Only the table scrolls — the page stays where you left
-   it — and it moves the moment the tracked waypoint actually changes: an ATO
-   or fuel figure just logged, or the clock catching up to one already
-   reached, both count as real progress and bring the table with them at
-   once. Focus is not what stops it: Enter steps from one box to the next, so
-   a box stays focused for the rest of the flight.
+   it — and it waits twenty seconds after anything else on the page was last
+   touched before bringing a changed target back to the top, so it never
+   yanks the view away while your hands are busy elsewhere. An ATO or fuel
+   figure just logged, or the clock catching up to a waypoint already
+   reached, are the two exceptions: both count as real flight progress
+   rather than idle background noise, so the table follows them at once,
+   with no wait at all. Focus is not what stops it: Enter steps from one box
+   to the next, so a box stays focused for the rest of the flight.
    Step 3 is also where the app puts itself back when the hands come off. Thirty-five
    seconds with nothing touched — no typing, no tapping, no scrolling — and the whole
    card comes back on screen, centred and complete, in whichever orientation the iPad
