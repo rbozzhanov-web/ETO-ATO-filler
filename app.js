@@ -1934,7 +1934,7 @@ $('#dctBtn').onclick = () => setPick(!dctPick);
    are otherwise left looking like any other row. Kept out of refreshAlt because
    that one returns early when the plan is shorter than an hour and has no
    checks — the table still needs its highlight. */
-let lastActivityAt = 0, followNow = false, autoTarget = null, autoT = null, lastNext = null;
+let lastActivityAt = 0, autoTarget = null, autoT = null, lastNext = null;
 
 // Scrolled to the box's own scrollTop rather than with scrollIntoView, which
 // walks every scrollable ancestor and used to drag the whole page with it. The
@@ -2000,19 +2000,15 @@ function refreshProgress(){
         + (off ? ` · ${off > 0 ? '+' : ''}${off} on plan` : '')
       : 'All waypoints passed';
   }
-  // Follow the flight, but never fight the hands — unless the flight itself is
-  // why this call is happening. An ATO or fuel figure just logged, or the
-  // clock's own periodic check finding the tracked waypoint has moved on, are
-  // both real progress rather than idle background noise, and move the marker
-  // on at once (followNow, set by those two call sites only). Anything else —
-  // a direct taken or undone, the table rebuilding — still waits for twenty
-  // seconds with nothing touched anywhere on the page, table included, so it
-  // never yanks the view away while the crew's hands are busy elsewhere.
-  if (target && target.i !== lastNext && (followNow || Date.now() - lastActivityAt > 20000)){
+  // Follow the flight, but never fight the hands: only on a change of target row,
+  // and not within twenty seconds of any touch on the page at all — not just the
+  // table itself. Focus is no test — Enter steps to the next field, so a box
+  // stays focused for the rest of the flight and the table would never follow
+  // again.
+  if (target && target.i !== lastNext && Date.now() - lastActivityAt > 20000){
     lastNext = target.i;
     scrollRowToTop(rowOf(target.i));
   }
-  followNow = false;
 }
 {
   const box = document.querySelector('.tblbox');
@@ -2043,9 +2039,6 @@ const tick = () => {
   // blurred layers just as it is being frozen. Leave the screen untouched until
   // it is visible again; the resume hook below catches the UI up in one frame.
   if (document.hidden) return;
-  // Nothing but the clock drives this call, so a target change found here is
-  // always the flight itself catching up to a waypoint, never idle noise.
-  followNow = true;
   refreshProgress(); refreshAlt(); refreshFuel();
 };
 setInterval(tick, 15000);
@@ -2341,9 +2334,7 @@ function bindInputs(){
       ACT[i][isAto ? 'ato' : 'fuel'] = inp.value;
       if (!ACT[i].ato && !ACT[i].fuel) delete ACT[i];
       refreshInputValidity();
-      paint(i); countFilled(); refreshFuel();
-      followNow = true;   // an ATO or fuel figure was just logged — never wait to follow it
-      refreshProgress(); save();
+      paint(i); countFilled(); refreshFuel(); refreshProgress(); save();
     };
     inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
       const nx = inputs[idx + (e.shiftKey ? -1 : 1)];
