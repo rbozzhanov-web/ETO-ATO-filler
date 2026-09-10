@@ -2,7 +2,7 @@
    index.html is the OFP companion, journey-log.html the Journey Log form. */
 const CACHE_PREFIX = 'ofp-companion-';
 const LEGACY_CACHE_PREFIX = 'eto-filler-v';
-const V = CACHE_PREFIX + 'rc1.8.14-20260910';
+const V = CACHE_PREFIX + 'rc1.8.15-20260910';
 const FILES = ['./', './index.html', './journey-log.html',
                './theme-init.js', './pdfmini.js', './ofp-core.js', './storage.js',
                './offline-update.js', './app.js', './jl-pdf.js', './journey-log.js',
