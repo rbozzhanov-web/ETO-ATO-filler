@@ -503,6 +503,91 @@ try {
     check(Math.abs(staleFocus.scrollAfterQuiet - staleFocus.wantTopPin) < 4,
           'the carousel still follows the flight to the top once the gate opens, a stale focused box notwithstanding');
 
+    /* The bug this guards: a touch anywhere resets the quiet wait, so a crew
+       genuinely busy elsewhere for minutes at a stretch -- reading a NOTAM,
+       working document fields, anything -- could keep the carousel from ever
+       following at all, exactly like a stuck-focused keypad box could. The
+       target changing at all now starts its own twenty-second clock that
+       nothing resets: the row is guaranteed onto screen within twenty
+       seconds of becoming the tracked one, no matter what keeps touching the
+       page after that. The quiet-since-last-touch rule still applies on its
+       own too -- it can let the carousel follow sooner, if the page was
+       already quiet when the target changed. */
+    const guaranteedFocus = await page.evaluate(async () => {
+      for (const k in ACT) delete ACT[k];
+      DCT.marks = []; syncDct();
+      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+      const t0 = now - 50;
+      const names = [], cums = [];
+      for (let i = 0; i < 20; i++){ names.push('WPT' + i); cums.push(i * 15); }
+      T0 = t0;
+      RESULT = names.map((wp, i) => ({
+        i, sec: 1, wp, et: i ? 15 : 0, cum: cums[i],
+        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
+      }));
+      document.querySelector('#c2').classList.remove('hide');
+      document.querySelector('#c3').classList.remove('hide');
+      const box = document.querySelector('.tblbox');
+      box.style.maxHeight = '260px';
+      render(t0, t0 + cums[cums.length - 1]);
+      const nextWp = () => RESULT.find(p => rowOf(p.i)?.classList.contains('next'))?.wp || null;
+      const settle = async () => {
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        await new Promise(r => setTimeout(r, 400));
+      };
+
+      refreshProgress();
+      await settle();
+      const initialTarget = nextWp();
+      const scrollAfterInitial = box.scrollTop;
+
+      const RealDate = Date;
+      const fake = mins => class extends RealDate {
+        constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + mins * 60000); }
+        static now(){ return RealDate.now() + mins * 60000; }
+      };
+
+      // A touch elsewhere on the page, the same instant the clock moves the
+      // target on: the wait starts now, for both rules alike.
+      window.Date = fake(46);
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      refreshProgress();
+      window.Date = RealDate;
+      await settle();
+      const targetAfterChange = nextWp();
+      const scrollRightAfterChange = box.scrollTop;
+
+      // Nineteen seconds later, still another touch -- under the old,
+      // touch-only rule this would push the wait back out by a further
+      // twenty seconds from here. It must not push back the target's own
+      // twenty-second ceiling.
+      window.Date = fake(46 + 19 / 60);
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      refreshProgress();
+      window.Date = RealDate;
+      await settle();
+      const scrollAt19s = box.scrollTop;
+
+      // One second later -- twenty seconds since the target itself changed,
+      // only one since that last touch: the touch-only rule would still hold
+      // it back here, but the guarantee does not.
+      window.Date = fake(46 + 20 / 60);
+      refreshProgress();
+      window.Date = RealDate;
+      await settle();
+      const scrollAt20s = box.scrollTop;
+
+      return { initialTarget, targetAfterChange, scrollAfterInitial, scrollRightAfterChange, scrollAt19s, scrollAt20s };
+    });
+    check(guaranteedFocus.targetAfterChange !== guaranteedFocus.initialTarget,
+          'the tracked waypoint actually changes once the clock moves on');
+    check(guaranteedFocus.scrollRightAfterChange === guaranteedFocus.scrollAfterInitial,
+          'the carousel does not jump the instant the target changes');
+    check(guaranteedFocus.scrollAt19s === guaranteedFocus.scrollAfterInitial,
+          'a touch nineteen seconds after the change still holds the carousel back');
+    check(guaranteedFocus.scrollAt20s !== guaranteedFocus.scrollAfterInitial,
+          'but twenty seconds after the target changed the carousel follows regardless of that touch');
+
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
     // numpad plus both orientations. A real tap is used here because programmatic
     // focus does not consistently model a user gesture in mobile WebKit.

@@ -1935,6 +1935,7 @@ $('#dctBtn').onclick = () => setPick(!dctPick);
    that one returns early when the plan is shorter than an hour and has no
    checks — the table still needs its highlight. */
 let lastActivityAt = 0, autoTarget = null, autoT = null, lastNext = null;
+let pendingTarget = null, pendingSince = 0;
 
 // Scrolled to the box's own scrollTop rather than with scrollIntoView, which
 // walks every scrollable ancestor and used to drag the whole page with it. The
@@ -2000,14 +2001,24 @@ function refreshProgress(){
         + (off ? ` · ${off > 0 ? '+' : ''}${off} on plan` : '')
       : 'All waypoints passed';
   }
-  // Follow the flight, but never fight the hands: only on a change of target row,
-  // and not within twenty seconds of any touch on the page at all — not just the
-  // table itself. Focus is no test — Enter steps to the next field, so a box
-  // stays focused for the rest of the flight and the table would never follow
-  // again.
-  if (target && target.i !== lastNext && Date.now() - lastActivityAt > 20000){
-    lastNext = target.i;
-    scrollRowToTop(rowOf(target.i));
+  // Follow the flight, but never fight the hands — up to a point. Two rules,
+  // either enough on its own: a touch anywhere on the page, not only the
+  // table itself, holds the follow back for twenty seconds after it (so a
+  // busy stretch already quiet when the target changes can still follow
+  // sooner than the other rule below, once it's been quiet that long); but
+  // the target changing at all starts its own twenty-second clock that
+  // nothing resets, so the row is guaranteed onto screen within twenty
+  // seconds of actually becoming the tracked one no matter what keeps
+  // happening on the page after that — a box left focused, Enter chaining
+  // through more fields, anything. Focus is no test on its own: Enter steps
+  // to the next field, so a box stays focused for the rest of the flight and
+  // that alone must never be read as reason to hold the follow back forever.
+  if (target && target.i !== lastNext){
+    if (target.i !== pendingTarget){ pendingTarget = target.i; pendingSince = Date.now(); }
+    if (Date.now() - pendingSince >= 20000 || Date.now() - lastActivityAt > 20000){
+      lastNext = target.i;
+      scrollRowToTop(rowOf(target.i));
+    }
   }
 }
 {
