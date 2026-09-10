@@ -433,15 +433,18 @@ try {
     check(idleGate.scrollAfterRelease !== idleGate.scrollWhileHeld,
           'the carousel follows again once twenty seconds have actually passed since that touch');
 
-    /* The bug this guards: logging an ATO is itself a touch, so it resets the
-       twenty-second gate the same as anything else — but if the box it was
-       entered into is left open on the keypad (the crew pauses before the
-       fuel figure, say) and the tracked waypoint has since moved on by the
-       time the gate actually releases, the table used to pull itself to the
-       NEW target's top, dragging the row an entry is still open against out
-       from under the keypad. With a box open, the release should centre that
-       row instead of top-anchoring whichever one is now tracked. */
-    const centerAfterGate = await page.evaluate(async () => {
+    /* The bug this guards: an on-screen keypad field, once focused, is never
+       blurred on its own -- Enter only ever moves focus to the next field, so
+       some box stays focused for the rest of the flight, exactly as the
+       comment above already says. A version of this fix that used "is a box
+       currently focused" as its own signal for "an entry is genuinely still
+       in progress" was wrong for exactly that reason: once any entry has ever
+       been made, a box is always focused, so that signal never goes away and
+       the carousel stops following the flight at all -- confirmed against a
+       real iPad. A box merely being focused, with the twenty-second gate
+       already open, must not hold the follow back: nothing has touched the
+       page in twenty seconds regardless of what still happens to have focus. */
+    const staleFocus = await page.evaluate(async () => {
       for (const k in ACT) delete ACT[k];
       DCT.marks = []; syncDct();
       const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
@@ -465,20 +468,16 @@ try {
       refreshProgress();
       await settle();
 
-      // Focus WPT5's ATO box the way the on-screen keypad does, then log it
-      // -- moving the tracked target on to WPT6 -- but leave the box focused,
-      // same as a real entry stays open until Enter moves on.
+      // Focus WPT5's ATO box and log it -- moving the tracked target on to
+      // WPT6 -- then leave the box focused and simply stop touching anything,
+      // the way it's left after a real entry with nothing tapped afterward.
       const inp = document.querySelector('#tbl tbody tr[data-i="5"] input.ato');
       inp.focus();
-      await settle();
-      const scrollAfterFocus = box.scrollTop;
-
       inp.value = fmt(now); inp.dispatchEvent(new Event('input'));
       await settle();
-      const scrollAfterEntry = box.scrollTop;
 
-      // Twenty-one seconds later, still nothing else touched and the box
-      // still open: the gate now releases.
+      // Twenty-one seconds later, still nothing touched, the box still
+      // holding focus it was never explicitly given up.
       const RealDate = Date;
       class FakeDate extends RealDate {
         constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + 21000); }
@@ -488,42 +487,21 @@ try {
       refreshProgress();
       window.Date = RealDate;
       await settle();
-      const scrollAfterQuiet = box.scrollTop;
 
-      // What a top-pin on the new target (WPT6) would have wanted, for
-      // comparison -- the exact wrong answer this fix moves away from.
       const row6 = rowOf(6);
       const head = box.querySelector('thead'), headH = head.offsetHeight;
       const anchor = row6.previousElementSibling || row6;
       const rel = anchor.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
-      const wouldBeTopPin = Math.round(Math.max(0, Math.min(rel - headH, box.scrollHeight - box.clientHeight)));
+      const wantTopPin = Math.round(Math.max(0, Math.min(rel - headH, box.scrollHeight - box.clientHeight)));
 
-      const nextWp = () => RESULT.find(p => rowOf(p.i)?.classList.contains('next'))?.wp || null;
-      const result = {
-        entryTarget: nextWp(), scrollAfterFocus, scrollAfterEntry, scrollAfterQuiet, wouldBeTopPin,
-        stillEditing: document.activeElement === inp
-      };
-      // Unlike every other test here, this one leaves a real box focused with
-      // the keypad genuinely open throughout -- closing it now, rather than
-      // leaving that for the next test to trip over, matches every other
-      // scenario's clean finish (WebKit's own numpad test right after this
-      // one taps a fresh field and checks the keypad opens for it; a keypad
-      // already open here left the outside-tap dismiss-and-reopen sequence
-      // to run mid-gesture instead).
-      npHideForce();
-      await settle();
+      const result = { scrollAfterQuiet: box.scrollTop, wantTopPin, stillFocused: document.activeElement === inp };
+      inp.blur();
       return result;
     });
-    check(centerAfterGate.entryTarget === 'WPT6',
-          'tracking still advances past the waypoint just logged, entry left open or not');
-    check(centerAfterGate.stillEditing,
-          'the box being typed into is left focused, matching a real entry not yet closed with Enter');
-    check(centerAfterGate.scrollAfterEntry === centerAfterGate.scrollAfterFocus,
-          'logging the ATO is itself a touch, so it does not release the gate any sooner than any other touch would');
-    check(Math.abs(centerAfterGate.scrollAfterQuiet - centerAfterGate.scrollAfterFocus) < 20,
-          'once the gate releases, the box left open stays roughly where it already was centred');
-    check(Math.abs(centerAfterGate.scrollAfterQuiet - centerAfterGate.wouldBeTopPin) > 40,
-          'the row an entry is still open against is not top-anchored away once the tracked waypoint moves on');
+    check(staleFocus.stillFocused,
+          'the box logged against stays focused afterward, with nothing having explicitly closed it');
+    check(Math.abs(staleFocus.scrollAfterQuiet - staleFocus.wantTopPin) < 4,
+          'the carousel still follows the flight to the top once the gate opens, a stale focused box notwithstanding');
 
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
     // numpad plus both orientations. A real tap is used here because programmatic

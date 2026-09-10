@@ -1966,28 +1966,6 @@ function scrollRowToTop(row){
   box.scrollTo({ top: want, behavior: 'smooth' });
 }
 
-// Same box-scrollTo approach as scrollRowToTop (never scrollIntoView, which
-// would drag the whole page — see the comment there), but centred on the row
-// rather than anchored under the header: used only while a box on that row is
-// actively open on the keypad, so the row an entry is being made against stays
-// in view rather than being pushed to the top by the tracked waypoint having
-// moved on to the next one in the meantime.
-function scrollRowToCenter(row){
-  const box = document.querySelector('.tblbox');
-  if (!box || !row) return;
-  const head = box.querySelector('thead');
-  const headH = head ? head.offsetHeight : 0;
-  const boxRect = box.getBoundingClientRect(), rowRect = row.getBoundingClientRect();
-  const rowMid = rowRect.top + rowRect.height / 2 - boxRect.top + box.scrollTop;
-  const visibleMid = headH + (box.clientHeight - headH) / 2;
-  const want = Math.round(Math.max(0, Math.min(rowMid - visibleMid, box.scrollHeight - box.clientHeight)));
-  if (Math.abs(want - box.scrollTop) < 2) return;
-  autoTarget = want;
-  clearTimeout(autoT);
-  autoT = setTimeout(() => { autoTarget = null; }, 3000);
-  box.scrollTo({ top: want, behavior: 'smooth' });
-}
-
 function markAbeam(row, want){
   const cell = row.cells[0], badge = cell.querySelector('.abbadge');
   if (want && !badge){
@@ -2029,11 +2007,7 @@ function refreshProgress(){
   // again.
   if (target && target.i !== lastNext && Date.now() - lastActivityAt > 20000){
     lastNext = target.i;
-    // A box left open on the keypad is a waypoint an entry is actually being
-    // made against — pulling the table to the top for whichever one is now
-    // tracked would drag that row out from under it. Keep it centred instead.
-    const editing = NP_TARGET && rowOf(NP_TARGET.dataset.i);
-    editing ? scrollRowToCenter(editing) : scrollRowToTop(rowOf(target.i));
+    scrollRowToTop(rowOf(target.i));
   }
 }
 {
