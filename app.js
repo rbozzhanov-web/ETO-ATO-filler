@@ -1789,11 +1789,22 @@ const routeIdx = off => scanIdx(() => true, off);
 // flight is running from the plan. A cut-out waypoint also counts as passed
 // once its own ATO is logged, which can happen well before its printed time:
 // a direct cuts a corner.
+//
+// A crew that takes its actuals from the FMC ahead of overflying — the normal
+// way of working, not an edge case — logs a time the wall clock has not
+// reached yet. That is fine for the waypoint itself, but it must not stall
+// tracking one step behind on whatever comes right after: a waypoint printed
+// zero minutes past the one just logged is the same instant on the route, not
+// a separate one still owed to the clock. Chained forward for as long as that
+// holds, so a run of co-located points is carried past together.
 function trackIdx(){
   const { idx: srcIdx, off } = offsetSource();
+  let sameInstantEnd = srcIdx;
+  while (sameInstantEnd >= 0 && sameInstantEnd + 1 < RESULT.length && RESULT[sameInstantEnd + 1].et === 0)
+    sameInstantEnd++;
   let ci = -1, ni = -1;
   RESULT.forEach((p, n) => {
-    const passed = n <= srcIdx || sinceDue(p.t + off) >= 0 || (isSkipped(p.i) && atoOf(p) !== null);
+    const passed = n <= sameInstantEnd || sinceDue(p.t + off) >= 0 || (isSkipped(p.i) && atoOf(p) !== null);
     if (passed) ci = n; else if (ni < 0) ni = n;
   });
   return { ci, ni };

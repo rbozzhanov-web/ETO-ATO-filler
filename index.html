@@ -696,6 +696,7 @@ td.diff{text-align:right;font-weight:700}
           <li>Removed the takeoff-time shortcut that filled in the plan's ETD — that's off-block time, not takeoff, so it's typed in directly now.</li>
           <li>The waypoint table now waits for twenty seconds with no touch anywhere on the page — not only on the table itself — before it refocuses on the tracked waypoint, so it no longer jumps out from under you mid-task elsewhere on the screen.</li>
           <li>Fixed: taking a direct could still drag the whole page down, not just the table, when the abeam waypoint's ATO box was auto-focused — the on-screen numpad's own reveal was fighting the table's own positioning.</li>
+          <li>Fixed: logging an actual ahead of overflying — off the FMC, before the wall clock reaches it — could leave tracking stalled one waypoint behind on a route with two points printed at the same instant. A waypoint at the same time as the one just logged now counts as reached alongside it.</li>
         </ul>
       </div>
 
@@ -749,7 +750,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.7 &nbsp;·&nbsp; Build 20260910.1 &nbsp;·&nbsp; 10 Sep 2026</span></p>
+      <span class="build">RC1.8.8 &nbsp;·&nbsp; Build 20260910.2 &nbsp;·&nbsp; 10 Sep 2026</span></p>
 
     </div>
   </div>

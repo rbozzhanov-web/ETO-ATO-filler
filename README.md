@@ -291,8 +291,10 @@ has nothing owing on it yet. From there the marker keeps moving with the clock e
 without a direct, so it is never left stalled on one waypoint waiting for its ATO — but writing one
 up can move the marker on sooner than the clock would: a direct cuts a corner, so an abeam position
 is often passed well before its printed time, and logging it counts as passing it whether or not
-that time has come round. Once the last of them is behind the marker — logged, overtaken by the
-clock, or both — it clears and the table goes back to following the route.
+that time has come round — and a position printed at the same instant as one just logged, ahead of
+overflying it, counts as passed right along with it rather than waiting on the clock to catch up.
+Once the last of them is behind the marker — logged, overtaken by the clock, or both — it clears and
+the table goes back to following the route.
 
 Only one direct is ever tracked. A second clearance does not layer onto the first — it replaces it
 outright, and the waypoints it cuts out are worked out fresh from wherever the flight actually is

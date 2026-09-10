@@ -302,6 +302,42 @@ try {
     check(pageDrag.before === pageDrag.after,
           'auto-focusing the abeam box after a direct does not drag the page itself');
 
+    /* The bug this guards: a crew logging actuals from the FMC ahead of
+       overflying — the normal way of working — enters a time the wall clock
+       has not reached yet. trackIdx() judges everything after that entry
+       against the clock, so a waypoint printed zero minutes later than the
+       one just logged — the same instant on the route, not a separate one —
+       stayed marked as still owed, one full step behind where tracking
+       should already be. */
+    const coLocated = await page.evaluate(() => {
+      for (const k in ACT) delete ACT[k];
+      DCT.marks = []; syncDct();
+      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+      const tegriAto = now + 9;          // logged ahead of the wall clock reaching it
+      const t0 = tegriAto - 18 + 2;      // TEGRI's own plan ETO (t0+18) is 2 min later, i.e. logged early
+      const names = ['DEP', 'TEGRI', '-LRBB', 'EKSUN', 'RIVOS', '-LBSR', 'DINRO', '-LTBB', 'UDROS', '-LTAA'];
+      const ets = [0, 18, 0, 30, 8, 9, 1, 12, 0, 2];
+      let cum = 0;
+      const cums = ets.map(e => (cum += e));
+      T0 = t0;
+      RESULT = names.map((wp, i) => ({
+        i, sec: 1, wp, et: ets[i], cum: cums[i],
+        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
+      }));
+      render(t0, t0 + cums[cums.length - 1]);
+      const inp = document.querySelector('#tbl tbody tr[data-i="1"] input.ato');   // TEGRI
+      inp.value = fmt(tegriAto); inp.dispatchEvent(new Event('input'));
+      // Direct to UDROS (8) taken from TEGRI, cutting -LRBB..-LTBB (2..7) —
+      // TEGRI itself, already logged, is not part of the cut.
+      DCT.marks = [{ to: 8, skipped: [2, 3, 4, 5, 6, 7] }];
+      syncDct();
+      afterDct();
+      const target = RESULT.find(p => rowOf(p.i)?.classList.contains('next'));
+      return { target: target && target.wp };
+    });
+    check(coLocated.target === 'EKSUN',
+          'a waypoint logged the same instant as one just entered does not stall tracking behind it');
+
     /* The bug this guards: the table's own row-refocus used to hold off only on
        a scroll or keystroke inside the table itself — a touch anywhere else on
        the page (a NOTAM, a chart, a document field) went unnoticed and the
