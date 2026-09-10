@@ -1779,21 +1779,45 @@ const routeIdx = off => scanIdx(() => true, off);
 // Where the flight actually is, over every waypoint in printed order — a
 // direct's cut-out ones included, since the aeroplane still goes past them and
 // tracking has to keep moving through them rather than stall on the first one
-// left unwritten. Everything up to and including the waypoint the running
-// offset is drawn from counts as passed outright: an ATO logged against a
-// waypoint means everything before it was necessarily flown through too,
-// whatever the shifted clock comparison alone would say about them — an entry
-// made out of order, or one that is simply wrong, must not read as the flight
-// not having reached waypoints it demonstrably has. Only what comes after that
-// waypoint is judged against the clock, shifted by how far the entry says the
-// flight is running from the plan. A cut-out waypoint also counts as passed
-// once its own ATO is logged, which can happen well before its printed time:
-// a direct cuts a corner.
+// left unwritten. Everything up to and including the last waypoint actually
+// reached counts as passed outright: an ATO logged against a waypoint means
+// everything before it was necessarily flown through too, whatever the
+// shifted clock comparison alone would say about them — an entry made out of
+// order, or one that is simply wrong, must not read as the flight not having
+// reached waypoints it demonstrably has. Only what comes after that waypoint
+// is judged against the clock, shifted by how far the entry says the flight
+// is running from the plan. A cut-out waypoint also counts as passed once its
+// own ATO is logged, which can happen well before its printed time: a direct
+// cuts a corner.
+//
+// "Actually reached" takes the wall clock into account, not just whether a
+// box has a value in it: a crew that takes its actuals from the FMC ahead of
+// overflying — the normal way of working, not an edge case — logs a time the
+// clock has not reached yet. That entry still drives the running offset,
+// since it is exactly the kind of advance reading that offset is for, but the
+// waypoint itself is a prediction until the clock actually gets there, and
+// tracking must not run ahead of where the flight really is. A waypoint
+// printed the same instant as the last one actually reached is reached right
+// along with it, though — chained forward for as long as that holds, so a run
+// of co-located points is carried past together the moment the clock does
+// reach that instant, not one step behind it.
 function trackIdx(){
-  const { idx: srcIdx, off } = offsetSource();
+  const { off } = offsetSource();
+  let reachedIdx = -1;
+  for (let n = RESULT.length - 1; n >= 0; n--){
+    const p = RESULT[n];
+    if (isSkipped(p.i)) continue;
+    const t = atoOf(p);
+    if (t !== null && sinceDue(t) >= 0){ reachedIdx = n; break; }
+  }
+  let sameInstantEnd = reachedIdx;
+  while (sameInstantEnd >= 0 && sameInstantEnd + 1 < RESULT.length && RESULT[sameInstantEnd + 1].et === 0)
+    sameInstantEnd++;
   let ci = -1, ni = -1;
   RESULT.forEach((p, n) => {
-    const passed = n <= srcIdx || sinceDue(p.t + off) >= 0 || (isSkipped(p.i) && atoOf(p) !== null);
+    const ato = atoOf(p);
+    const passed = n <= sameInstantEnd || sinceDue(p.t + off) >= 0
+      || (isSkipped(p.i) && ato !== null && sinceDue(ato) >= 0);
     if (passed) ci = n; else if (ni < 0) ni = n;
   });
   return { ci, ni };

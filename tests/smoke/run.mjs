@@ -212,7 +212,22 @@ try {
       // read as DEP itself — logged over three hours earlier — still being ahead.
       const inp6 = document.querySelector('#tbl tbody tr[data-i="6"] input.ato');
       inp6.value = fmt(t0 + 400); inp6.dispatchEvent(new Event('input'));
-      return { target: nextWp() };
+
+      // t0+400 is itself still ahead of the real clock the moment it's typed
+      // in — as any advance entry is. Move the clock past it so this checks
+      // the causality rule once WPT6 is genuinely reached, not the separate
+      // still-pending case covered below; short of WPT7's own adjusted due
+      // (t0+430) so WPT7 remains the one still owed.
+      const RealDate = Date;
+      class FakeDate extends RealDate {
+        constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + 355 * 60000); }
+        static now(){ return RealDate.now() + 355 * 60000; }
+      }
+      window.Date = FakeDate;
+      refreshProgress();
+      const target = nextWp();
+      window.Date = RealDate;
+      return { target };
     });
     check(causality.target === 'WPT7',
           'a late ATO logged further down the route never reads as an earlier waypoint still being ahead');
@@ -301,6 +316,57 @@ try {
     });
     check(pageDrag.before === pageDrag.after,
           'auto-focusing the abeam box after a direct does not drag the page itself');
+
+    /* The bug this guards: a crew logging actuals from the FMC ahead of
+       overflying — the normal way of working, not test data — enters a time
+       the wall clock has not reached yet. That entry is a prediction until
+       the clock actually gets there, and tracking must not run ahead of
+       where the flight really is: the highlight has to stay on the waypoint
+       just logged, not jump onward the instant a value lands in its box. */
+    const advanceEntry = await page.evaluate(() => {
+      for (const k in ACT) delete ACT[k];
+      DCT.marks = []; syncDct();
+      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+      const tegriAto = now + 9;          // logged ahead of the wall clock reaching it
+      const t0 = tegriAto - 18 + 2;      // TEGRI's own plan ETO (t0+18) is 2 min later, i.e. logged early
+      const names = ['DEP', 'TEGRI', '-LRBB', 'EKSUN', 'RIVOS', '-LBSR', 'DINRO', '-LTBB', 'UDROS', '-LTAA'];
+      const ets = [0, 18, 0, 30, 8, 9, 1, 12, 0, 2];
+      let cum = 0;
+      const cums = ets.map(e => (cum += e));
+      T0 = t0;
+      RESULT = names.map((wp, i) => ({
+        i, sec: 1, wp, et: ets[i], cum: cums[i],
+        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
+      }));
+      render(t0, t0 + cums[cums.length - 1]);
+      const inp = document.querySelector('#tbl tbody tr[data-i="1"] input.ato');   // TEGRI
+      inp.value = fmt(tegriAto); inp.dispatchEvent(new Event('input'));
+      // Direct to UDROS (8) taken from TEGRI, cutting -LRBB..-LTBB (2..7) —
+      // TEGRI itself, already logged, is not part of the cut.
+      DCT.marks = [{ to: 8, skipped: [2, 3, 4, 5, 6, 7] }];
+      syncDct();
+      afterDct();
+      const target = RESULT.find(p => rowOf(p.i)?.classList.contains('next'));
+
+      // The bug this ALSO guards: once the clock genuinely reaches that
+      // advance entry, tracking has to carry through -LRBB — printed the same
+      // instant as TEGRI — rather than stalling on it for a separate reason.
+      const RealDate = Date;
+      class FakeDate extends RealDate {
+        constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + 10 * 60000); }
+        static now(){ return RealDate.now() + 10 * 60000; }
+      }
+      window.Date = FakeDate;
+      refreshProgress();
+      const targetOnceReached = RESULT.find(p => rowOf(p.i)?.classList.contains('next'));
+      window.Date = RealDate;
+
+      return { target: target && target.wp, targetOnceReached: targetOnceReached && targetOnceReached.wp };
+    });
+    check(advanceEntry.target === 'TEGRI',
+          'an actual logged ahead of the wall clock reaching it keeps the highlight on that waypoint');
+    check(advanceEntry.targetOnceReached === 'EKSUN',
+          'once the clock reaches an advance entry, a waypoint logged the same instant does not stall tracking behind it');
 
     /* The bug this guards: the table's own row-refocus used to hold off only on
        a scroll or keystroke inside the table itself — a touch anywhere else on
