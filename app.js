@@ -1934,7 +1934,7 @@ $('#dctBtn').onclick = () => setPick(!dctPick);
    are otherwise left looking like any other row. Kept out of refreshAlt because
    that one returns early when the plan is shorter than an hour and has no
    checks — the table still needs its highlight. */
-let lastActivityAt = 0, autoTarget = null, autoT = null, lastNext = null;
+let autoTarget = null, autoT = null, lastNext = null;
 
 // Scrolled to the box's own scrollTop rather than with scrollIntoView, which
 // walks every scrollable ancestor and used to drag the whole page with it. The
@@ -2000,39 +2000,23 @@ function refreshProgress(){
         + (off ? ` · ${off > 0 ? '+' : ''}${off} on plan` : '')
       : 'All waypoints passed';
   }
-  // Follow the flight, but never fight the hands: only on a change of target row,
-  // and not within twenty seconds of any touch on the page at all — not just the
-  // table itself. Focus is no test — Enter steps to the next field, so a box
-  // stays focused for the rest of the flight and the table would never follow
-  // again.
-  if (target && target.i !== lastNext && Date.now() - lastActivityAt > 20000){
+  // Follow the flight the moment it actually moves. There are exactly two ways
+  // the tracked row can change: an ATO or fuel figure was just logged, or the
+  // clock itself has caught up to a waypoint already reached — real progress
+  // either way, not idle background noise, so both move the marker on at once
+  // rather than waiting for the crew to fall quiet first.
+  if (target && target.i !== lastNext){
     lastNext = target.i;
     scrollRowToTop(rowOf(target.i));
   }
 }
 {
   const box = document.querySelector('.tblbox');
-  // The table's own scroll needs the autoTarget check no other touch does: it
-  // fires on the auto-scroll's own way to its target too, which is not the
-  // crew's hand and must not read as one — that would keep the twenty-second
-  // wait from ever actually elapsing.
   box.addEventListener('scroll', () => {
     if (autoTarget !== null && Math.abs(box.scrollTop - autoTarget) > 2) return;   // still ours
     autoTarget = null;
-    lastActivityAt = Date.now();
   }, { passive: true });
 }
-// Anywhere else on the page — typing in a document field, scrolling the
-// NOTAMs, opening a chart — counts the same as a touch on the table itself.
-// Capturing, so a scroll inside a nested box reaches this too: those never
-// bubble. The table's own scroll is excluded here and left to the listener
-// above instead, which alone knows to tell its own auto-scroll apart from
-// the crew's hand.
-for (const ev of ['pointerdown', 'keydown', 'input', 'wheel', 'touchmove', 'scroll'])
-  document.addEventListener(ev, e => {
-    if (ev === 'scroll' && e.target === document.querySelector('.tblbox')) return;
-    lastActivityAt = Date.now();
-  }, { passive: true, capture: true });
 
 const tick = () => {
   // Updating a hidden standalone app forces WebKit to redraw several fixed and
