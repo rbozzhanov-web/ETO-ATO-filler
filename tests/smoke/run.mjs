@@ -261,6 +261,47 @@ try {
     check(focusScroll.rowTopInBox > 2,
           'the tracked row clears the header overlay rather than sitting flush under it');
 
+    /* The bug this guards: focusing a numkey field opens the on-screen numpad,
+       whose own focusin handler reveals the field with scrollIntoView — unlike
+       scrollRowToTop, that walks every scrollable ancestor and, measured
+       against a real page tall enough to actually move, dragged the whole
+       page down by a few hundred pixels on every direct, not just the table.
+       Reproduced against a live browser before the fix: an otherwise identical
+       scenario moved window.scrollY from 753 to 1047. */
+    const pageDrag = await page.evaluate(async () => {
+      for (const k in ACT) delete ACT[k];
+      DCT.marks = []; syncDct();
+      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+      const t0 = now - 50;
+      const names = [], cums = [];
+      for (let i = 0; i < 20; i++){ names.push('WPT' + i); cums.push(i * 15); }
+      T0 = t0;
+      RESULT = names.map((wp, i) => ({
+        i, sec: 1, wp, et: i ? 15 : 0, cum: cums[i],
+        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
+      }));
+      document.querySelector('#c2').classList.remove('hide');
+      document.querySelector('#c3').classList.remove('hide');
+      document.querySelector('.tblbox').style.maxHeight = '260px';
+      render(t0, t0 + cums[cums.length - 1]);
+      // Padding below the card gives the page real room to be dragged down —
+      // without it the bug this guards has nowhere to move the page to.
+      const pad = document.createElement('div');
+      pad.style.height = '2000px';
+      document.body.appendChild(pad);
+      document.querySelector('#c2').scrollIntoView();
+      await new Promise(r => requestAnimationFrame(r));
+      const before = scrollY;
+      applyDirect(6);   // box.scrollTop is still 0 here -- the row isn't in view within the box yet
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise(r => setTimeout(r, 500));
+      const after = scrollY;
+      pad.remove();
+      return { before, after };
+    });
+    check(pageDrag.before === pageDrag.after,
+          'auto-focusing the abeam box after a direct does not drag the page itself');
+
     /* The bug this guards: the table's own row-refocus used to hold off only on
        a scroll or keystroke inside the table itself — a touch anywhere else on
        the page (a NOTAM, a chart, a document field) went unnoticed and the
