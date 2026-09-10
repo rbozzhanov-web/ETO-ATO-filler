@@ -98,9 +98,12 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 /* Step 3 is where the flight is actually worked — takeoff time, then the
    waypoint carousel opening inside it — so its card carries a faint wash of
    the accent already used for the tracked row, just enough to read as the
-   working card among the plainer ones around it. The carousel itself is left
-   exactly as it is; only the window it sits in is tinted. */
+   working card among the plainer ones around it. That wash is the frame, not
+   the content: the takeoff-time entry and the carousel's own scrollable
+   table are each their own plain window cut into it, left exactly as they
+   were, so the colour separates the two rather than sitting behind them. */
 .card#c2{background:color-mix(in srgb, var(--acc) 9%, var(--panel))}
+.card#c2 .win{background:var(--panel);border-radius:8px;padding:12px 14px;margin-bottom:10px}
 .step{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.8px;
   text-transform:uppercase;color:var(--dim);margin-bottom:10px}
 /* A second part of the same card, opened once the step above it is done: a rule
@@ -351,7 +354,7 @@ td.fu.late input{border-color:var(--err);background:color-mix(in srgb,var(--err)
 .scrollwrap[data-more] .chev.dn{opacity:1}
 .scrollwrap[data-prev] .chev.up{opacity:1}
 .tblbox{max-height:min(56vh,520px);overflow:auto;-webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px}
+  overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
 table{border-collapse:collapse;width:100%;font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
 th{position:sticky;top:0;z-index:2;background:var(--panel2);color:var(--dim);font-size:11px;
   text-transform:uppercase;letter-spacing:.6px;padding:9px 8px;text-align:left;
@@ -568,7 +571,7 @@ td.diff{text-align:right;font-weight:700}
 
   <div class="card hide" id="c2">
     <div class="step"><i>3</i> Takeoff time (airborne), UTC</div>
-    <div class="row">
+    <div class="row win">
       <div><label>HHMM</label><input type="text" id="etd" class="big numkey" placeholder="----" maxlength="5"
         inputmode="none" pattern="[0-9]*" autocomplete="off" autocorrect="off" spellcheck="false"
         enterkeyhint="go"></div>
