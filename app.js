@@ -1966,6 +1966,28 @@ function scrollRowToTop(row){
   box.scrollTo({ top: want, behavior: 'smooth' });
 }
 
+// Same box-scrollTo approach as scrollRowToTop (never scrollIntoView, which
+// would drag the whole page — see the comment there), but centred on the row
+// rather than anchored under the header: used only while a box on that row is
+// actively being typed into, so the row an entry is being made against stays
+// in view rather than being pushed to the top by the tracked waypoint moving
+// on to the next one mid-entry.
+function scrollRowToCenter(row){
+  const box = document.querySelector('.tblbox');
+  if (!box || !row) return;
+  const head = box.querySelector('thead');
+  const headH = head ? head.offsetHeight : 0;
+  const boxRect = box.getBoundingClientRect(), rowRect = row.getBoundingClientRect();
+  const rowMid = rowRect.top + rowRect.height / 2 - boxRect.top + box.scrollTop;
+  const visibleMid = headH + (box.clientHeight - headH) / 2;
+  const want = Math.round(Math.max(0, Math.min(rowMid - visibleMid, box.scrollHeight - box.clientHeight)));
+  if (Math.abs(want - box.scrollTop) < 2) return;
+  autoTarget = want;
+  clearTimeout(autoT);
+  autoT = setTimeout(() => { autoTarget = null; }, 3000);
+  box.scrollTo({ top: want, behavior: 'smooth' });
+}
+
 function markAbeam(row, want){
   const cell = row.cells[0], badge = cell.querySelector('.abbadge');
   if (want && !badge){
@@ -2010,7 +2032,13 @@ function refreshProgress(){
   // never yanks the view away while the crew's hands are busy elsewhere.
   if (target && target.i !== lastNext && (followNow || Date.now() - lastActivityAt > 20000)){
     lastNext = target.i;
-    scrollRowToTop(rowOf(target.i));
+    // Entering an ATO can itself be what moves the target on (logging the
+    // current one makes the next one due) — mid-entry, with a box on this
+    // very row still open on the keypad, is the one moment that must not be
+    // pulled away to the row now ahead: keep the row being typed into
+    // centred instead, exactly the way it does the rest of the flight.
+    const editing = NP_TARGET && rowOf(NP_TARGET.dataset.i);
+    editing ? scrollRowToCenter(editing) : scrollRowToTop(rowOf(target.i));
   }
   followNow = false;
 }

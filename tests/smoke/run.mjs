@@ -543,6 +543,79 @@ try {
     check(gatedJump.scrollAfterQuiet !== gatedJump.scrollAfterInitial,
           'the carousel does catch up once the page has gone quiet for twenty seconds');
 
+    /* The bug this guards: logging the ATO a box is open for is itself what
+       can move the tracked waypoint on to the next one (entryJump above) —
+       and that used to pull the carousel to the NEW target's top while the
+       box just typed into, still open on the keypad, was left behind. With
+       an entry actually in progress the row being typed into should stay
+       centred instead, exactly where the keypad's own focus centred it, not
+       get shoved aside by the row now tracked ahead of it. */
+    const centerDuringEntry = await page.evaluate(async () => {
+      for (const k in ACT) delete ACT[k];
+      DCT.marks = []; syncDct();
+      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+      const t0 = now - 5;
+      const names = [], cums = [];
+      for (let i = 0; i < 20; i++){ names.push('WPT' + i); cums.push(i * 15); }
+      T0 = t0;
+      RESULT = names.map((wp, i) => ({
+        i, sec: 1, wp, et: i ? 15 : 0, cum: cums[i],
+        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
+      }));
+      document.querySelector('#c2').classList.remove('hide');
+      document.querySelector('#c3').classList.remove('hide');
+      const box = document.querySelector('.tblbox');
+      box.style.maxHeight = '260px';
+      render(t0, t0 + cums[cums.length - 1]);
+      const nextWp = () => RESULT.find(p => rowOf(p.i)?.classList.contains('next'))?.wp || null;
+      const settle = async () => {
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        await new Promise(r => setTimeout(r, 400));
+      };
+
+      refreshProgress();
+      await settle();
+      const initialTarget = nextWp();
+
+      // Focus WPT5's ATO box the way the on-screen keypad does -- npShow's
+      // own centring runs here -- then log it the way a real keystroke does
+      // (value set, 'input' dispatched), with the box left focused
+      // throughout, same as a real entry stays open until Enter moves on.
+      // WPT5 sits well down the list so a jump to WPT6's top, if the old
+      // behaviour still fired, would land somewhere clearly different from
+      // wherever WPT5 itself is centred -- near the top of a short list
+      // the two could coincide and this test would not tell them apart.
+      const inp = document.querySelector('#tbl tbody tr[data-i="5"] input.ato');
+      inp.focus();
+      await settle();
+      const scrollAfterFocus = box.scrollTop;
+
+      inp.value = fmt(now); inp.dispatchEvent(new Event('input'));
+      await settle();
+      const scrollAfterEntry = box.scrollTop;
+
+      // What a top-pin on the new target (WPT6) would have wanted, for
+      // comparison -- the exact wrong answer this fix moves away from.
+      const row6 = rowOf(6);
+      const head = box.querySelector('thead'), headH = head.offsetHeight;
+      const anchor = row6.previousElementSibling || row6;
+      const rel = anchor.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+      const wouldBeTopPin = Math.round(Math.max(0, Math.min(rel - headH, box.scrollHeight - box.clientHeight)));
+
+      return {
+        initialTarget, entryTarget: nextWp(), scrollAfterFocus, scrollAfterEntry, wouldBeTopPin,
+        stillEditing: document.activeElement === inp
+      };
+    });
+    check(centerDuringEntry.initialTarget === 'WPT1' && centerDuringEntry.entryTarget === 'WPT6',
+          'tracking still advances past the waypoint just logged, entry in progress or not');
+    check(centerDuringEntry.stillEditing,
+          'the box being typed into is left focused, matching a real entry not yet closed with Enter');
+    check(Math.abs(centerDuringEntry.scrollAfterEntry - centerDuringEntry.scrollAfterFocus) < 20,
+          'the waypoint an entry is being made against stays roughly put once logged, rather than being pulled elsewhere');
+    check(Math.abs(centerDuringEntry.scrollAfterEntry - centerDuringEntry.wouldBeTopPin) > 40,
+          'the row the entry was made against is not pushed aside by the row now tracked ahead of it');
+
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
     // numpad plus both orientations. A real tap is used here because programmatic
     // focus does not consistently model a user gesture in mobile WebKit.

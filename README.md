@@ -161,8 +161,12 @@ contexts, so everything works on either.
    figure just logged, or the clock catching up to a waypoint already
    reached, are the two exceptions: both count as real flight progress
    rather than idle background noise, so the table follows them at once,
-   with no wait at all. Focus is not what stops it: Enter steps from one box
-   to the next, so a box stays focused for the rest of the flight.
+   with no wait at all — except while a box is actually open on the keypad,
+   when logging one can itself be what moves the tracked waypoint on to the
+   next: the row an entry is being made against stays centred through that
+   instead of being pulled aside by the row now tracked ahead of it. Focus is
+   not what stops it: Enter steps from one box to the next, so a box stays
+   focused for the rest of the flight.
    Step 3 is also where the app puts itself back when the hands come off. Thirty-five
    seconds with nothing touched — no typing, no tapping, no scrolling — and the whole
    card comes back on screen, centred and complete, in whichever orientation the iPad
