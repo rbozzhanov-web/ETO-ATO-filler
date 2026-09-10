@@ -44,6 +44,14 @@ const numpad = $('#numpad');
 // nothing else ever needs to.
 let NP_SUPPRESS_NEXT = false;
 function npSuppressNext(){ NP_SUPPRESS_NEXT = true; }
+// The keypad's own reveal walks every scrollable ancestor, the page included —
+// fine when a tap is what asked for it, since nothing else is positioning the
+// page at that point. But applyDirect() focuses a field of its own accord to
+// land the crew on the abeam waypoint, and has already scrolled the table
+// itself to the right row; the keypad coming up must not then drag the page
+// out from under that. Set immediately before such a focus, consumed once.
+let NP_SUPPRESS_SCROLL_NEXT = false;
+function npSuppressScrollNext(){ NP_SUPPRESS_SCROLL_NEXT = true; }
 // Setting .value from script, unlike real typing, never sets a field's own
 // dirty flag — so blurring it afterwards raises no native change event, only
 // the input events dispatched below. Journey Log's HH:MM formatting (and
@@ -103,7 +111,9 @@ function npShow(el){
   numpad.classList.add('show');
   document.body.style.setProperty('--numpad-h', numpad.offsetHeight + 'px');
   document.body.classList.add('numpad-open');
-  requestAnimationFrame(() => { if (NP_TARGET === el) el.scrollIntoView({ block: 'center', behavior: 'auto' }); });
+  const suppressScroll = NP_SUPPRESS_SCROLL_NEXT; NP_SUPPRESS_SCROLL_NEXT = false;
+  if (!suppressScroll)
+    requestAnimationFrame(() => { if (NP_TARGET === el) el.scrollIntoView({ block: 'center', behavior: 'auto' }); });
 }
 function npHide({ revealActuals = false } = {}){
   const el = NP_TARGET;
@@ -1852,14 +1862,20 @@ function applyDirect(target){
   // its own scroll-into-view a frame later rather than inside the call itself — a
   // correction issued straight after select() lands before that and gets overrun
   // by it regardless. Asking again next frame, once the browser has had its say,
-  // is what actually keeps scrollRowToTop's own call the last word.
+  // is what actually keeps scrollRowToTop's own call the last word. Focusing a
+  // numkey field also opens the on-screen numpad, whose own focusin handler
+  // reveals the field with scrollIntoView — unlike scrollRowToTop, that walks
+  // every scrollable ancestor and can take the page down with it too. Told to
+  // stand down this once, the keypad still opens; only its own reveal is
+  // skipped, since scrollRowToTop is what positions the field instead.
   const ab = abeamIdx(currentOffset());
   const abAt = ab.ci >= 0 ? ab.ci : ab.ni;
   const abeamRow = abAt >= 0 && rowOf(RESULT[abAt].i);
   const abeamInput = abeamRow && abeamRow.querySelector('input.ato');
   if (abeamInput){
+    npSuppressScrollNext();
     abeamInput.focus({ preventScroll: true });
-    abeamInput.select();
+    abeamInput.setSelectionRange(0, abeamInput.value.length);
     requestAnimationFrame(() => scrollRowToTop(abeamRow));
   }
 }
