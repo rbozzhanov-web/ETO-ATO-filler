@@ -1934,7 +1934,7 @@ $('#dctBtn').onclick = () => setPick(!dctPick);
    are otherwise left looking like any other row. Kept out of refreshAlt because
    that one returns early when the plan is shorter than an hour and has no
    checks — the table still needs its highlight. */
-let autoTarget = null, autoT = null, lastNext = null;
+let lastActivityAt = 0, followNow = false, autoTarget = null, autoT = null, lastNext = null;
 
 // Scrolled to the box's own scrollTop rather than with scrollIntoView, which
 // walks every scrollable ancestor and used to drag the whole page with it. The
@@ -2000,29 +2000,52 @@ function refreshProgress(){
         + (off ? ` · ${off > 0 ? '+' : ''}${off} on plan` : '')
       : 'All waypoints passed';
   }
-  // Follow the flight the moment it actually moves. There are exactly two ways
-  // the tracked row can change: an ATO or fuel figure was just logged, or the
-  // clock itself has caught up to a waypoint already reached — real progress
-  // either way, not idle background noise, so both move the marker on at once
-  // rather than waiting for the crew to fall quiet first.
-  if (target && target.i !== lastNext){
+  // Follow the flight, but never fight the hands — unless the flight itself is
+  // why this call is happening. An ATO or fuel figure just logged, or the
+  // clock's own periodic check finding the tracked waypoint has moved on, are
+  // both real progress rather than idle background noise, and move the marker
+  // on at once (followNow, set by those two call sites only). Anything else —
+  // a direct taken or undone, the table rebuilding — still waits for twenty
+  // seconds with nothing touched anywhere on the page, table included, so it
+  // never yanks the view away while the crew's hands are busy elsewhere.
+  if (target && target.i !== lastNext && (followNow || Date.now() - lastActivityAt > 20000)){
     lastNext = target.i;
     scrollRowToTop(rowOf(target.i));
   }
+  followNow = false;
 }
 {
   const box = document.querySelector('.tblbox');
+  // The table's own scroll needs the autoTarget check no other touch does: it
+  // fires on the auto-scroll's own way to its target too, which is not the
+  // crew's hand and must not read as one — that would keep the twenty-second
+  // wait from ever actually elapsing.
   box.addEventListener('scroll', () => {
     if (autoTarget !== null && Math.abs(box.scrollTop - autoTarget) > 2) return;   // still ours
     autoTarget = null;
+    lastActivityAt = Date.now();
   }, { passive: true });
 }
+// Anywhere else on the page — typing in a document field, scrolling the
+// NOTAMs, opening a chart — counts the same as a touch on the table itself.
+// Capturing, so a scroll inside a nested box reaches this too: those never
+// bubble. The table's own scroll is excluded here and left to the listener
+// above instead, which alone knows to tell its own auto-scroll apart from
+// the crew's hand.
+for (const ev of ['pointerdown', 'keydown', 'input', 'wheel', 'touchmove', 'scroll'])
+  document.addEventListener(ev, e => {
+    if (ev === 'scroll' && e.target === document.querySelector('.tblbox')) return;
+    lastActivityAt = Date.now();
+  }, { passive: true, capture: true });
 
 const tick = () => {
   // Updating a hidden standalone app forces WebKit to redraw several fixed and
   // blurred layers just as it is being frozen. Leave the screen untouched until
   // it is visible again; the resume hook below catches the UI up in one frame.
   if (document.hidden) return;
+  // Nothing but the clock drives this call, so a target change found here is
+  // always the flight itself catching up to a waypoint, never idle noise.
+  followNow = true;
   refreshProgress(); refreshAlt(); refreshFuel();
 };
 setInterval(tick, 15000);
@@ -2318,7 +2341,9 @@ function bindInputs(){
       ACT[i][isAto ? 'ato' : 'fuel'] = inp.value;
       if (!ACT[i].ato && !ACT[i].fuel) delete ACT[i];
       refreshInputValidity();
-      paint(i); countFilled(); refreshFuel(); refreshProgress(); save();
+      paint(i); countFilled(); refreshFuel();
+      followNow = true;   // an ATO or fuel figure was just logged — never wait to follow it
+      refreshProgress(); save();
     };
     inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
       const nx = inputs[idx + (e.shiftKey ? -1 : 1)];

@@ -404,9 +404,9 @@ try {
       const initialTarget = nextWp();
       const scrollAfterInitial = box.scrollTop;
 
-      // A touch elsewhere on the page, right as the clock moves far enough for
-      // a new waypoint to become 'next' — this must follow immediately, not
-      // wait on the touch to be twenty seconds cold.
+      // A touch elsewhere on the page, right as the clock's own periodic check
+      // (tick, not a direct call) finds a new waypoint has become 'next' — this
+      // must follow immediately, not wait on the touch to be twenty seconds cold.
       const RealDate = Date;
       class FakeDate extends RealDate {
         constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + 46 * 60000); }
@@ -414,7 +414,7 @@ try {
       }
       window.Date = FakeDate;
       document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));   // touch, this same instant
-      refreshProgress();
+      tick();
       window.Date = RealDate;
       await settle();
       const jumpTarget = nextWp();
@@ -473,6 +473,75 @@ try {
           'logging an ATO against a later waypoint moves tracking straight past it');
     check(entryJump.scrollAfterEntry !== entryJump.scrollAfterInitial,
           'the carousel follows an ATO entry immediately, with no wait at all');
+
+    /* Those two are the only named exceptions. Any other call that lands on
+       refreshProgress() with a genuinely new target — a direct taken or
+       undone, a full table rebuild — does not set followNow, so it still
+       goes through the original twenty-second wait rather than chasing the
+       row onto screen mid-touch. Reusing entryJump's own scenario (logging
+       an ATO moves the target from WPT1 to WPT6) but writing ACT directly
+       instead of going through the real input box isolates exactly that: the
+       same underlying target change, through a call site that does not
+       claim followNow. */
+    const gatedJump = await page.evaluate(async () => {
+      for (const k in ACT) delete ACT[k];
+      DCT.marks = []; syncDct();
+      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+      const t0 = now - 5;
+      const names = [], cums = [];
+      for (let i = 0; i < 20; i++){ names.push('WPT' + i); cums.push(i * 15); }
+      T0 = t0;
+      RESULT = names.map((wp, i) => ({
+        i, sec: 1, wp, et: i ? 15 : 0, cum: cums[i],
+        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
+      }));
+      document.querySelector('#c2').classList.remove('hide');
+      document.querySelector('#c3').classList.remove('hide');
+      const box = document.querySelector('.tblbox');
+      box.style.maxHeight = '260px';
+      render(t0, t0 + cums[cums.length - 1]);
+      const nextWp = () => RESULT.find(p => rowOf(p.i)?.classList.contains('next'))?.wp || null;
+      const settle = async () => {
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        await new Promise(r => setTimeout(r, 400));
+      };
+
+      refreshProgress();   // page load: nothing has touched the page yet
+      await settle();
+      const initialTarget = nextWp();
+      const scrollAfterInitial = box.scrollTop;
+
+      // A touch on the page, then straight away the same target change
+      // entryJump makes — but through a raw refreshProgress() call, the way
+      // afterDct() or render() reach it, neither of which sets followNow.
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      ACT[5] = { ato: fmt(now) };
+      refreshProgress();
+      await settle();
+      const jumpTarget = nextWp();
+      const scrollAfterJump = box.scrollTop;
+
+      // Only once the page has actually gone quiet for twenty seconds does
+      // the carousel catch up to the target that already changed underneath it.
+      const RealDate = Date;
+      class FakeDate extends RealDate {
+        constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + 46 * 60000); }
+        static now(){ return RealDate.now() + 46 * 60000; }
+      }
+      window.Date = FakeDate;
+      refreshProgress();
+      window.Date = RealDate;
+      await settle();
+      const scrollAfterQuiet = box.scrollTop;
+
+      return { initialTarget, jumpTarget, scrollAfterInitial, scrollAfterJump, scrollAfterQuiet };
+    });
+    check(gatedJump.jumpTarget !== gatedJump.initialTarget,
+          'the tracked target itself changes at once, with no gate on the classification');
+    check(gatedJump.scrollAfterJump === gatedJump.scrollAfterInitial,
+          'a target change right after a touch, reached without followNow, does not drag the carousel mid-touch');
+    check(gatedJump.scrollAfterQuiet !== gatedJump.scrollAfterInitial,
+          'the carousel does catch up once the page has gone quiet for twenty seconds');
 
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
     // numpad plus both orientations. A real tap is used here because programmatic
