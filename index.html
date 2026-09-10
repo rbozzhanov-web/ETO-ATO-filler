@@ -696,7 +696,7 @@ td.diff{text-align:right;font-weight:700}
           <li>Removed the takeoff-time shortcut that filled in the plan's ETD — that's off-block time, not takeoff, so it's typed in directly now.</li>
           <li>The waypoint table now waits for twenty seconds with no touch anywhere on the page — not only on the table itself — before it refocuses on the tracked waypoint, so it no longer jumps out from under you mid-task elsewhere on the screen.</li>
           <li>Fixed: taking a direct could still drag the whole page down, not just the table, when the abeam waypoint's ATO box was auto-focused — the on-screen numpad's own reveal was fighting the table's own positioning.</li>
-          <li>Fixed: logging an actual ahead of overflying — off the FMC, before the wall clock reaches it — could leave tracking stalled one waypoint behind on a route with two points printed at the same instant. A waypoint at the same time as the one just logged now counts as reached alongside it.</li>
+          <li>Fixed: logging a time straight off the FMC ahead of overflying could jump the tracked highlight onward before the flight had actually got there — and on a route with two points printed at the same instant, past both of them at once. Tracking now waits for the clock to actually reach a logged time before moving the marker past it.</li>
         </ul>
       </div>
 
