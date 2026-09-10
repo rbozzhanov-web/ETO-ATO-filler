@@ -433,6 +433,88 @@ try {
     check(idleGate.scrollAfterRelease !== idleGate.scrollWhileHeld,
           'the carousel follows again once twenty seconds have actually passed since that touch');
 
+    /* The bug this guards: logging an ATO is itself a touch, so it resets the
+       twenty-second gate the same as anything else — but if the box it was
+       entered into is left open on the keypad (the crew pauses before the
+       fuel figure, say) and the tracked waypoint has since moved on by the
+       time the gate actually releases, the table used to pull itself to the
+       NEW target's top, dragging the row an entry is still open against out
+       from under the keypad. With a box open, the release should centre that
+       row instead of top-anchoring whichever one is now tracked. */
+    const centerAfterGate = await page.evaluate(async () => {
+      for (const k in ACT) delete ACT[k];
+      DCT.marks = []; syncDct();
+      const now = (() => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+      const t0 = now - 5;
+      const names = [], cums = [];
+      for (let i = 0; i < 20; i++){ names.push('WPT' + i); cums.push(i * 15); }
+      T0 = t0;
+      RESULT = names.map((wp, i) => ({
+        i, sec: 1, wp, et: i ? 15 : 0, cum: cums[i],
+        t: t0 + cums[i], rem: 30000 - cums[i] * 100, page: 0
+      }));
+      document.querySelector('#c2').classList.remove('hide');
+      document.querySelector('#c3').classList.remove('hide');
+      const box = document.querySelector('.tblbox');
+      box.style.maxHeight = '260px';
+      render(t0, t0 + cums[cums.length - 1]);
+      const settle = async () => {
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        await new Promise(r => setTimeout(r, 400));
+      };
+      refreshProgress();
+      await settle();
+
+      // Focus WPT5's ATO box the way the on-screen keypad does, then log it
+      // -- moving the tracked target on to WPT6 -- but leave the box focused,
+      // same as a real entry stays open until Enter moves on.
+      const inp = document.querySelector('#tbl tbody tr[data-i="5"] input.ato');
+      inp.focus();
+      await settle();
+      const scrollAfterFocus = box.scrollTop;
+
+      inp.value = fmt(now); inp.dispatchEvent(new Event('input'));
+      await settle();
+      const scrollAfterEntry = box.scrollTop;
+
+      // Twenty-one seconds later, still nothing else touched and the box
+      // still open: the gate now releases.
+      const RealDate = Date;
+      class FakeDate extends RealDate {
+        constructor(...a){ if (a.length) return new RealDate(...a); return new RealDate(RealDate.now() + 21000); }
+        static now(){ return RealDate.now() + 21000; }
+      }
+      window.Date = FakeDate;
+      refreshProgress();
+      window.Date = RealDate;
+      await settle();
+      const scrollAfterQuiet = box.scrollTop;
+
+      // What a top-pin on the new target (WPT6) would have wanted, for
+      // comparison -- the exact wrong answer this fix moves away from.
+      const row6 = rowOf(6);
+      const head = box.querySelector('thead'), headH = head.offsetHeight;
+      const anchor = row6.previousElementSibling || row6;
+      const rel = anchor.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+      const wouldBeTopPin = Math.round(Math.max(0, Math.min(rel - headH, box.scrollHeight - box.clientHeight)));
+
+      const nextWp = () => RESULT.find(p => rowOf(p.i)?.classList.contains('next'))?.wp || null;
+      return {
+        entryTarget: nextWp(), scrollAfterFocus, scrollAfterEntry, scrollAfterQuiet, wouldBeTopPin,
+        stillEditing: document.activeElement === inp
+      };
+    });
+    check(centerAfterGate.entryTarget === 'WPT6',
+          'tracking still advances past the waypoint just logged, entry left open or not');
+    check(centerAfterGate.stillEditing,
+          'the box being typed into is left focused, matching a real entry not yet closed with Enter');
+    check(centerAfterGate.scrollAfterEntry === centerAfterGate.scrollAfterFocus,
+          'logging the ATO is itself a touch, so it does not release the gate any sooner than any other touch would');
+    check(Math.abs(centerAfterGate.scrollAfterQuiet - centerAfterGate.scrollAfterFocus) < 20,
+          'once the gate releases, the box left open stays roughly where it already was centred');
+    check(Math.abs(centerAfterGate.scrollAfterQuiet - centerAfterGate.wouldBeTopPin) > 40,
+          'the row an entry is still open against is not top-anchored away once the tracked waypoint moves on');
+
     // WebKit gets an iPad-sized/touch-enabled context and verifies the custom
     // numpad plus both orientations. A real tap is used here because programmatic
     // focus does not consistently model a user gesture in mobile WebKit.

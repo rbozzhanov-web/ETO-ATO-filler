@@ -156,8 +156,12 @@ contexts, so everything works on either.
    record of it, so the table is never confused for a summary of what has and
    hasn't been done yet. Only the table scrolls — the page stays where you left
    it — and it holds still for twenty seconds after any touch on the page at
-   all, not only on the table itself. Focus is not what stops it: Enter steps
-   from one box to the next, so a box stays focused for the rest of the flight.
+   all, not only on the table itself. Logging an entry counts as a touch too,
+   so it resets the same wait rather than shortening it — but if the box it
+   went into is still open once the wait runs out, that row stays centred
+   instead of the table pulling itself to the top for whichever one is
+   tracked by then. Focus is not what stops it: Enter steps from one box to
+   the next, so a box stays focused for the rest of the flight.
    Step 3 is also where the app puts itself back when the hands come off. Thirty-five
    seconds with nothing touched — no typing, no tapping, no scrolling — and the whole
    card comes back on screen, centred and complete, in whichever orientation the iPad

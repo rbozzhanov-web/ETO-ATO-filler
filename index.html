@@ -708,6 +708,7 @@ td.diff{text-align:right;font-weight:700}
           <li>Fixed: taking a direct could still drag the whole page down, not just the table, when the abeam waypoint's ATO box was auto-focused — the on-screen numpad's own reveal was fighting the table's own positioning.</li>
           <li>Fixed: logging a time straight off the FMC ahead of overflying could jump the tracked highlight onward before the flight had actually got there — and on a route with two points printed at the same instant, past both of them at once. Tracking now waits for the clock to actually reach a logged time before moving the marker past it.</li>
           <li>The takeoff time and Actuals card now carries a faint tint of the same accent already used for the tracked row, setting it apart as the working card among the plainer ones around it — the waypoint table itself is unchanged.</li>
+          <li>A box left open on the keypad now keeps its own waypoint centred once the twenty-second gate releases, instead of the table pulling itself to the top for whichever one is tracked by then.</li>
         </ul>
       </div>
 
@@ -761,7 +762,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.12 &nbsp;·&nbsp; Build 20260910.6 &nbsp;·&nbsp; 10 Sep 2026</span></p>
+      <span class="build">RC1.8.13 &nbsp;·&nbsp; Build 20260910.7 &nbsp;·&nbsp; 10 Sep 2026</span></p>
 
     </div>
   </div>
