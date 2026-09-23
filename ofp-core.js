@@ -200,7 +200,7 @@ function abeamAt(result, isSkipped, hasTime, passed){
    used before that, kept for the one-time carry-over and for the case where no
    digest is available at all. */
 const PLAN_PREFIX = 'etofill:plan:';
-const SETTING_KEYS = new Set(['etofill:theme', 'etofill:wxhi', 'etofill:last']);
+const SETTING_KEYS = new Set(['etofill:theme', 'etofill:wxhi', 'etofill:last', 'etofill:view']);
 const legacyKeyFor = (name, size) => 'etofill:' + name + ':' + size;
 const planKeyFor = (hash, name, size) => hash ? PLAN_PREFIX + hash : legacyKeyFor(name, size);
 

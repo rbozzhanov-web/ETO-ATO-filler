@@ -249,13 +249,31 @@ test('a fresh install with no controller yet is not treated as an update', async
   assert.deepEqual(env.reg.waiting.calls, []);
 });
 
-test('the page reloads exactly once when the new worker takes over, however often it fires', () => {
-  const env = fakeEnv();
-  watchForUpdates(() => false, env);
+test('the page reloads exactly once when the new worker takes over, however often it fires', async () => {
+  const env = fakeEnv({ onLine: true, controller: {} });
+  env.reg.waiting = waiting();
+  await watchForUpdates(() => false, env);           // on the ground, nothing open: applied
+  assert.deepEqual(env.reg.waiting.calls, [{ type: 'skip-waiting' }]);
   env.fireControllerChange();
   env.fireControllerChange();
   env.fireControllerChange();
   assert.equal(env.reloadCalls, 1);
+});
+
+/* The bug this guards: every controllerchange reloaded the page. A release
+   downloaded on the ground and left waiting behind an open flight activates by
+   itself the next time the app starts from cold — in the air, every time
+   iPadOS has unloaded it — and claims the page that has just loaded. The crew
+   then watched the whole load happen a second time, offline, over their plan. */
+test('a worker taking over on its own does not reload the page', async () => {
+  for (const [onLine, open] of [[false, true], [true, true], [false, false]]){
+    const env = fakeEnv({ onLine, controller: {} });
+    env.reg.waiting = waiting();
+    await watchForUpdates(() => open, env);
+    assert.deepEqual(env.reg.waiting.calls, [], 'nothing was asked for');
+    env.fireControllerChange();
+    assert.equal(env.reloadCalls, 0, `reloaded with onLine=${onLine}, open=${open}`);
+  }
 });
 
 test('a cached page offline is served without a request being made at all', async () => {

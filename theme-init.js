@@ -9,6 +9,14 @@ try{
   if(t === 'light') document.documentElement.setAttribute('data-theme', 'light');
 }catch(e){}
 
+// A flight left open on the OFP page is reopened as soon as app.js loads. Until
+// it is back on screen the page says so, instead of painting the empty load
+// screen first and then jumping to the plan. app.js clears this either way.
+try{
+  if(!/journey-log\.html$/.test(location.pathname) && localStorage.getItem('etofill:last'))
+    document.documentElement.setAttribute('data-resuming', '');
+}catch(e){}
+
 // Never shown inside another site's frame. The policy that would forbid it,
 // frame-ancestors, cannot be set from a <meta> tag and GitHub Pages sends no
 // headers of its own — so a framing page could lay its own controls over this

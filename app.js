@@ -400,7 +400,10 @@ $('#jlogBtn').onclick = () => { location.href = './journey-log.html'; };
 // Coming back from the Journey Log, which asks for #top: Safari would otherwise
 // restore wherever this page was last scrolled to, and the header — and the
 // button that crosses back — would not be where it was left.
-if (location.hash === '#top'){
+// Read before the hash is cleared below: restoreView() leaves the page at the
+// top in this one case.
+const ARRIVED_FROM_JOURNEY_LOG = location.hash === '#top';
+if (ARRIVED_FROM_JOURNEY_LOG){
   history.replaceState(null, '', location.pathname + location.search);
   scrollTo(0, 0);
   addEventListener('load', () => scrollTo(0, 0), { once: true });
@@ -546,8 +549,13 @@ async function load(f){
 }
 
 // Shared by the file picker and by the session resumed out of IndexedDB after
-// iPadOS has evicted the app from memory.
-async function loadBuffer(name, size, buf, resumed){
+// iPadOS has evicted the app from memory. A resumed session hands over what is
+// already known about its PDF — the digest resumeRecord has just checked, and
+// what reading it produced last time — so neither is worked out a second time.
+// The stored reading is only trusted from this very build: a new release may
+// read a document differently, and then it is read again.
+const BUILD = ($('.build') || {}).textContent || '';
+async function loadBuffer(name, size, buf, resumed, known = {}){
   if (typeof DecompressionStream === 'undefined'){
     msg('#m1', 'This browser is not supported. OFP Companion requires Safari/iPadOS 16.4 or later.', 'err');
     return false;
@@ -562,10 +570,10 @@ async function loadBuffer(name, size, buf, resumed){
   NAME = name; SIZE = size;
   // The saved state belongs to this PDF's bytes, not to its name — see the
   // stored-flight-data section below.
-  HASH = await digestOf(buf);
+  HASH = known.hash || await digestOf(buf);
   KEY = planKeyFor(HASH, name, size);
   showStoredCount();
-  RAW = buf;
+  RAW = buf; DOC = null; OPENQ = [];
   $('#fname').textContent = name + '  ·  ' + (size / 1048576).toFixed(1) + ' MB';
   drop.classList.add('loaded');
   hide('#m1'); hide('#m3');
@@ -584,7 +592,10 @@ async function loadBuffer(name, size, buf, resumed){
   alerted.clear();
   $('#etd').value = '';
   try {
-    const r = await parse(RAW);
+    const kept = known.parsed && known.parsed.build === BUILD ? known.parsed : null;
+    const r = kept || await parse(RAW);
+    if (RAW !== buf) return false;                 // another PDF was chosen meanwhile
+    DOC = r.doc || null; OPENQ = r.openQ || [];
     PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor; FIELDS = r.fields; FPL = r.fpl;
     showIcao(r.icao);
     showOfp(r.ofp);
@@ -615,7 +626,14 @@ async function loadBuffer(name, size, buf, resumed){
         ? `Continued where you left off — ${name}, saved ${st.at ? fmt(st.at) + 'Z' : 'earlier'}.`
         : 'Restored previously entered data for this file.', 'ok');
     }
-    if (!resumed) keepSession(name, size, buf);
+    // Kept whenever it had to be read: a fresh load, or a resumed one whose
+    // stored reading came from another build.
+    // A chart's decoded image is a blob: URL that dies with this page, so the
+    // chart list is kept without one.
+    if (!kept){
+      const { doc, ...parsed } = r;
+      keepSession(name, size, buf, { ...parsed, charts: r.charts.map(({ url, ...c }) => c), build: BUILD });
+    }
     // preventScroll, or focusing this box hauls the page past the header and the
     // whole ICAO plan — on a phone that is well over a thousand pixels. The
     // keypad stays down for it too: the crew hasn't asked for the box yet.
@@ -959,7 +977,7 @@ async function paintChart(){
   const only = node => { clear(box); box.appendChild(node); };
   if (!c.url){
     only(mk('p', 'disc', 'Decoding…'));
-    try { c.url = await chartUrl(DOC, DOC.pages()[c.page], c.key); }
+    try { const doc = ensureDoc(); c.url = await chartUrl(doc, doc.pages()[c.page], c.key); }
     catch (e){ only(mk('p', 'disc', 'Could not read this chart: ' + e.message)); return; }
     if (CHARTS[chartAt] !== c) return;              // paged on while decoding
   }
@@ -1471,14 +1489,13 @@ function weatherNotams(lines, icao){
 
 async function parse(buf){
   const doc = new PDFMini.Doc(new Uint8Array(buf));
-  DOC = doc;
   const pages = doc.pages();
-  const dotRows = [], headers = [], rawFields = [], page0 = [], allLines = [], charts = [];
+  const dotRows = [], headers = [], rawFields = [], page0 = [], allLines = [], charts = [], openQ = [];
   let anchor = 0, fpl = null;
 
   for (let p = 0; p < pages.length; p++){
     const items = PDFMini.textItems(await doc.content(pages[p]));
-    pages[p].openQ = items.openQ;              // for the overlay to close before it draws
+    pages[p].openQ = openQ[p] = items.openQ;   // for the overlay to close before it draws
     const font = courierName(doc, pages[p]);
     chartPage(doc, pages[p], p, items.length, charts);
     const byLine = new Map();
@@ -1588,9 +1605,24 @@ async function parse(buf){
   if (pairs.some(p => !p.font)) throw new Error('no Courier font on the page');
   allLines.sort((a, b) => a.page - b.page || b.base - a.base);
   const icao = icaoPlan(allLines);
-  return { pairs, headers, anchor, fields, fpl, icao, charts,
+  return { doc, pairs, headers, anchor, fields, fpl, icao, charts, openQ,
            ofp: ofpIdent(allLines), figs: keyFigures(allLines),
            wx: weatherNotams(allLines, icao) };
+}
+
+/* ---- the PDF itself, only when it is needed ----
+   Everything the screen shows comes out of parse(), and a reopened flight
+   brings that back from storage. The document object — the whole file turned
+   into text and its cross-reference table read — is only needed to decode a
+   chart or to write the saved PDF, so a reopened flight builds it the first
+   time one of those asks for it: a moment's work at Save, rather than a pause
+   in the way of the crew's first taps after the app comes back. */
+let OPENQ = [];
+function ensureDoc(){
+  if (DOC || !RAW) return DOC;
+  DOC = new PDFMini.Doc(new Uint8Array(RAW));
+  DOC.pages().forEach((pg, i) => { pg.openQ = OPENQ[i] || 0; });
+  return DOC;
 }
 
 /* ================= calculation =================
@@ -2550,20 +2582,46 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) flush
    The form state fits in localStorage, the PDF does not — it goes to IndexedDB so
    a cold start can pick the flight up where it stopped instead of showing an empty
    drop zone. Every failure here is non-fatal: the app just loses the resume. */
-async function keepSession(name, size, buf){
-  return OFPStorage.keepSession(name, size, HASH, buf);
+async function keepSession(name, size, buf, parsed){
+  return OFPStorage.keepSession(name, size, HASH, buf, parsed);
 }
 async function dropSession(){ return OFPStorage.dropSession(); }
+// While a flight is being reopened the page says so, rather than showing the
+// empty load screen for a moment and then jumping to the plan: theme-init.js
+// marks the page before its first paint whenever there is a flight to reopen.
 async function resumeSession(){
-  const rec = await OFPStorage.resumeRecord();
-  if (rec) await loadBuffer(rec.name, rec.size, rec.buf, true);
+  try {
+    const rec = await OFPStorage.resumeRecord();
+    if (rec && await loadBuffer(rec.name, rec.size, rec.buf, true, { hash: rec.hash, parsed: rec.parsed }))
+      restoreView();
+  } finally {
+    delete document.documentElement.dataset.resuming;
+  }
 }
+
+// Where the page was scrolled to, so a flight reopened after iPadOS unloaded
+// the app comes back where it was left instead of at the top. Coming back from
+// the Journey Log is the exception: that asks for the top on purpose (#top).
+const VIEW = 'etofill:view';
+function keepView(){
+  if (!KEY) return;
+  try { localStorage.setItem(VIEW, JSON.stringify({ key: KEY, y: Math.round(scrollY) })); } catch(e){}
+}
+function restoreView(){
+  if (ARRIVED_FROM_JOURNEY_LOG) return;
+  let v = null;
+  try { v = JSON.parse(localStorage.getItem(VIEW) || 'null'); } catch(e){}
+  if (v && v.key === KEY && v.y > 0) scrollTo({ top: v.y, behavior: 'instant' });
+}
+addEventListener('pagehide', keepView);
+document.addEventListener('visibilitychange', () => { if (document.hidden) keepView(); });
 pruneStoredPlans();
 showStoredCount();
 resumeSession();
 
 /* ================= PDF generation ================= */
 function build(){
+  const doc = ensureDoc();
   const per = new Map();
   const ops = pi => { if (!per.has(pi)) per.set(pi, new PDFMini.Ops()); return per.get(pi); };
   const WHITE = [1, 1, 1];
@@ -2599,7 +2657,7 @@ function build(){
     }
   }
 
-  const PGS = DOC.pages();
+  const PGS = doc.pages();
   for (const c of CHECKS){
     const v = ALT[c.mark];
     if (!v || (!v.a1 && !v.sb && !v.a2)) continue;
@@ -2626,7 +2684,7 @@ function build(){
   const map = new Map([...per].map(([k, v]) => [k, v.done()]));
   const fonts = [{ name: BOLD,
     dict: '<</Type/Font/BaseFont/Courier-Bold/Encoding/StandardEncoding/Subtype/Type1>>' }];
-  return new Blob([PDFMini.append(DOC, map, { fonts })], { type: 'application/pdf' });
+  return new Blob([PDFMini.append(doc, map, { fonts })], { type: 'application/pdf' });
 }
 const outName = () => NAME.replace(/\.pdf$/i, '') + '_ETO.pdf';
 
