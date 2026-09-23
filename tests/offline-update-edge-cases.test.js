@@ -61,7 +61,7 @@ function workerHarness({ network = async () => { throw new Error('offline'); }, 
   const cache = name => ({
     addAll: async keys => {
       const m = store.get(name);
-      for (const k of keys) m.set(keyOf(k), new Response('cached ' + k));
+      for (const k of keys) m.set(keyOf(k), new Response('cached ' + (k.src || k)));
     },
     put: async (k, v) => store.get(name).set(keyOf(k), v.clone()),
     match: async k => copy(store.get(name).get(keyOf(k))),
@@ -90,7 +90,11 @@ function workerHarness({ network = async () => { throw new Error('offline'); }, 
   // that cannot answer the question would.
   if (onLine !== undefined) self.navigator = { onLine };
   const counted = (...a) => { fetchCalls++; return network(...a); };
-  const ctx = { self, caches, fetch: counted, Response, URL, Promise, setTimeout, clearTimeout, console };
+  // Node's Request insists on an absolute URL; the worker's are relative to itself.
+  class Request {
+    constructor(src, init = {}){ this.src = src; this.url = new URL(src, ORIGIN + '/').href; this.cache = init.cache; }
+  }
+  const ctx = { self, caches, fetch: counted, Response, URL, Promise, Request, setTimeout, clearTimeout, console };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   vm.runInContext(SW, ctx);

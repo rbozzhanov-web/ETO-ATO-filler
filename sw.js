@@ -2,7 +2,7 @@
    index.html is the OFP companion, journey-log.html the Journey Log form. */
 const CACHE_PREFIX = 'ofp-companion-';
 const LEGACY_CACHE_PREFIX = 'eto-filler-v';
-const V = CACHE_PREFIX + 'rc1.8.16-20260923';
+const V = CACHE_PREFIX + 'rc1.8.17-20260923';
 const FILES = ['./', './index.html', './journey-log.html',
                './theme-init.js', './pdfmini.js', './ofp-core.js', './storage.js',
                './offline-update.js', './app.js', './jl-pdf.js', './journey-log.js',
@@ -18,7 +18,12 @@ self.addEventListener('install', e => {
   // A new worker never takes over on its own: it waits to be told, by the page,
   // once the whole of it is cached and an update is therefore complete rather
   // than half landed. The page sends that word as soon as it sees one waiting.
-  e.waitUntil(caches.open(V).then(c => c.addAll(FILES)));
+  //
+  // Every file is fetched past the HTTP cache: a host like GitHub Pages lets the
+  // browser keep a file for minutes, so a worker installing soon after a
+  // release would otherwise store the previous release's scripts under the new
+  // version's name — a page paired with an older script.
+  e.waitUntil(caches.open(V).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))));
 });
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'skip-waiting') self.skipWaiting();

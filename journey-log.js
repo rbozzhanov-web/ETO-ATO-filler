@@ -251,6 +251,11 @@ function emptyDoc(){ return { version: VERSION, manual: {}, pages: [], source: n
 const clone = o => JSON.parse(JSON.stringify(o));
 
 /* --------------------------------------------------------------------- state */
+// A Journey Log carries crew names, staff numbers and duty times, and it does
+// not stay on a shared tablet for ever: like the OFP companion's plans, one left
+// untouched for this long is removed — form and issued PDF both — the next time
+// the page opens. (Declared ahead of load(), which runs on the line below.)
+const RETAIN_MS = 30 * 86400000;
 let doc = load();
 let sourcePdf = null;
 let sourceToken = 0;
@@ -263,7 +268,17 @@ function load(){
     const raw = localStorage.getItem(KEY);
     if(raw){
       const d = JSON.parse(raw);
-      if(d && d.version === VERSION && Array.isArray(d.pages)){ d.manual = d.manual || {}; return d; }
+      if(d && d.version === VERSION && Array.isArray(d.pages)){
+        // Written before this app kept a clock: it ages from here on.
+        if(typeof d.savedAt !== 'number') d.savedAt = Date.now();
+        if(Date.now() - d.savedAt > RETAIN_MS){
+          localStorage.removeItem(KEY);
+          dropSource();
+          return emptyDoc();
+        }
+        d.manual = d.manual || {};
+        return d;
+      }
     }
   }catch(e){}
   return emptyDoc();
@@ -272,6 +287,7 @@ let saveTimer = null;
 function saveNow(){
   clearTimeout(saveTimer); saveTimer = null;
   try{
+    doc.savedAt = Date.now();
     localStorage.setItem(KEY, JSON.stringify(doc));
     return true;
   }catch(e){
@@ -913,7 +929,9 @@ async function exportPdf(){
   const button = document.getElementById('export');
   button.disabled = true; button.textContent = 'Exporting…';
   try{
-    const bytes = appendPdf(sourcePdf, exportOps());
+    const perPage = exportOps();
+    await markOpenQ(sourcePdf, [...perPage.keys()]);
+    const bytes = appendPdf(sourcePdf, perPage);
     await deliverPdf(new Blob([bytes], { type:'application/pdf' }), exportName());
     say('Completed PDF is ready.', 'ok');
   }catch(err){
@@ -1215,7 +1233,9 @@ async function loadPdf(file){
     scrollTo(0, 0);
   }catch(err){
     console.error('Journey Log PDF read failed:', err);
-    say('This PDF could not be read as a supported Journey Log. Choose the issued Journey Log PDF and try again.', 'err');
+    say(/encrypted/.test(err && err.message)
+      ? 'This PDF is password-protected or encrypted, which this app cannot read. Use the unprotected Journey Log PDF.'
+      : 'This PDF could not be read as a supported Journey Log. Choose the issued Journey Log PDF and try again.', 'err');
   }
 }
 

@@ -18,9 +18,13 @@ function loadWorker({ network }){
   // the worker happens to hand it, and hands back a fresh Response every time.
   const keyOf = k => new URL(typeof k === 'string' ? k : k.url, ORIGIN + '/').href;
   const copy = r => r && r.clone();
+  const installModes = [];
   const cacheApi = name => ({
     addAll: async keys => {
-      for (const k of keys) store.get(name).set(keyOf(k), new Response('cached ' + k));
+      for (const k of keys){
+        installModes.push(k.cache);
+        store.get(name).set(keyOf(k), new Response('cached ' + (k.src || k)));
+      }
     },
     put: async (k, v) => { store.get(name).set(keyOf(k), v); },
     match: async k => copy(store.get(name).get(keyOf(k)))
@@ -47,12 +51,17 @@ function loadWorker({ network }){
     clients: { claim: async () => {} },
     skipWaiting: () => {}
   };
-  const ctx = { self, caches, fetch: network, Response, URL, Promise,
+  // The worker resolves a relative Request against its own script URL; Node's
+  // own Request insists on an absolute one, so this stands in for it.
+  class Request {
+    constructor(src, init = {}){ this.src = src; this.url = new URL(src, ORIGIN + '/').href; this.cache = init.cache; }
+  }
+  const ctx = { self, caches, fetch: network, Response, URL, Promise, Request,
                 setTimeout, clearTimeout, console };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8'), ctx);
-  return { handlers, store, caches };
+  return { handlers, store, caches, installModes };
 }
 
 // Drive one lifecycle or fetch event and hand back what the worker answered.
@@ -74,6 +83,13 @@ test('install precaches every file the two apps are made of', async () => {
                    './ofp-core.js', './app.js', './jl-pdf.js', './journey-log.js',
                    './manifest.webmanifest', './icon-192.png', './icon-512.png'])
     assert.ok(await w.caches.match(f), f + ' is not precached');
+});
+
+test('install fetches past the HTTP cache, so a release never precaches the last one', async () => {
+  const w = loadWorker({ network: async () => ok('net') });
+  await fire(w.handlers, 'install', {});
+  assert.ok(w.installModes.length > 0);
+  assert.ok(w.installModes.every(m => m === 'reload'), 'every precache request bypasses the HTTP cache');
 });
 
 test('a page comes from the cache instantly, and the network quietly refreshes it', async () => {

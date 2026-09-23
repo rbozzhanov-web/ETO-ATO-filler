@@ -60,9 +60,10 @@ test('the incremental update rewrites objects under their own generation', async
   assert.ok(appended.some(([n, g]) => n === 3 && g === 4), 'page rewritten as 3 4 obj');
   assert.ok(!appended.some(([n, g]) => n === 3 && g === 0), 'page not rewritten as 3 0 obj');
 
-  // the new xref section carries generation 4 for the page and 0 for new objects
+  // the new xref section carries generation 4 for the page and 0 for the new
+  // objects: the leading "q" stream, the font and the overlay
   const gens = lastXrefEntries(out).map(([, g]) => g).sort();
-  assert.deepEqual(gens, [0, 0, 4]);
+  assert.deepEqual(gens, [0, 0, 0, 4]);
 
   // and the trailer's own /Root reference keeps the generation it was read with
   assert.match(s.slice(-400), /\/Root 1 2 R/);
@@ -82,7 +83,7 @@ test('the appended document still parses, with the overlay on the page', async (
 
   const contents = again.get(page.dict.Contents);
   assert.ok(Array.isArray(contents), '/Contents became an array');
-  assert.equal(contents.length, 2);
+  assert.equal(contents.length, 3);        // q, the page as issued, the overlay
 
   const content = await again.content(page);
   assert.match(content, /WPT01/);           // the original page is intact
@@ -95,7 +96,8 @@ test('an /Contents already given as an array is extended, not replaced', async (
   const out = PDFMini.append(doc, new Map([[0, new PDFMini.Ops().done()]]), { fonts: [] });
   const again = new PDFMini.Doc(out);
   const contents = again.get(again.pages()[0].dict.Contents);
-  assert.equal(contents.length, 2);
+  assert.equal(contents.length, 3);
+  assert.equal(contents[1].ref, 4, 'the original stream stays, between the q and the overlay');
 });
 
 test('a document larger than the limit is refused before it is read', () => {
@@ -163,4 +165,29 @@ test('a document with bytes after %%EOF keeps its original objects once saved', 
   const out = PDFMini.append(doc, new Map([[0, new PDFMini.Ops().done()]]), { fonts: [] });
   assert.match(str(out).slice(-300), new RegExp('/Prev ' + doc.startxref + '>>'));
   assert.equal(new PDFMini.Doc(out).pages().length, 1);
+});
+
+/* The bug this guards: the overlay was appended to whatever graphics state the
+   page's own content left behind. A page that leaves a transform (or a clip)
+   in effect would have every ETO, ATO and fuel figure drawn somewhere else —
+   and its text positions were read without that transform too. */
+test('text positions follow the page transform, and the overlay starts from a clean state', async () => {
+  const text = 'q 1 0 0 1 0 -100 cm BT /F1 10 Tf 100 700 Td (WPT01) Tj ET\n'   // left open
+             + '2 0 0 2 0 0 cm\n';
+  const doc = new PDFMini.Doc(buildPdf({ text }));
+  const items = PDFMini.textItems(await doc.content(doc.pages()[0]));
+  assert.equal(items[0].x, 100);
+  assert.equal(items[0].y, 600, 'the cm in effect when the text was drawn is applied');
+  assert.equal(items.openQ, 1, 'one q left unclosed');
+
+  doc.pages()[0].openQ = items.openQ;
+  const ops = new PDFMini.Ops().text('FB', 9, 10, 20, '0455', [0, 0, 1]).done();
+  const out = PDFMini.append(doc, new Map([[0, ops]]),
+    { fonts: [{ name: 'FB', dict: '<</Type/Font/Subtype/Type1/BaseFont/Courier-Bold>>' }] });
+  const again = new PDFMini.Doc(out);
+  const content = await again.content(again.pages()[0]);
+  assert.match(content, /^q\n/, 'the page as issued is wrapped');
+  assert.match(content, /Q\nQ\nq\n/, 'its own open q and the wrapper are both closed first');
+  const drawn = PDFMini.textItems(content).find(i => i.str === '0455');
+  assert.deepEqual([drawn.x, drawn.y, drawn.size], [10, 20, 9], 'the overlay lands in default space');
 });

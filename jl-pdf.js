@@ -179,6 +179,9 @@ class Doc {
     this.xref = new Map();
     this.trailer = {};
     this.readXref();
+    // Strings and streams in an encrypted file are ciphertext: refused by name
+    // rather than parsed to nonsense or exported into garbage.
+    if (this.trailer.Encrypt !== undefined) throw new Error('encrypted PDF is not supported');
   }
   readXref(){
     const m = /startxref\s+(\d+)\s*%%EOF\s*$/.exec(this.s.slice(-2048))
@@ -203,6 +206,9 @@ class Doc {
         const start = lx.obj(), count = lx.obj();
         if (typeof start !== 'number' || typeof count !== 'number') break;
         lx.skip();
+        // A count is the document's word, not a bound: a section claiming a
+        // billion entries would otherwise be walked a billion times, hanging the tab.
+        if (start < 0 || count < 0 || lx.i + count * 19 > this.s.length) throw new Error('damaged cross-reference table');
         for (let k = 0; k < count; k++){
           const e = this.s.substr(lx.i, 20);
           const em = /^(\d{10})\s(\d{5})\s([nf])/.exec(e);
@@ -328,12 +334,36 @@ const toBytes = s => {
   return out;
 };
 const pdfNumber = n => (Math.round(n * 1000) / 1000).toString();
+// The export font carries WinAnsi, which has no Cyrillic. Rather than a row of
+// '?' where a crew member's name was, Cyrillic is written in Latin letters the
+// way a passport writes it: ICAO Doc 9303's table, with the Kazakh letters it
+// does not cover given their plain Latin counterparts.
+const CYRILLIC = {
+  'А':'A','Б':'B','В':'V','Г':'G','Д':'D','Е':'E','Ё':'E','Ж':'ZH','З':'Z','И':'I','Й':'I',
+  'К':'K','Л':'L','М':'M','Н':'N','О':'O','П':'P','Р':'R','С':'S','Т':'T','У':'U','Ф':'F',
+  'Х':'KH','Ц':'TS','Ч':'CH','Ш':'SH','Щ':'SHCH','Ъ':'IE','Ы':'Y','Ь':'','Э':'E','Ю':'IU','Я':'IA',
+  'Є':'IE','І':'I','Ї':'I','Ґ':'G','Ў':'U',
+  'Ә':'A','Ғ':'G','Қ':'K','Ң':'NG','Ө':'O','Ұ':'U','Ү':'U','Һ':'H'
+};
+// A capital followed by a small letter is the start of a name written in
+// title case: Юрий is Iurii, not IUrii.
+const translit = (ch, next) => {
+  const up = ch.toUpperCase();
+  if(!(up in CYRILLIC)) return null;
+  const t = CYRILLIC[up];
+  if(ch !== up) return t.toLowerCase();
+  return next && next !== next.toUpperCase() ? t.charAt(0) + t.slice(1).toLowerCase() : t;
+};
 const pdfLatin = value => {
   const swaps = { '–':'-', '—':'-', '‘':"'", '’':"'", '“':'\"', '”':'\"', '…':'...' };
   let out = '';
-  for(const ch of String(value).replace(/[–—‘’“”…]/g, c => swaps[c])){
-    const n = ch.codePointAt(0);
-    out += n >= 32 && n <= 255 ? String.fromCharCode(n) : '?';
+  const chars = [...String(value).replace(/[–—‘’“”…]/g, c => swaps[c])];
+  for(let i = 0; i < chars.length; i++){
+    const ch = chars[i], n = ch.codePointAt(0), t = translit(ch, chars[i + 1]);
+    // Printable ASCII and the printable half of Latin-1 are the same bytes in
+    // WinAnsi; the C1 control range between them is not text.
+    out += t !== null ? t
+         : (n >= 32 && n <= 126) || (n >= 160 && n <= 255) ? String.fromCharCode(n) : '?';
   }
   return out.replace(/([\\()])/g, '\\$1');
 };
@@ -361,6 +391,27 @@ function addPdfFont(raw, name, number){
   if(depth !== 0) throw new Error('could not update the Journey Log font resources');
   return raw.slice(0, end) + `/${name} ${number} 0 R` + raw.slice(end);
 }
+// How many q a page's own content leaves unclosed at its end — the export has
+// to close them before it draws, or its text inherits whatever transform or
+// clip the form left in effect.
+function unclosedQ(content){
+  const lx = new Lexer(content, 0);
+  let depth = 0;
+  for(;;){
+    const o = lx.obj();
+    if(o === null) break;
+    if(o && typeof o === 'object' && 'op' in o){
+      if(o.op === 'q') depth++;
+      else if(o.op === 'Q' && depth > 0) depth--;
+    }
+  }
+  return depth;
+}
+async function markOpenQ(doc, pageIndexes){
+  const pages = doc.pages();
+  for(const pi of pageIndexes)
+    if(pages[pi]) pages[pi].openQ = unclosedQ(await doc.content(pages[pi]));
+}
 function appendPdf(doc, perPage){
   const pages = doc.pages();
   let size = doc.get(doc.trailer.Size);
@@ -372,6 +423,13 @@ function appendPdf(doc, perPage){
   const put = (num, gen) => changed.set(num, { off: cursor, gen });
   if(!/[\r\n]$/.test(doc.s)){ parts.push('\n'); cursor++; }
   const emit = s => { parts.push(s); cursor += s.length; };
+
+  // The page as issued is wrapped in q ... Q: one shared "q" stream in front
+  // of it, and each page's export stream opens by closing that and anything
+  // the page itself left open (markOpenQ), so it draws in the default space.
+  const qNumber = next++;
+  put(qNumber, 0);
+  emit(`${qNumber} 0 obj\n<</Length 2>>\nstream\nq\n\nendstream\nendobj\n`);
 
   const fontNumber = next++;
   put(fontNumber, 0);
@@ -400,7 +458,7 @@ function appendPdf(doc, perPage){
     const page = pages[pi];
     if(!page || !ops) continue;
     const contentNumber = next++;
-    const content = ops.done();
+    const content = 'Q\n'.repeat((page.openQ || 0) + 1) + ops.done();
     put(contentNumber, 0);
     emit(`${contentNumber} 0 obj\n<</Length ${content.length}>>\nstream\n${content}endstream\nendobj\n`);
 
@@ -412,8 +470,8 @@ function appendPdf(doc, perPage){
     const raw = doc.s.slice(start, lx.i);
     const current = page.dict.Contents;
     let patched = Array.isArray(current)
-      ? raw.replace(/\/Contents\s*\[([\s\S]*?)\]/, (m, inner) => `/Contents[${inner} ${contentNumber} 0 R]`)
-      : raw.replace(/\/Contents\s+(\d+)\s+(\d+)\s+R/, (m, n, g) => `/Contents[${n} ${g} R ${contentNumber} 0 R]`);
+      ? raw.replace(/\/Contents\s*\[([\s\S]*?)\]/, (m, inner) => `/Contents[${qNumber} 0 R ${inner} ${contentNumber} 0 R]`)
+      : raw.replace(/\/Contents\s+(\d+)\s+(\d+)\s+R/, (m, n, g) => `/Contents[${qNumber} 0 R ${n} ${g} R ${contentNumber} 0 R]`);
     if(patched === raw) throw new Error(`could not add export data to page ${pi + 1}`);
     if(!addFontToResources(page) && !new RegExp('/JL\\s').test(patched))
       patched = addPdfFont(patched, 'JL', fontNumber);
@@ -455,5 +513,5 @@ function appendPdf(doc, perPage){
 // In the browser this file is a classic script and these are simply globals.
 // Under Node — the test runner — it is a CommonJS module, and this is its export.
 if (typeof module !== 'undefined' && module.exports)
-  module.exports = { toStr, toBytes, Lexer, Doc, PdfOps, addPdfFont, appendPdf,
+  module.exports = { toStr, toBytes, Lexer, Doc, PdfOps, pdfLatin, addPdfFont, appendPdf, unclosedQ, markOpenQ,
                      PDF_LIMITS, PX_TO_PT, exportPlacement };

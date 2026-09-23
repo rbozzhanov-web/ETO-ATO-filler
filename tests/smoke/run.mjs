@@ -631,6 +631,21 @@ try {
     await page.close();
   }
 
+  /* ---- framed by another site ----
+     No frame-ancestors can be sent from GitHub Pages, so the page hides itself
+     when it finds it is not the top-level document. */
+  {
+    const page = await context.newPage();
+    await page.setContent(`<iframe src="${base}index.html" width="800" height="600"></iframe>`);
+    const frame = page.frames().find(f => f.url().endsWith('index.html'));
+    await frame.waitForLoadState('load').catch(() => {});
+    const hidden = page.url() === 'about:blank'
+      ? await frame.evaluate(() => getComputedStyle(document.documentElement).display === 'none')
+      : true;                                  // or it broke out to the top level instead
+    check(hidden, 'the app refuses to be shown inside another page\u2019s frame');
+    await page.close();
+  }
+
   /* ---- a second plan loaded over a calculated one ----
      The bug this guards: loading the next sector kept the previous plan's
      computed rows until Calculate was pressed again, and Save PDF — offered as
@@ -679,6 +694,20 @@ try {
       const a = at(1), b = at(3.5);
       return Math.abs(a.x - b.x) < 0.001 && Math.abs(a.y - b.y) < 0.001 && a.size === b.size;
     }), 'the export geometry is the same at any zoom');
+
+    // Retention: a log untouched for thirty days is gone the next time the page
+    // opens; a recent one is still there.
+    const kept = async age => {
+      await page.evaluate(age => localStorage.setItem('journeylog.v1', JSON.stringify({
+        version: '2', manual: {}, pages: [], source: null, mark: 'M',
+        savedAt: Date.now() - age })), age);
+      await page.reload({ waitUntil: 'networkidle' });
+      return page.evaluate(() => doc.mark === 'M');
+    };
+    check(await kept(29 * 86400000), 'a Journey Log saved 29 days ago is kept');
+    check(!await kept(31 * 86400000), 'a Journey Log saved 31 days ago is removed');
+    check(await page.evaluate(() => localStorage.getItem('journeylog.v1') === null),
+          'and its stored copy is gone too');
     await page.close();
   }
 

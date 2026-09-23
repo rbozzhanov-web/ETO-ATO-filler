@@ -623,7 +623,9 @@ async function loadBuffer(name, size, buf, resumed){
     return true;
   } catch (err){
     console.error('OFP parse failed:', err);
-    msg('#m1', 'This PDF could not be read as a supported flight-plan package. Try another OFP PDF.', 'err');
+    msg('#m1', /encrypted/.test(err && err.message)
+      ? 'This PDF is password-protected or encrypted, which this app cannot read. Use the unprotected OFP PDF.'
+      : 'This PDF could not be read as a supported flight-plan package. Try another OFP PDF.', 'err');
     return false;
   }
 }
@@ -1476,6 +1478,7 @@ async function parse(buf){
 
   for (let p = 0; p < pages.length; p++){
     const items = PDFMini.textItems(await doc.content(pages[p]));
+    pages[p].openQ = items.openQ;              // for the overlay to close before it draws
     const font = courierName(doc, pages[p]);
     chartPage(doc, pages[p], p, items.length, charts);
     const byLine = new Map();
@@ -1667,8 +1670,9 @@ clockTick();
 
 /* ---- due-time monitoring ---- */
 const nowUtc = () => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
-// minutes past the due time, wrapped to ±12 h
-const sinceDue = target => sinceDueAt(nowUtc(), target);
+// minutes past the due time: on the flight's own timeline once there is a
+// takeoff time, otherwise wrapped to ±12 h
+const sinceDue = target => T0 === null ? sinceDueAt(nowUtc(), target) : sinceDueFrom(nowUtc(), target, T0);
 const chkState = c => {
   const v = ALT[c.mark] || {};
   const n = ['a1','sb','a2'].filter(k => v[k]).length;
@@ -2511,6 +2515,7 @@ function writeState(){
       etd: $('#etd').value, alt: $('#alt').checked, act: ACT, txt: TXT, alt2: ALT,
       alerted: [...alerted], alarm: $('#altAlert').checked, dct: DCT.marks,
       at: nowUtc(), savedAt: Date.now() }));
+    OFPStorage.touchSession();
     const d = new Date();
     $('#saved').textContent = 'saved ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
     showStoredCount();
