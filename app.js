@@ -575,6 +575,14 @@ async function loadBuffer(name, size, buf, resumed){
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
   DCT.marks = []; syncDct();
+  // Everything Calculate derived for the plan before this one goes too. It is
+  // only rebuilt by the next Calculate, and until then Save PDF — shown as soon
+  // as a plan is loaded — would write the old flight's ETOs onto this one, the
+  // takeoff box would still hold the old takeoff time, and the old altimeter
+  // checks would go on falling due and beeping.
+  RESULT = []; CHECKS = []; FUEL = []; T0 = null;
+  alerted.clear();
+  $('#etd').value = '';
   try {
     const r = await parse(RAW);
     PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor; FIELDS = r.fields; FPL = r.fpl;
@@ -615,7 +623,9 @@ async function loadBuffer(name, size, buf, resumed){
     return true;
   } catch (err){
     console.error('OFP parse failed:', err);
-    msg('#m1', 'This PDF could not be read as a supported flight-plan package. Try another OFP PDF.', 'err');
+    msg('#m1', /encrypted/.test(err && err.message)
+      ? 'This PDF is password-protected or encrypted, which this app cannot read. Use the unprotected OFP PDF.'
+      : 'This PDF could not be read as a supported flight-plan package. Try another OFP PDF.', 'err');
     return false;
   }
 }
@@ -1468,6 +1478,7 @@ async function parse(buf){
 
   for (let p = 0; p < pages.length; p++){
     const items = PDFMini.textItems(await doc.content(pages[p]));
+    pages[p].openQ = items.openQ;              // for the overlay to close before it draws
     const font = courierName(doc, pages[p]);
     chartPage(doc, pages[p], p, items.length, charts);
     const byLine = new Map();
@@ -1607,8 +1618,10 @@ function showFpl(){
   $('#etd').placeholder = FPL.ETD;
 }
 
-$('#etd').oninput = e => { e.target.value = e.target.value.replace(/[^\d:]/g, ''); };
+// One handler, not two: a second assignment to oninput silently replaced the
+// filter that used to sit on its own line above this one.
 $('#etd').oninput = () => {
+  $('#etd').value = $('#etd').value.replace(/[^\d:]/g, '');
   const v = $('#etd').value, bad = v.length > 0 && parseTime(v) === null;
   $('#etd').classList.toggle('bad', bad);
   $('#etd').setAttribute('aria-invalid', bad ? 'true' : 'false');
@@ -1657,8 +1670,9 @@ clockTick();
 
 /* ---- due-time monitoring ---- */
 const nowUtc = () => { const d = new Date(); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
-// minutes past the due time, wrapped to ±12 h
-const sinceDue = target => sinceDueAt(nowUtc(), target);
+// minutes past the due time: on the flight's own timeline once there is a
+// takeoff time, otherwise wrapped to ±12 h
+const sinceDue = target => T0 === null ? sinceDueAt(nowUtc(), target) : sinceDueFrom(nowUtc(), target, T0);
 const chkState = c => {
   const v = ALT[c.mark] || {};
   const n = ['a1','sb','a2'].filter(k => v[k]).length;
@@ -2374,7 +2388,11 @@ function renderFields(){
       inp.inputMode = 'none'; inp.pattern = '[0-9]*'; inp.classList.add('numkey');
     }
     inp.oninput = () => {
-      inp.value = inp.value.toUpperCase().slice(0, f.n);
+      // The PDF overlay can only carry printable ASCII (Courier-Bold under
+      // StandardEncoding), so anything else — a Cyrillic layout left switched
+      // on, a curly quote — is refused here, where the crew sees it, rather
+      // than turned into '?' on the saved document.
+      inp.value = inp.value.toUpperCase().replace(/[^\x20-\x7e]/g, '').slice(0, f.n);
       TXT[f.i] = inp.value;
       if (!inp.value) delete TXT[f.i];
       fieldsSummary();
@@ -2497,6 +2515,7 @@ function writeState(){
       etd: $('#etd').value, alt: $('#alt').checked, act: ACT, txt: TXT, alt2: ALT,
       alerted: [...alerted], alarm: $('#altAlert').checked, dct: DCT.marks,
       at: nowUtc(), savedAt: Date.now() }));
+    OFPStorage.touchSession();
     const d = new Date();
     $('#saved').textContent = 'saved ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
     showStoredCount();
@@ -2664,6 +2683,7 @@ $('#reset').onclick = () => {
   clearTimeout(saveT); saveT = null;
   dropSession();
   RAW = null; DOC = null; PLAN = null; RESULT = []; FIELDS = []; FPL = null;
+  HDRS = []; CHECKS = []; FUEL = []; T0 = null;
   NAME = ''; SIZE = 0; HASH = null; KEY = '';
   showStoredCount();
   alerted.clear();

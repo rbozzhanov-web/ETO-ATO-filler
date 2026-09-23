@@ -165,12 +165,21 @@ const PDFMini = (() => {
       this.xref = new Map();
       this.trailer = {};
       this.readXref();
+      // Strings and streams in an encrypted file are ciphertext: read as they
+      // are they would parse to nonsense, and an overlay appended in the clear
+      // would be “decrypted” into garbage by every reader. Refused by name.
+      if (this.trailer.Encrypt !== undefined) throw new Error('encrypted PDF is not supported');
     }
     readXref(){
       const m = /startxref\s+(\d+)\s*%%EOF\s*$/.exec(this.s.slice(-2048))
              || /startxref\s+(\d+)/g.exec(this.s.slice(this.s.lastIndexOf('startxref')));
       if (!m) throw new Error('startxref not found');
       let off = parseInt(m[1], 10);
+      // The incremental update written below chains back to this section with
+      // /Prev, so it has to be the offset actually read here — not a second,
+      // stricter match of the file's tail, which misses a file with anything
+      // after its %%EOF and would leave the saved PDF with no original objects.
+      this.startxref = off;
       const seen = new Set();
       while (off !== undefined && !seen.has(off)){
         seen.add(off);
@@ -185,6 +194,9 @@ const PDFMini = (() => {
           const start = lx.obj(), count = lx.obj();
           if (typeof start !== 'number' || typeof count !== 'number') break;
           lx.skip();
+          // A count is the document's word, not a bound: a section claiming a
+          // billion entries would otherwise be walked a billion times, hanging the tab.
+          if (start < 0 || count < 0 || lx.i + count * 19 > this.s.length) throw new Error('damaged cross-reference table');
           for (let k = 0; k < count; k++){
             const e = this.s.substr(lx.i, 20);
             const em = /^(\d{10})\s(\d{5})\s([nf])/.exec(e);
@@ -304,11 +316,18 @@ const PDFMini = (() => {
   }
 
   /* ---------- text extraction ---------- */
+  // Positions come out in the page's default space — the space the overlay is
+  // drawn in — so the transformation matrix the page itself sets up with cm,
+  // saved and restored with q and Q, is carried along. out.openQ is how many q
+  // the page leaves unclosed at its end, which append() has to close before
+  // drawing anything of its own.
   function textItems(content){
     const lx = new Lexer(content, 0);
     const st = [];
     let size = 0, Tc = 0, Tz = 100, TL = 0;
     let Tm = [1,0,0,1,0,0], Tlm = [1,0,0,1,0,0];
+    let CTM = [1,0,0,1,0,0];
+    const saved = [];
     const out = [];
     const mul = (a, b) => [
       a[0]*b[0] + a[1]*b[2],       a[0]*b[1] + a[1]*b[3],
@@ -319,8 +338,11 @@ const PDFMini = (() => {
     const show = t => {
       if (!t) return;
       const sc = Math.hypot(Tm[0], Tm[1]) || 1;
+      const cs = Math.hypot(CTM[0], CTM[1]) || 1;
       const cw = size * 0.6 * (Tz / 100) + Tc;     // Courier: 600/1000 em
-      out.push({ str: t, x: Tm[4], y: Tm[5], size: size * sc, cw });
+      const x = Tm[4] * CTM[0] + Tm[5] * CTM[2] + CTM[4];
+      const y = Tm[4] * CTM[1] + Tm[5] * CTM[3] + CTM[5];
+      out.push({ str: t, x, y, size: size * sc * cs, cw: cw * cs });
       Tm = mul([1,0,0,1, t.length * cw, 0], Tm);
     };
     for (;;){
@@ -329,7 +351,13 @@ const PDFMini = (() => {
       if (o === undefined) continue;
       if (typeof o === 'object' && 'op' in o){
         const op = o.op;
-        if (op === 'BT'){ Tm = [1,0,0,1,0,0]; Tlm = Tm.slice(); st.length = 0; }
+        if (op === 'q') saved.push(CTM.slice());
+        else if (op === 'Q'){ if (saved.length) CTM = saved.pop(); }
+        else if (op === 'cm'){
+          const v = st.slice(-6);
+          if (v.length === 6 && v.every(n => typeof n === 'number')) CTM = mul(v, CTM);
+        }
+        else if (op === 'BT'){ Tm = [1,0,0,1,0,0]; Tlm = Tm.slice(); st.length = 0; }
         else if (op === 'Tf'){ size = st[st.length - 1] || 0; }
         else if (op === 'TL'){ TL = st[st.length - 1] || 0; }
         else if (op === 'Tc'){ Tc = st[st.length - 1] || 0; }
@@ -357,11 +385,17 @@ const PDFMini = (() => {
         st.length = 0;
       } else st.push(o);
     }
+    out.openQ = saved.length;
     return out;
   }
 
   /* ---------- incremental write ---------- */
-  const esc = t => String(t).replace(/([\\()])/g, '\\$1');
+  // The overlay font is Courier-Bold under StandardEncoding, which has glyphs
+  // for printable ASCII only. Anything else is written as '?': a character
+  // outside Latin-1 would otherwise be cut to its low byte by toBytes — the
+  // Cyrillic Щ becomes ')' and ends the string early, and whatever follows it
+  // is then read as drawing operators on the crew's document.
+  const esc = t => String(t).replace(/[^\x20-\x7e]/g, '?').replace(/([\\()])/g, '\\$1');
 
   // insert "/Name N 0 R" into the page /Font dictionary
   function addFont(raw, name, num){
@@ -398,6 +432,17 @@ const PDFMini = (() => {
     let cursor = base;
     const emit = s => { parts.push(s); cursor += s.length; };
 
+    // The page's own content is wrapped in q ... Q so the overlay is drawn in
+    // the page's default space, whatever transform or clip the content leaves
+    // behind: one shared "q" stream goes in front of it, and each overlay
+    // opens by closing that and anything the page itself left open.
+    let qnum = null;
+    if ([...perPage].some(([pi, ops]) => pages[pi] && ops)){
+      qnum = next++;
+      put(qnum, 0);
+      emit(`${qnum} 0 obj\n<</Length 2>>\nstream\nq\n\nendstream\nendobj\n`);
+    }
+
     const fonts = (opts && opts.fonts) || [];
     for (const f of fonts){
       f.num = next++;
@@ -410,8 +455,9 @@ const PDFMini = (() => {
       if (!pg || !ops) continue;
 
       const cnum = next++;
+      const body = 'Q\n'.repeat((pg.openQ || 0) + 1) + ops;
       put(cnum, 0);
-      emit(`${cnum} 0 obj\n<</Length ${ops.length}>>\nstream\n${ops}\nendstream\nendobj\n`);
+      emit(`${cnum} 0 obj\n<</Length ${body.length}>>\nstream\n${body}\nendstream\nendobj\n`);
 
       // page: /Contents X 0 R  ->  /Contents[X 0 R cnum 0 R]
       const off = doc.offsetOf(pg.ref);
@@ -424,9 +470,9 @@ const PDFMini = (() => {
       const cur = pg.dict.Contents;
       let patched;
       if (Array.isArray(cur))
-        patched = raw.replace(/\/Contents\s*\[([\s\S]*?)\]/, (m, inner) => `/Contents[${inner} ${cnum} 0 R]`);
+        patched = raw.replace(/\/Contents\s*\[([\s\S]*?)\]/, (m, inner) => `/Contents[${qnum} 0 R ${inner} ${cnum} 0 R]`);
       else
-        patched = raw.replace(/\/Contents\s+(\d+)\s+(\d+)\s+R/, (m, n, g) => `/Contents[${n} ${g} R ${cnum} 0 R]`);
+        patched = raw.replace(/\/Contents\s+(\d+)\s+(\d+)\s+R/, (m, n, g) => `/Contents[${qnum} 0 R ${n} ${g} R ${cnum} 0 R]`);
       if (patched === raw) throw new Error('could not update /Contents of page ' + (pi + 1));
       for (const f of fonts)
         if (!new RegExp('/' + f.name + '[\\s/]').test(patched)) patched = addFont(patched, f.name, f.num);
@@ -456,7 +502,6 @@ const PDFMini = (() => {
     const idStr = Array.isArray(tr.ID)
       ? '/ID[' + tr.ID.map(v => '<' + [...v.text].map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').toUpperCase() + '>').join('') + ']'
       : '';
-    const prev = /startxref\s+(\d+)\s*%%EOF\s*$/.exec(doc.s.slice(-2048));
     // The trailer's own references go back out with the generation they were
     // read with, not a flat zero.
     const asRef = r => r.ref + ' ' + (r.gen || 0) + ' R';
@@ -464,7 +509,7 @@ const PDFMini = (() => {
        + '/Root ' + asRef(tr.Root)
        + (tr.Info && tr.Info.ref ? '/Info ' + asRef(tr.Info) : '')
        + idStr
-       + (prev ? '/Prev ' + prev[1] : '')
+       + '/Prev ' + doc.startxref
        + '>>\nstartxref\n' + xrefPos + '\n%%EOF\n';
     emit(x);
 

@@ -12,6 +12,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { chromium, webkit } from 'playwright';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -28,6 +29,27 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
   res.end(fs.readFileSync(file));
 });
+
+const require = createRequire(import.meta.url);
+const { buildPdf } = require('../helpers/make-pdf.js');
+const PDFMini = require('../../pdfmini.js');
+
+// A minimal OFP the real parser accepts: an ETO/ATO header, then per waypoint an
+// ETO line (name ... ET) and an ATO line (... T/T REM), each ending in the four
+// dots the ETO and ATO boxes are found by.
+function ofpPdf(ets){
+  let t = 'BT /F1 10 Tf 50 720 Td (WPT  FL   ET  ETO) Tj ET\nBT /F1 10 Tf 480 720 Td (ATO) Tj ET\n';
+  let y = 700, cum = 0;
+  ets.forEach((et, k) => {
+    cum += et;
+    const tt = Math.floor(cum / 60) + '.' + String(cum % 60).padStart(2, '0');
+    t += `BT /F1 10 Tf 50 ${y} Td (W${k}XX FL350 ${et} 1234) Tj ET\nBT /F1 10 Tf 470 ${y} Td (....) Tj ET\n`;
+    t += `BT /F1 10 Tf 50 ${y - 12} Td (AA BB ${tt} ${30000 - cum * 50}) Tj ET\n`
+       + `BT /F1 10 Tf 470 ${y - 12} Td (....) Tj ET\n`;
+    y -= 30;
+  });
+  return [...buildPdf({ text: t, compress: false })];
+}
 
 const failures = [];
 const check = (ok, what) => { if (!ok) failures.push(what); else console.log('  ok  ' + what); };
@@ -609,6 +631,49 @@ try {
     await page.close();
   }
 
+  /* ---- framed by another site ----
+     No frame-ancestors can be sent from GitHub Pages, so the page hides itself
+     when it finds it is not the top-level document. */
+  {
+    const page = await context.newPage();
+    await page.setContent(`<iframe src="${base}index.html" width="800" height="600"></iframe>`);
+    const frame = page.frames().find(f => f.url().endsWith('index.html'));
+    await frame.waitForLoadState('load').catch(() => {});
+    const hidden = page.url() === 'about:blank'
+      ? await frame.evaluate(() => getComputedStyle(document.documentElement).display === 'none')
+      : true;                                  // or it broke out to the top level instead
+    check(hidden, 'the app refuses to be shown inside another page\u2019s frame');
+    await page.close();
+  }
+
+  /* ---- a second plan loaded over a calculated one ----
+     The bug this guards: loading the next sector kept the previous plan's
+     computed rows until Calculate was pressed again, and Save PDF — offered as
+     soon as a plan is loaded — wrote the previous flight's ETOs onto the new
+     one's ETO column. */
+  {
+    const { page } = await open('index.html');
+    const out = await page.evaluate(async ([a, b]) => {
+      const buf = x => new Uint8Array(x).buffer;
+      await loadBuffer('A.pdf', a.length, buf(a), false);
+      document.querySelector('#etd').value = '1000';
+      document.querySelector('#calc').click();
+      const calculated = RESULT.length;
+      await loadBuffer('B.pdf', b.length, buf(b), false);
+      return { calculated, rows: RESULT.length, checks: CHECKS.length,
+               etd: document.querySelector('#etd').value,
+               saved: [...new Uint8Array(await build().arrayBuffer())] };
+    }, [ofpPdf([0, 20, 40, 60]), ofpPdf([0, 33, 44, 55])]);
+    const saved = new PDFMini.Doc(new Uint8Array(out.saved));
+    const written = PDFMini.textItems(await saved.content(saved.pages()[0]))
+      .filter(i => i.x > 460 && i.x < 500 && /^\d{4}$/.test(i.str));
+    check(out.calculated === 4, 'the first plan is calculated');
+    check(out.rows === 0 && out.checks === 0, 'loading the next plan drops the previous plan\u2019s rows and checks');
+    check(out.etd === '', 'loading the next plan clears the previous takeoff time');
+    check(written.length === 0, 'Save PDF writes no previous-flight ETOs onto the next plan');
+    await page.close();
+  }
+
   /* ---- the Journey Log ---- */
   {
     const { page, problems } = await open('journey-log.html');
@@ -629,6 +694,20 @@ try {
       const a = at(1), b = at(3.5);
       return Math.abs(a.x - b.x) < 0.001 && Math.abs(a.y - b.y) < 0.001 && a.size === b.size;
     }), 'the export geometry is the same at any zoom');
+
+    // Retention: a log untouched for thirty days is gone the next time the page
+    // opens; a recent one is still there.
+    const kept = async age => {
+      await page.evaluate(age => localStorage.setItem('journeylog.v1', JSON.stringify({
+        version: '2', manual: {}, pages: [], source: null, mark: 'M',
+        savedAt: Date.now() - age })), age);
+      await page.reload({ waitUntil: 'networkidle' });
+      return page.evaluate(() => doc.mark === 'M');
+    };
+    check(await kept(29 * 86400000), 'a Journey Log saved 29 days ago is kept');
+    check(!await kept(31 * 86400000), 'a Journey Log saved 31 days ago is removed');
+    check(await page.evaluate(() => localStorage.getItem('journeylog.v1') === null),
+          'and its stored copy is gone too');
     await page.close();
   }
 

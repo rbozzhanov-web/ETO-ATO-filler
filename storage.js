@@ -3,6 +3,10 @@
    IndexedDB/localStorage resume copy that lets iPadOS restore an evicted tab. */
 const OFPStorage = (() => {
   const LAST = 'etofill:last';
+  // The resume copy is there to carry a flight across iPadOS evicting the app,
+  // not to open a tablet's next crew onto an old flight. Once nothing has been
+  // done with it for this long it is dropped rather than reopened.
+  const RESUME_MAX_AGE = 24 * 3600 * 1000;
 
   async function digestOf(buf){
     try {
@@ -52,11 +56,22 @@ const OFPStorage = (() => {
     if (typeof indexedDB === 'undefined') return;
     try { await idbSet('last', null); } catch(e){}
   }
-  async function resumeRecord(){
+  // Called on every save: the age that matters is the time since the flight
+  // was last worked, not since its PDF was first loaded.
+  function touchSession(){
+    try {
+      const meta = JSON.parse(localStorage.getItem(LAST) || 'null');
+      if (!meta) return;
+      meta.at = Date.now();
+      localStorage.setItem(LAST, JSON.stringify(meta));
+    } catch(e){}
+  }
+  async function resumeRecord(now = Date.now()){
     if (typeof indexedDB === 'undefined') return null;
     let meta;
     try { meta = JSON.parse(localStorage.getItem(LAST) || 'null'); } catch(e){ return null; }
     if (!meta) return null;
+    if (typeof meta.at !== 'number' || now - meta.at > RESUME_MAX_AGE){ await dropSession(); return null; }
     let rec;
     try { rec = await idbGet('last'); } catch(e){ return null; }
     if (!rec || !rec.buf || rec.name !== meta.name || rec.size !== meta.size) return null;
@@ -67,7 +82,7 @@ const OFPStorage = (() => {
     }
     return rec;
   }
-  return { LAST, digestOf, keepSession, dropSession, resumeRecord };
+  return { LAST, RESUME_MAX_AGE, digestOf, keepSession, touchSession, dropSession, resumeRecord };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = OFPStorage;

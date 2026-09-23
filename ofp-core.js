@@ -34,8 +34,21 @@ function validFuelEntry(v){
 // A difference between two times of day, read the short way round: a flight is
 // never twelve hours out from its own plan, so a larger gap is the day rolling
 // over rather than the aeroplane being half a day late.
-const wrapMin = m => { while (m < -720) m += 1440; while (m >= 720) m -= 1440; return m; };
+// Arithmetic rather than a loop: a loop never finishes on an infinite input.
+const wrapMin = m => ((m + 720) % 1440 + 1440) % 1440 - 720;
 const sinceDueAt = (nowMin, target) => wrapMin(nowMin - norm(target));
+
+// The same, once a takeoff time is known to anchor it: both times are placed on
+// the flight's own timeline, from six hours before takeoff to eighteen after,
+// rather than read the short way round the clock. The short way cannot tell a
+// waypoint thirteen hours ahead from one eleven hours behind, so on a sector
+// longer than twelve hours the far end of the route read as already passed
+// from the moment of takeoff.
+const FLIGHT_BEFORE = 360;
+function sinceDueFrom(nowMin, target, t0){
+  const rel = m => norm(m - t0 + FLIGHT_BEFORE) - FLIGHT_BEFORE;
+  return rel(nowMin) - rel(target);
+}
 
 /* ---------- the ETO table ----------
    Each waypoint carries its cumulative time from the start of its own section.
@@ -232,6 +245,6 @@ function prunePlans(store, now, retainDays, maxPlans){
 // In the browser this file is a classic script and these are simply globals.
 // Under Node — the test runner — it is a CommonJS module, and this is its export.
 if (typeof module !== 'undefined' && module.exports)
-  module.exports = { norm, fmt, hhmm, parseTime, validFuelEntry, wrapMin, sinceDueAt, computeResult,
+  module.exports = { norm, fmt, hhmm, parseTime, validFuelEntry, wrapMin, sinceDueAt, sinceDueFrom, computeResult,
                      hourlyChecks, fuelBox, fuelChecks, directSkips, abeamAt,
                      PLAN_PREFIX, SETTING_KEYS, legacyKeyFor, planKeyFor, planKeysIn, prunePlans };

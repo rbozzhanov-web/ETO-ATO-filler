@@ -142,6 +142,9 @@ contexts, so everything works on either.
    Calculate walks every waypoint's ET against the plan's own T/T and inserts the
    whole ETO column from that — a mismatch between the two raises a warning rather
    than being silently trusted.
+   From then on every due time is read on the flight's own timeline — from six
+   hours before that takeoff time to eighteen after — so a sector longer than
+   twelve hours still reads its far end as ahead, not already passed.
    The card then opens underneath
    into the waypoint table: entering the time and reading what it produces is one
    job, so it is one card.
@@ -552,7 +555,19 @@ down with it.
 
 Built for Air Astana plans: unencrypted PDF, classic xref table, uncompressed
 objects, Courier font. If the format turns out to be different, the app says so
-on load instead of damaging the document.
+on load instead of damaging the document; an encrypted or password-protected
+PDF is refused by name.
+
+What the app writes is drawn in the page's own default space: text positions
+are read through any transform the page sets up, and the page as issued is
+wrapped in `q … Q` so nothing it leaves in effect can move or clip the overlay.
+The OFP overlay font carries printable ASCII only, so the document fields accept
+nothing else. The Journey Log's export writes Cyrillic in Latin letters the way
+a passport does (ICAO Doc 9303), rather than dropping it.
+
+Neither page will display inside another site's frame. GitHub Pages cannot send
+the `frame-ancestors` header, so each page checks for itself and stays blank if
+it is framed.
 
 ---
 
@@ -571,7 +586,14 @@ paired with the wrong document.
 
 Nothing is kept indefinitely: entries age out after 30 days, only the 20 most
 recent flights are held, and **Clear other flights** on the load card removes
-every stored flight but the one open now.
+every stored flight but the one open now. The resume copy of the PDF is only
+for carrying a flight across the app being evicted: once 24 hours pass with
+nothing saved against it, it is dropped instead of reopened, so the next crew
+on a shared tablet opens onto the load screen rather than an old flight.
+
+The Journey Log keeps its form in the same browser storage and the issued PDF
+in IndexedDB. A log left untouched for 30 days is removed — both parts — the
+next time the page opens.
 
 ---
 

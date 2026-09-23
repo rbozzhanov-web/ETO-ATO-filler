@@ -84,3 +84,19 @@ test('valid HHMM boundary values still parse exactly', () => {
   assert.equal(parseTime('2358'), 1438);
   assert.equal(parseTime('2359'), 1439);
 });
+
+/* The bug this guards: due times were read the short way round the clock, so
+   on a sector longer than twelve hours the far end of the route read as passed
+   — and overdue — from the moment of takeoff. */
+test('a waypoint thirteen hours after takeoff is still ahead at takeoff', () => {
+  const { sinceDueFrom } = require('../ofp-core.js');
+  const t0 = parseTime('0100'), far = t0 + 13 * 60;
+  assert.ok(sinceDueAt(t0, far) > 0, 'the short way round gets this wrong');
+  assert.equal(sinceDueFrom(t0, far, t0), -780);
+  assert.equal(sinceDueFrom(far + 5, far, t0), 5);                 // five minutes late
+  assert.equal(sinceDueFrom(parseTime('2350'), parseTime('2330') + 60, parseTime('2330')), -40);  // across midnight
+  assert.equal(sinceDueFrom(parseTime('0030'), parseTime('0010'), parseTime('2330')), 20); // ATO as time of day
+  // and within twelve hours both readings agree
+  for (const [now, due] of [[130, 150], [1435, 5], [5, 1435], [600, 540]])
+    assert.equal(sinceDueFrom(now, due, 100), sinceDueAt(now, due));
+});

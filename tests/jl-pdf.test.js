@@ -78,7 +78,8 @@ test('a page issued under a non-zero generation is rewritten under it', () => {
   const appended = objectHeaders(out.subarray(doc.bytes.length));
   assert.ok(appended.some(([n, g]) => n === 3 && g === 3), 'page rewritten as 3 3 obj');
   assert.ok(!appended.some(([n, g]) => n === 3 && g === 0));
-  assert.deepEqual(lastXrefEntries(out).map(([, g]) => g).sort(), [0, 0, 3]);
+  // the page under 3; the new "q" stream, font and export stream under 0
+  assert.deepEqual(lastXrefEntries(out).map(([, g]) => g).sort(), [0, 0, 0, 3]);
   assert.match(str(out).slice(-400), /\/Root 1 5 R/);
 });
 
@@ -107,4 +108,38 @@ test('a page tree that points back at itself terminates', () => {
                                          '<</Type/Pages/Kids[2 0 R]/Count 1>>');
   const doc = new jl.Doc(new Uint8Array(Buffer.from(looped, 'latin1')));
   assert.deepEqual(doc.pages(), []);
+});
+
+// See the matching pdfmini test: /Prev has to be the section actually read.
+test('a Journey Log with bytes after %%EOF keeps its original objects once exported', () => {
+  const padded = Buffer.concat([Buffer.from(buildPdf()), Buffer.from('\0\0\0\0')]);
+  const doc = new jl.Doc(new Uint8Array(padded));
+  const out = jl.appendPdf(doc, new Map([[0, new jl.PdfOps().text('JL', 9, 10, 20, 'ABC', [0, 0, 1])]]));
+  assert.match(str(out).slice(-300), new RegExp('/Prev ' + doc.startxref + '>>'));
+  assert.equal(new jl.Doc(out).pages().length, 1);
+});
+
+/* A crew member's name typed in Cyrillic used to come out of the export as a
+   row of question marks: the export font has no Cyrillic. It is written in
+   Latin letters instead, the way a passport writes it (ICAO Doc 9303). */
+test('Cyrillic is transliterated for the export, not dropped', () => {
+  assert.equal(jl.pdfLatin('ЩЕРБАКОВ Юрий'), 'SHCHERBAKOV Iurii');
+  assert.equal(jl.pdfLatin('ҚАНАТ Әлия'), 'KANAT Aliia');
+  assert.equal(jl.pdfLatin('Ёж (Ъ)'), 'Ezh \\(IE\\)');
+  assert.equal(jl.pdfLatin('A\u0085Bé'), 'A?Bé');       // a C1 control is not text; é is
+  assert.equal(jl.pdfLatin('日本'), '??');
+});
+
+// See the matching pdfmini test: the export draws in the page's default space
+// whatever the issued form leaves in effect.
+test('the export closes what the issued form leaves open before it draws', async () => {
+  const doc = new jl.Doc(buildPdf({ text: 'q 2 0 0 2 0 0 cm q BT /F1 10 Tf 1 1 Td (X) Tj ET Q\n' }));
+  assert.equal(jl.unclosedQ(await doc.content(doc.pages()[0])), 1);
+  await jl.markOpenQ(doc, [0]);
+  const out = jl.appendPdf(doc, new Map([[0, new jl.PdfOps().text('JL', 9, 10, 20, 'ABC', [0, 0, 1])]]));
+  const again = new jl.Doc(out);
+  const content = await again.content(again.pages()[0]);
+  assert.match(content, /^q\n/);
+  assert.match(content, /Q\nQ\nq\n.*\(ABC\) Tj/s);
+  assert.equal(jl.unclosedQ(content), 0, 'balanced once exported');
 });

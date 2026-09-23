@@ -63,3 +63,30 @@ test('a broken page reference resolves safely instead of recursing or inventing 
   const doc = new PDFMini.Doc(asBytes(broken));
   assert.deepEqual(doc.pages(), []);
 });
+
+const jl = require('../jl-pdf.js');
+const withTrailer = (s, extra) => s.replace('/Root 1 0 R', '/Root 1 0 R' + extra);
+
+test('an encrypted PDF is refused by name by both readers', () => {
+  const s = Buffer.from(buildPdf()).toString('latin1');
+  const enc = asBytes(withTrailer(s, '/Encrypt 9 0 R'));
+  assert.throws(() => new PDFMini.Doc(enc), /encrypted PDF/);
+  assert.throws(() => new jl.Doc(enc), /encrypted PDF/);
+});
+
+/* The bug this guards: a cross-reference section's entry count was trusted as
+   a loop bound, so a file claiming a billion entries hung the tab walking them. */
+test('an xref count larger than the file is rejected instead of walked', () => {
+  const s = Buffer.from(buildPdf()).toString('latin1');
+  const bad = asBytes(s.replace(/xref\n0 (\d+)/, 'xref\n0 999999999'));
+  const t = Date.now();
+  assert.throws(() => new PDFMini.Doc(bad), /damaged cross-reference/);
+  assert.throws(() => new jl.Doc(bad), /damaged cross-reference/);
+  assert.ok(Date.now() - t < 1000);
+});
+
+test('wrapMin returns on a non-finite input rather than looping for ever', () => {
+  const { wrapMin } = require('../ofp-core.js');
+  assert.ok(Number.isNaN(wrapMin(Infinity)));
+  assert.ok(Number.isNaN(wrapMin(NaN)));
+});
