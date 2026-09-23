@@ -171,6 +171,11 @@ const PDFMini = (() => {
              || /startxref\s+(\d+)/g.exec(this.s.slice(this.s.lastIndexOf('startxref')));
       if (!m) throw new Error('startxref not found');
       let off = parseInt(m[1], 10);
+      // The incremental update written below chains back to this section with
+      // /Prev, so it has to be the offset actually read here — not a second,
+      // stricter match of the file's tail, which misses a file with anything
+      // after its %%EOF and would leave the saved PDF with no original objects.
+      this.startxref = off;
       const seen = new Set();
       while (off !== undefined && !seen.has(off)){
         seen.add(off);
@@ -361,7 +366,12 @@ const PDFMini = (() => {
   }
 
   /* ---------- incremental write ---------- */
-  const esc = t => String(t).replace(/([\\()])/g, '\\$1');
+  // The overlay font is Courier-Bold under StandardEncoding, which has glyphs
+  // for printable ASCII only. Anything else is written as '?': a character
+  // outside Latin-1 would otherwise be cut to its low byte by toBytes — the
+  // Cyrillic Щ becomes ')' and ends the string early, and whatever follows it
+  // is then read as drawing operators on the crew's document.
+  const esc = t => String(t).replace(/[^\x20-\x7e]/g, '?').replace(/([\\()])/g, '\\$1');
 
   // insert "/Name N 0 R" into the page /Font dictionary
   function addFont(raw, name, num){
@@ -456,7 +466,6 @@ const PDFMini = (() => {
     const idStr = Array.isArray(tr.ID)
       ? '/ID[' + tr.ID.map(v => '<' + [...v.text].map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').toUpperCase() + '>').join('') + ']'
       : '';
-    const prev = /startxref\s+(\d+)\s*%%EOF\s*$/.exec(doc.s.slice(-2048));
     // The trailer's own references go back out with the generation they were
     // read with, not a flat zero.
     const asRef = r => r.ref + ' ' + (r.gen || 0) + ' R';
@@ -464,7 +473,7 @@ const PDFMini = (() => {
        + '/Root ' + asRef(tr.Root)
        + (tr.Info && tr.Info.ref ? '/Info ' + asRef(tr.Info) : '')
        + idStr
-       + (prev ? '/Prev ' + prev[1] : '')
+       + '/Prev ' + doc.startxref
        + '>>\nstartxref\n' + xrefPos + '\n%%EOF\n';
     emit(x);
 

@@ -108,3 +108,12 @@ test('a page tree that points back at itself terminates', () => {
   const doc = new jl.Doc(new Uint8Array(Buffer.from(looped, 'latin1')));
   assert.deepEqual(doc.pages(), []);
 });
+
+// See the matching pdfmini test: /Prev has to be the section actually read.
+test('a Journey Log with bytes after %%EOF keeps its original objects once exported', () => {
+  const padded = Buffer.concat([Buffer.from(buildPdf()), Buffer.from('\0\0\0\0')]);
+  const doc = new jl.Doc(new Uint8Array(padded));
+  const out = jl.appendPdf(doc, new Map([[0, new jl.PdfOps().text('JL', 9, 10, 20, 'ABC', [0, 0, 1])]]));
+  assert.match(str(out).slice(-300), new RegExp('/Prev ' + doc.startxref + '>>'));
+  assert.equal(new jl.Doc(out).pages().length, 1);
+});

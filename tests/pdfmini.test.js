@@ -134,3 +134,33 @@ test('a page tree that points back at itself terminates', () => {
   const doc = new PDFMini.Doc(new Uint8Array(Buffer.from(looped, 'latin1')));
   assert.deepEqual(doc.pages(), []);
 });
+
+/* The bug this guards: the overlay font only has glyphs for printable ASCII,
+   and toBytes keeps the low byte of each character. A Cyrillic Щ (U+0429) came
+   out as ')', closed the string early, and everything typed after it ran as
+   drawing operators on the page — here, a full-page fill over the OFP. */
+test('text outside printable ASCII cannot end the string and inject operators', async () => {
+  const doc = new PDFMini.Doc(buildPdf());
+  const typed = 'ATIS Щ 0 0 1 rg 0 0 612 792 re f Ш ќ';
+  const ops = new PDFMini.Ops().text('FB', 10, 50, 50, typed, [0, 0, 1]).done();
+  const out = PDFMini.append(doc, new Map([[0, ops]]),
+    { fonts: [{ name: 'FB', dict: '<</Type/Font/Subtype/Type1/BaseFont/Courier-Bold>>' }] });
+  const again = new PDFMini.Doc(out);
+  const items = PDFMini.textItems(await again.content(again.pages()[0]));
+  const overlay = items.filter(i => i.x === 50 && i.y === 50);
+  assert.equal(overlay.length, 1, 'one string, not a string and a run of operators');
+  assert.equal(overlay[0].str, 'ATIS ? 0 0 1 rg 0 0 612 792 re f ? ?');
+  assert.doesNotMatch(await again.content(again.pages()[0]), /\) 0 0 1 rg/);
+});
+
+/* The bug this guards: /Prev was found by matching the file's tail a second
+   time, strictly, so a file with anything after its %%EOF — trailing NUL
+   padding, say — read fine but was saved with no /Prev at all, and the saved
+   PDF opened with none of its original pages. */
+test('a document with bytes after %%EOF keeps its original objects once saved', () => {
+  const padded = Buffer.concat([Buffer.from(buildPdf()), Buffer.from('\0\0\0\0')]);
+  const doc = new PDFMini.Doc(new Uint8Array(padded));
+  const out = PDFMini.append(doc, new Map([[0, new PDFMini.Ops().done()]]), { fonts: [] });
+  assert.match(str(out).slice(-300), new RegExp('/Prev ' + doc.startxref + '>>'));
+  assert.equal(new PDFMini.Doc(out).pages().length, 1);
+});

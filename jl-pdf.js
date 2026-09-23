@@ -185,6 +185,10 @@ class Doc {
            || /startxref\s+(\d+)/g.exec(this.s.slice(this.s.lastIndexOf('startxref')));
     if (!m) throw new Error('startxref not found');
     let off = parseInt(m[1], 10);
+    // The export's incremental update chains back to exactly this section; a
+    // second, stricter match of the tail would miss a file with trailing bytes
+    // after %%EOF and leave the exported PDF without its original objects.
+    this.startxref = off;
     const seen = new Set();
     while (off !== undefined && !seen.has(off)){
       seen.add(off);
@@ -436,13 +440,12 @@ function appendPdf(doc, perPage){
   const id = Array.isArray(tr.ID)
     ? '/ID[' + tr.ID.map(v => '<' + [...v.text].map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').toUpperCase() + '>').join('') + ']'
     : '';
-  const previous = /startxref\s+(\d+)\s*%%EOF\s*$/.exec(doc.s.slice(-2048));
   // The trailer's own references go back out with the generation they were read
   // with, not a flat zero.
   const asRef = r => r.ref + ' ' + (r.gen || 0) + ' R';
   tail += 'trailer\n<</Size ' + next + '/Root ' + asRef(tr.Root)
        + (tr.Info && tr.Info.ref ? '/Info ' + asRef(tr.Info) : '') + id
-       + (previous ? '/Prev ' + previous[1] : '') + '>>\nstartxref\n' + xref + '\n%%EOF\n';
+       + '/Prev ' + doc.startxref + '>>\nstartxref\n' + xref + '\n%%EOF\n';
   emit(tail);
   const extra = toBytes(parts.join('')), out = new Uint8Array(doc.bytes.length + extra.length);
   out.set(doc.bytes); out.set(extra, doc.bytes.length);

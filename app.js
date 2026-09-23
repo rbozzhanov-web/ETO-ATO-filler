@@ -575,6 +575,14 @@ async function loadBuffer(name, size, buf, resumed){
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
   DCT.marks = []; syncDct();
+  // Everything Calculate derived for the plan before this one goes too. It is
+  // only rebuilt by the next Calculate, and until then Save PDF — shown as soon
+  // as a plan is loaded — would write the old flight's ETOs onto this one, the
+  // takeoff box would still hold the old takeoff time, and the old altimeter
+  // checks would go on falling due and beeping.
+  RESULT = []; CHECKS = []; FUEL = []; T0 = null;
+  alerted.clear();
+  $('#etd').value = '';
   try {
     const r = await parse(RAW);
     PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor; FIELDS = r.fields; FPL = r.fpl;
@@ -1607,8 +1615,10 @@ function showFpl(){
   $('#etd').placeholder = FPL.ETD;
 }
 
-$('#etd').oninput = e => { e.target.value = e.target.value.replace(/[^\d:]/g, ''); };
+// One handler, not two: a second assignment to oninput silently replaced the
+// filter that used to sit on its own line above this one.
 $('#etd').oninput = () => {
+  $('#etd').value = $('#etd').value.replace(/[^\d:]/g, '');
   const v = $('#etd').value, bad = v.length > 0 && parseTime(v) === null;
   $('#etd').classList.toggle('bad', bad);
   $('#etd').setAttribute('aria-invalid', bad ? 'true' : 'false');
@@ -2374,7 +2384,11 @@ function renderFields(){
       inp.inputMode = 'none'; inp.pattern = '[0-9]*'; inp.classList.add('numkey');
     }
     inp.oninput = () => {
-      inp.value = inp.value.toUpperCase().slice(0, f.n);
+      // The PDF overlay can only carry printable ASCII (Courier-Bold under
+      // StandardEncoding), so anything else — a Cyrillic layout left switched
+      // on, a curly quote — is refused here, where the crew sees it, rather
+      // than turned into '?' on the saved document.
+      inp.value = inp.value.toUpperCase().replace(/[^\x20-\x7e]/g, '').slice(0, f.n);
       TXT[f.i] = inp.value;
       if (!inp.value) delete TXT[f.i];
       fieldsSummary();
@@ -2664,6 +2678,7 @@ $('#reset').onclick = () => {
   clearTimeout(saveT); saveT = null;
   dropSession();
   RAW = null; DOC = null; PLAN = null; RESULT = []; FIELDS = []; FPL = null;
+  HDRS = []; CHECKS = []; FUEL = []; T0 = null;
   NAME = ''; SIZE = 0; HASH = null; KEY = '';
   showStoredCount();
   alerted.clear();
