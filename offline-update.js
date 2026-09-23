@@ -19,16 +19,27 @@
 function watchForUpdates(hasOpen, env){
   const nav = env.navigator, doc = env.document, loc = env.location;
   if (!('serviceWorker' in nav) || !loc.protocol.startsWith('http')) return null;
-  let reloading = false;
+  let reloading = false, requested = false;
   const offline = () => nav.onLine === false;
 
   function applyUpdate(reg){
     const worker = reg.waiting;
-    if (worker && !offline() && !hasOpen()) worker.postMessage({ type: 'skip-waiting' });
+    if (worker && !offline() && !hasOpen()){
+      requested = true;
+      worker.postMessage({ type: 'skip-waiting' });
+    }
   }
 
+  // Only the switch this page asked for, above — on the ground, with nothing
+  // open — is followed by a reload. A worker can also take over on its own: a
+  // release downloaded on the ground and left waiting becomes active the next
+  // time the app starts from cold, which in the air is every time iPadOS has
+  // unloaded it, and it then claims the page that has just loaded. That page is
+  // already working; reloading it would only redo the whole load in front of
+  // the crew, with a flight open and no network. The new version is simply in
+  // place from the next load on.
   nav.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) return;
+    if (reloading || !requested) return;
     reloading = true;
     loc.reload();
   });

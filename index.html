@@ -132,6 +132,13 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 #drop.loaded .dropHint{display:none}
 #drop.loaded .fn{margin-top:0;color:var(--txt);flex:1}
 #drop.loaded::after{content:"Change";flex:0 0 auto;font-size:12px;font-weight:600;color:var(--acc)}
+/* A flight is being reopened (theme-init.js marks this before first paint): the
+   box takes its slim loaded shape and says so, rather than inviting a new PDF
+   for a moment before the plan arrives underneath it. */
+html[data-resuming] #drop:not(.loaded){padding:12px 14px;text-align:left;border-style:solid}
+html[data-resuming] #drop:not(.loaded) .dropHint{display:none}
+html[data-resuming] #drop:not(.loaded)::after{content:"Reopening the open flight\2026";font-size:13px;color:var(--dim)}
+html[data-resuming] #paste,html[data-resuming] #shortcutBtn,html[data-resuming] #disc{visibility:hidden}
 .disc{display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:12.5px;color:var(--dim)}
 .fplbox{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);overflow:hidden}
 .fplhead{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);
@@ -761,7 +768,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.18 &nbsp;·&nbsp; Build 20260923.1 &nbsp;·&nbsp; 23 Sep 2026</span></p>
+      <span class="build">RC1.8.19 &nbsp;·&nbsp; Build 20260923.2 &nbsp;·&nbsp; 23 Sep 2026</span></p>
 
     </div>
   </div>

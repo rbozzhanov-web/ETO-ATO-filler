@@ -90,7 +90,20 @@ refresh behind the page, nothing to wait out. It reads from its cache and that
 is the whole of it.
 
 Offline it never updates, which means the version you leave the ground with is the version you
-fly with.
+fly with. The one reload the app ever does for an update is the one it asked for
+itself, on the ground with nothing open. A version downloaded earlier and left
+waiting takes over quietly on a later cold start and is simply in place from
+the next load, without reloading the page in front of you.
+
+iPadOS unloads a backgrounded web app whenever another app wants the memory,
+which in flight, with the EFB apps open, is often. Coming back then starts the
+page from cold, and so does every crossing between the OFP and the Journey Log.
+The open flight comes straight back all the same: what reading its PDF produced
+is kept with the PDF, so it is not read again page by page, and until it is
+back on screen the load card says it is reopening the flight instead of showing
+an empty load screen. The page returns to where it was scrolled; coming back
+from the Journey Log still starts at the top. The stored reading belongs to one
+build — after an update the PDF is read once more, the first time it is opened.
 
 ---
 

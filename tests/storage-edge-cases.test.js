@@ -92,7 +92,7 @@ test('autosave delegates cold-session persistence to the isolated storage module
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
   assert.match(app, /const digestOf = OFPStorage\.digestOf;/);
-  assert.match(app, /OFPStorage\.keepSession\(name, size, HASH, buf\)/);
+  assert.match(app, /OFPStorage\.keepSession\(name, size, HASH, buf, parsed\)/);
   assert.match(app, /OFPStorage\.resumeRecord\(\)/);
   assert.match(storage, /catch\(e\)\{ \/\* quota\/private mode:/);
   assert.match(storage, /if \(meta\.hash && rec\.hash && meta\.hash !== rec\.hash\)/);

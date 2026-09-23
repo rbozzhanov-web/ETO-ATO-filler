@@ -674,6 +674,63 @@ try {
     await page.close();
   }
 
+  /* ---- reopening a flight, offline ----
+     The bug this guards: every time iPadOS unloaded the app — and every trip
+     back from the Journey Log — the whole package was read again, page by page,
+     behind an empty load screen that then jumped to the plan. The reading is
+     kept with the PDF now: the flight comes back from it without a parse, says
+     it is reopening rather than showing the load screen, returns to where it was
+     scrolled, and still saves a complete PDF. */
+  {
+    const { page } = await open('index.html');
+    await page.evaluate(async a => {
+      await loadBuffer('R.pdf', a.length, new Uint8Array(a).buffer, false);
+      document.querySelector('#etd').value = '1000';
+      document.querySelector('#calc').click();
+      flushSave();
+      await new Promise(r => setTimeout(r, 300));            // the stored copy is written
+    }, ofpPdf([0, 20, 40, 60]));
+    await page.evaluate(() => {
+      document.body.style.minHeight = '4000px';               // room to scroll
+      scrollTo(0, 600);
+      dispatchEvent(new Event('pagehide'));
+    });
+    await page.context().setOffline(true);
+    await page.addInitScript(() => {
+      // theme-init.js sets the mark before first paint; record that it did.
+      // (Before any markup is parsed there is no documentElement yet to watch.)
+      window.__marked = false;
+      new MutationObserver(() => {
+        if (document.documentElement && document.documentElement.hasAttribute('data-resuming')) window.__marked = true;
+      }).observe(document, { attributes: true, subtree: true, childList: true, attributeFilter: ['data-resuming'] });
+      // Count parses of the package: parse() is a global, wrapped once app.js
+      // has defined it and before the reopen — which waits on IndexedDB — calls it.
+      window.__parses = 0;
+      addEventListener('DOMContentLoaded', () => {
+        const real = window.parse;
+        window.parse = (...a) => { window.__parses++; return real(...a); };
+      });
+    });
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => RESULT.length === 4, null, { timeout: 10000 });
+    const back = await page.evaluate(() => ({
+      marked: window.__marked, cleared: !document.documentElement.hasAttribute('data-resuming'),
+      parses: window.__parses, y: Math.round(scrollY)
+    }));
+    const saved = await page.evaluate(async () => [...new Uint8Array(await build().arrayBuffer())]);
+    await page.context().setOffline(false);
+    const out = new PDFMini.Doc(new Uint8Array(saved));
+    const etos = PDFMini.textItems(await out.content(out.pages()[0]))
+      .filter(i => i.x > 460 && i.x < 500 && /^\d{4}$/.test(i.str)).map(i => i.str);
+    check(back.marked, 'a reopening flight is marked before first paint, not shown as the load screen');
+    check(back.cleared, 'and the mark is cleared once the flight is back');
+    check(back.parses === 0, 'the flight comes back from its stored reading, without parsing the PDF again'
+          + (back.parses ? ` (parsed ${back.parses}x)` : ''));
+    check(back.y === 600, 'the page comes back where it was scrolled');
+    check(etos.join(' ') === '1000 1020 1100 1200', 'a reopened flight still saves its ETOs into the PDF');
+    await page.close();
+  }
+
   /* ---- the Journey Log ---- */
   {
     const { page, problems } = await open('journey-log.html');

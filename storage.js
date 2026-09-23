@@ -44,10 +44,13 @@ const OFPStorage = (() => {
     } finally { db.close(); }
   }
 
-  async function keepSession(name, size, hash, buf){
+  // parsed is what reading the PDF produced, kept beside it so that reopening
+  // the flight — after iPadOS unloads the app, or on the way back from the
+  // Journey Log — does not have to read all of its pages again.
+  async function keepSession(name, size, hash, buf, parsed){
     if (typeof indexedDB === 'undefined') return;
     try {
-      await idbSet('last', { name, size, hash, buf });
+      await idbSet('last', { name, size, hash, buf, parsed: parsed || null });
       localStorage.setItem(LAST, JSON.stringify({ name, size, hash, at: Date.now() }));
     } catch(e){ /* quota/private mode: the live flight continues without cold resume */ }
   }
