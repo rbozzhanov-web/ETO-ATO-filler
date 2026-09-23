@@ -140,3 +140,18 @@ test('every shipped script parses', () => {
   for (const f of SCRIPTS)
     assert.doesNotThrow(() => new vm.Script(read(f), { filename: f }), f + ' does not parse');
 });
+
+/* ------------------------------------------------------------ one version
+   The bug this guards: releases 1.8.16 and 1.8.17 went live with the label on
+   the guide still reading RC1.8.15, so a device running the new code looked
+   exactly like one that had not updated. The label, package.json and the
+   service worker's cache name have to name the same release. */
+test('the version shown in the app matches the release being shipped', () => {
+  const version = JSON.parse(read('package.json')).version;
+  const label = /class="build">RC([\d.]+) /.exec(read('index.html'));
+  const cache = /CACHE_PREFIX \+ 'rc([\d.]+)-\d+'/.exec(read('sw.js'));
+  assert.ok(label, 'index.html shows a build label');
+  assert.ok(cache, 'sw.js names its cache after the release');
+  assert.equal(label[1], version, 'index.html build label');
+  assert.equal(cache[1], version, 'sw.js cache version');
+});
