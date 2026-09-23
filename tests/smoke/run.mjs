@@ -695,7 +695,13 @@ try {
       scrollTo(0, 600);
       dispatchEvent(new Event('pagehide'));
     });
-    await page.context().setOffline(true);
+    // Reloaded offline where the harness can: Playwright's Linux WebKit fails
+    // any reload of a service-worker page while its offline emulation is on
+    // ("WebKit encountered an internal error" — on main too, before this
+    // change), so under WebKit the same reopen is driven online. The reopen
+    // itself makes no request either way.
+    const offline = engineName !== 'webkit';
+    if (offline) await page.context().setOffline(true);
     await page.addInitScript(() => {
       // theme-init.js sets the mark before first paint; record that it did.
       // (Before any markup is parsed there is no documentElement yet to watch.)
@@ -707,6 +713,9 @@ try {
       // has defined it and before the reopen — which waits on IndexedDB — calls it.
       window.__parses = 0;
       addEventListener('DOMContentLoaded', () => {
+        // The same room to scroll as before the reload: on the tall iPad
+        // viewport the plan alone is shorter than the offset being restored.
+        document.body.style.minHeight = '4000px';
         const real = window.parse;
         window.parse = (...a) => { window.__parses++; return real(...a); };
       });
@@ -718,7 +727,7 @@ try {
       parses: window.__parses, y: Math.round(scrollY)
     }));
     const saved = await page.evaluate(async () => [...new Uint8Array(await build().arrayBuffer())]);
-    await page.context().setOffline(false);
+    if (offline) await page.context().setOffline(false);
     const out = new PDFMini.Doc(new Uint8Array(saved));
     const etos = PDFMini.textItems(await out.content(out.pages()[0]))
       .filter(i => i.x > 460 && i.x < 500 && /^\d{4}$/.test(i.str)).map(i => i.str);
