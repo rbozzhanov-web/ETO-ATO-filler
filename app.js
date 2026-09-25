@@ -567,13 +567,16 @@ async function loadBuffer(name, size, buf, resumed, known = {}){
              + `packages up to ${PDFMini.LIMITS.bytes / 1048576} MB.`, 'err');
     return false;
   }
+  const token = ++LOADING;
   NAME = name; SIZE = size;
   // The saved state belongs to this PDF's bytes, not to its name — see the
-  // stored-flight-data section below.
+  // stored-flight-data section below. A reopened flight arrives with its
+  // digest already checked and, usually, without its bytes: those follow in
+  // the background (ensureRaw) once the flight is back on screen.
   HASH = known.hash || await digestOf(buf);
   KEY = planKeyFor(HASH, name, size);
   showStoredCount();
-  RAW = buf; DOC = null; OPENQ = [];
+  RAW = buf; RAW_WAIT = null; DOC = null; OPENQ = [];
   $('#fname').textContent = name + '  ·  ' + (size / 1048576).toFixed(1) + ' MB';
   drop.classList.add('loaded');
   hide('#m1'); hide('#m3');
@@ -593,9 +596,15 @@ async function loadBuffer(name, size, buf, resumed, known = {}){
   $('#etd').value = '';
   try {
     const kept = known.parsed && known.parsed.build === BUILD ? known.parsed : null;
-    const r = kept || await parse(RAW);
-    if (RAW !== buf) return false;                 // another PDF was chosen meanwhile
-    DOC = r.doc || null; OPENQ = r.openQ || [];
+    // A stored reading from another build is read again, which needs the bytes.
+    if (!kept && !buf) buf = await ensureRaw();
+    const r = kept || await parse(buf);
+    if (token !== LOADING) return false;           // another PDF was chosen meanwhile
+    // The document object parse() built is let go: it holds the whole file a
+    // second time, as text, and is only wanted again at Save or for a chart.
+    // Everything a tablet keeps in memory counts towards iPadOS choosing it to
+    // unload when the crew switches to another app.
+    DOC = null; OPENQ = r.openQ || [];
     PLAN = r.pairs; HDRS = r.headers; ANCHOR = r.anchor; FIELDS = r.fields; FPL = r.fpl;
     showIcao(r.icao);
     showOfp(r.ofp);
@@ -977,7 +986,7 @@ async function paintChart(){
   const only = node => { clear(box); box.appendChild(node); };
   if (!c.url){
     only(mk('p', 'disc', 'Decoding…'));
-    try { const doc = ensureDoc(); c.url = await chartUrl(doc, doc.pages()[c.page], c.key); }
+    try { await ensureRaw(); const doc = ensureDoc(); c.url = await chartUrl(doc, doc.pages()[c.page], c.key); }
     catch (e){ only(mk('p', 'disc', 'Could not read this chart: ' + e.message)); return; }
     if (CHARTS[chartAt] !== c) return;              // paged on while decoding
   }
@@ -1059,10 +1068,16 @@ $('#chartBox').addEventListener('touchend', e => {
   const now = Date.now();
   if (now - chartLastTap < 320){ setChartZoom(null); chartLastTap = 0; } else chartLastTap = now;
 }, { passive: true });
+// A decoded chart is a full-size bitmap — 1800 x 1451 is some ten megabytes
+// once drawn — so none is kept once the viewer closes: they are decoded again
+// the next time it opens. Memory the page holds on to while the crew is in
+// another app is what gets it unloaded.
 const openCharts = on => {
   $('#charts').classList.toggle('hide', !on);
   document.body.style.overflow = on ? 'hidden' : '';
-  if (on) paintChart();
+  if (on){ paintChart(); return; }
+  clear($('#chartBox'));
+  for (const c of CHARTS) if (c.url){ URL.revokeObjectURL(c.url); c.url = null; }
 };
 $('#chartOpen').onclick = () => openCharts(true);
 $('#chartClose').onclick = () => openCharts(false);
@@ -1617,12 +1632,27 @@ async function parse(buf){
    chart or to write the saved PDF, so a reopened flight builds it the first
    time one of those asks for it: a moment's work at Save, rather than a pause
    in the way of the crew's first taps after the app comes back. */
-let OPENQ = [];
+let OPENQ = [], LOADING = 0, RAW_WAIT = null;
 function ensureDoc(){
-  if (DOC || !RAW) return DOC;
+  if (DOC) return DOC;
+  if (!RAW) throw new Error('the PDF is still being read');
   DOC = new PDFMini.Doc(new Uint8Array(RAW));
   DOC.pages().forEach((pg, i) => { pg.openQ = OPENQ[i] || 0; });
   return DOC;
+}
+// The PDF's bytes: in memory for a plan loaded from a file, fetched from the
+// resume copy — and checked against the digest this flight is saved under —
+// for one that was reopened.
+function ensureRaw(){
+  if (RAW) return Promise.resolve(RAW);
+  if (!RAW_WAIT){
+    const token = LOADING;
+    RAW_WAIT = OFPStorage.readPdf(HASH).then(buf => {
+      if (token === LOADING) RAW = buf;
+      return buf;
+    }, err => { RAW_WAIT = null; throw err; });
+  }
+  return RAW_WAIT;
 }
 
 /* ================= calculation =================
@@ -2586,17 +2616,24 @@ async function keepSession(name, size, buf, parsed){
   return OFPStorage.keepSession(name, size, HASH, buf, parsed);
 }
 async function dropSession(){ return OFPStorage.dropSession(); }
-// While a flight is being reopened the page says so, rather than showing the
-// empty load screen for a moment and then jumping to the plan: theme-init.js
-// marks the page before its first paint whenever there is a flight to reopen.
+// While a flight is being reopened the page is held back — theme-init.js marks
+// it before its first paint whenever there is a flight to reopen — and it is
+// shown once, complete and scrolled to where it was left, instead of an empty
+// load screen that fills in and then jumps. The PDF's bytes are read only
+// after that, in the background: nothing on screen needs them.
 async function resumeSession(){
+  let reopened = false;
   try {
     const rec = await OFPStorage.resumeRecord();
-    if (rec && await loadBuffer(rec.name, rec.size, rec.buf, true, { hash: rec.hash, parsed: rec.parsed }))
-      restoreView();
+    reopened = !!rec && await loadBuffer(rec.name, rec.size, rec.buf, true, { hash: rec.hash, parsed: rec.parsed });
+    if (reopened) restoreView();
   } finally {
     delete document.documentElement.dataset.resuming;
   }
+  if (reopened && !RAW) setTimeout(() => ensureRaw().catch(err => {
+    console.error('Stored PDF unreadable:', err);
+    msg('#m3', 'The stored copy of this PDF could not be read. Open the PDF again before saving.', 'err');
+  }), 250);
 }
 
 // Where the page was scrolled to, so a flight reopened after iPadOS unloaded
@@ -2702,6 +2739,7 @@ $('#dl').onclick = async () => {
   // Both the share-succeeded and the share-cancelled paths return from inside the
   // try, so the button has to be restored in a finally or it stays dead.
   try {
+    await ensureRaw();
     const blob = build(), name = outName();
     const file = new File([blob], name, { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [file] })){
@@ -2722,6 +2760,13 @@ $('#dl').onclick = async () => {
 };
 
 $('#open').onclick = () => {
+  // The preview tab has to open inside the tap itself, so there is no waiting
+  // for the stored copy here; it is normally in long before anyone asks.
+  if (!RAW){
+    ensureRaw().catch(() => {});
+    msg('#m3', 'The PDF is still being read — try the preview again in a moment.', 'warn');
+    return;
+  }
   try {
     const url = URL.createObjectURL(build());
     const w = window.open(url, '_blank');
@@ -2740,6 +2785,7 @@ $('#reset').onclick = () => {
   if (KEY) dropPlan(KEY);
   clearTimeout(saveT); saveT = null;
   dropSession();
+  LOADING++; RAW_WAIT = null;
   RAW = null; DOC = null; PLAN = null; RESULT = []; FIELDS = []; FPL = null;
   HDRS = []; CHECKS = []; FUEL = []; T0 = null;
   NAME = ''; SIZE = 0; HASH = null; KEY = '';

@@ -726,7 +726,16 @@ try {
       marked: window.__marked, cleared: !document.documentElement.hasAttribute('data-resuming'),
       parses: window.__parses, y: Math.round(scrollY)
     }));
-    const saved = await page.evaluate(async () => [...new Uint8Array(await build().arrayBuffer())]);
+    // The PDF's bytes are read after the flight is on screen; Save waits for them.
+    const saved = await page.evaluate(async () => { await ensureRaw(); return [...new Uint8Array(await build().arrayBuffer())]; });
+    // A decoded chart is released when the viewer closes, not kept in memory.
+    const released = await page.evaluate(() => {
+      const box = document.querySelector('#chartBox');
+      CHARTS = [{ page: 0, key: 'X', url: URL.createObjectURL(new Blob(['x'])) }];
+      box.appendChild(document.createElement('img'));
+      openCharts(false);
+      return box.childElementCount === 0 && CHARTS[0].url === null;
+    });
     if (offline) await page.context().setOffline(false);
     const out = new PDFMini.Doc(new Uint8Array(saved));
     const etos = PDFMini.textItems(await out.content(out.pages()[0]))
@@ -737,6 +746,7 @@ try {
           + (back.parses ? ` (parsed ${back.parses}x)` : ''));
     check(back.y === 600, 'the page comes back where it was scrolled');
     check(etos.join(' ') === '1000 1020 1100 1200', 'a reopened flight still saves its ETOs into the PDF');
+    check(released, 'closing the chart viewer lets its decoded images go');
     await page.close();
   }
 

@@ -44,20 +44,24 @@ const OFPStorage = (() => {
     } finally { db.close(); }
   }
 
-  // parsed is what reading the PDF produced, kept beside it so that reopening
-  // the flight — after iPadOS unloads the app, or on the way back from the
-  // Journey Log — does not have to read all of its pages again.
+  // Two records. 'last' is the PDF itself; 'lastParsed' is what reading it
+  // produced — small, and all that is needed to put the flight back on
+  // screen. Reopening the flight after iPadOS unloads the app, or on the way
+  // back from the Journey Log, reads only the second; the PDF is fetched and
+  // checked afterwards, off the path to the screen (readPdf).
   async function keepSession(name, size, hash, buf, parsed){
-    if (typeof indexedDB === 'undefined') return;
+    if (typeof indexedDB === 'undefined') return false;
     try {
-      await idbSet('last', { name, size, hash, buf, parsed: parsed || null });
+      await idbSet('last', { name, size, hash, buf });
+      await idbSet('lastParsed', parsed ? { name, size, hash, parsed } : null);
       localStorage.setItem(LAST, JSON.stringify({ name, size, hash, at: Date.now() }));
-    } catch(e){ /* quota/private mode: the live flight continues without cold resume */ }
+      return true;
+    } catch(e){ return false; /* quota/private mode: the live flight continues without cold resume */ }
   }
   async function dropSession(){
     try { localStorage.removeItem(LAST); } catch(e){}
     if (typeof indexedDB === 'undefined') return;
-    try { await idbSet('last', null); } catch(e){}
+    try { await idbSet('last', null); await idbSet('lastParsed', null); } catch(e){}
   }
   // Called on every save: the age that matters is the time since the flight
   // was last worked, not since its PDF was first loaded.
@@ -75,6 +79,14 @@ const OFPStorage = (() => {
     try { meta = JSON.parse(localStorage.getItem(LAST) || 'null'); } catch(e){ return null; }
     if (!meta) return null;
     if (typeof meta.at !== 'number' || now - meta.at > RESUME_MAX_AGE){ await dropSession(); return null; }
+    // The quick way back: the stored reading, when it is this very PDF's.
+    // Its bytes are not touched here — readPdf fetches and checks them later.
+    let quick = null;
+    try { quick = await idbGet('lastParsed'); } catch(e){}
+    if (quick && quick.parsed && quick.name === meta.name && quick.size === meta.size
+        && (quick.hash || null) === (meta.hash || null))
+      return { name: quick.name, size: quick.size, hash: quick.hash, parsed: quick.parsed, buf: null };
+
     let rec;
     try { rec = await idbGet('last'); } catch(e){ return null; }
     if (!rec || !rec.buf || rec.name !== meta.name || rec.size !== meta.size) return null;
@@ -85,7 +97,19 @@ const OFPStorage = (() => {
     }
     return rec;
   }
-  return { LAST, RESUME_MAX_AGE, digestOf, keepSession, touchSession, dropSession, resumeRecord };
+  // The stored PDF, checked against the digest its flight was saved under
+  // before anything is written from it: a copy that does not match is never
+  // paired with that flight's entries.
+  async function readPdf(hash){
+    const rec = await idbGet('last');
+    if (!rec || !rec.buf) throw new Error('the stored copy of this PDF is missing');
+    if (hash){
+      const have = await digestOf(rec.buf);
+      if (have && have !== hash) throw new Error('the stored copy of this PDF does not match');
+    }
+    return rec.buf;
+  }
+  return { LAST, RESUME_MAX_AGE, digestOf, keepSession, touchSession, dropSession, resumeRecord, readPdf };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = OFPStorage;
