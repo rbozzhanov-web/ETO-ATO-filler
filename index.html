@@ -159,6 +159,11 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
    app.js clears the mark. Until then one quiet line says what is happening,
    instead of an empty load screen that fills in and jumps. */
 html[data-resuming] .wrap > :not(.hd){visibility:hidden}
+/* Nor does anything animate into place behind it: the load card shrinking to its
+   slim loaded row took .15s, still running when the page was shown — a visible
+   shrink, with the page scrolling along with it. Changes made while reopening
+   land at once, and the page appears already settled. */
+html[data-resuming] *,html[data-resuming] *::before,html[data-resuming] *::after{transition:none!important;animation:none!important}
 html[data-resuming] .wrap::after{content:"Reopening the open flight\2026";position:fixed;left:0;right:0;
   top:45%;text-align:center;font-size:14px;color:var(--dim);pointer-events:none}
 .disc{display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:12.5px;color:var(--dim)}

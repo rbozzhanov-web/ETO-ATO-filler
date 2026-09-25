@@ -400,6 +400,10 @@ $('#jlogBtn').onclick = () => { location.href = './journey-log.html'; };
 // Coming back from the Journey Log, which asks for #top: Safari would otherwise
 // restore wherever this page was last scrolled to, and the header — and the
 // button that crosses back — would not be where it was left.
+// Where the page sits after a load is this app's decision, not the browser's:
+// its own restoration of an old scroll position can land after restoreView()
+// has put a reopened flight back where it was, and undo it.
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 // Read before the hash is cleared below: restoreView() leaves the page at the
 // top in this one case.
 const ARRIVED_FROM_JOURNEY_LOG = location.hash === '#top';

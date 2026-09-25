@@ -721,7 +721,10 @@ try {
       });
     });
     await page.reload({ waitUntil: 'load' });
-    await page.waitForFunction(() => RESULT.length === 4, null, { timeout: 10000 });
+    // Until the mark clears the reopen is not finished: the scroll position is
+    // restored after the plan's rows exist, just before the page is shown.
+    await page.waitForFunction(() => RESULT.length === 4
+      && !document.documentElement.hasAttribute('data-resuming'), null, { timeout: 10000 });
     const back = await page.evaluate(() => ({
       marked: window.__marked, cleared: !document.documentElement.hasAttribute('data-resuming'),
       parses: window.__parses, y: Math.round(scrollY)
@@ -744,7 +747,7 @@ try {
     check(back.cleared, 'and the mark is cleared once the flight is back');
     check(back.parses === 0, 'the flight comes back from its stored reading, without parsing the PDF again'
           + (back.parses ? ` (parsed ${back.parses}x)` : ''));
-    check(back.y === 600, 'the page comes back where it was scrolled');
+    check(back.y === 600, 'the page comes back where it was scrolled' + (back.y === 600 ? '' : ` (at ${back.y})`));
     check(etos.join(' ') === '1000 1020 1100 1200', 'a reopened flight still saves its ETOs into the PDF');
     check(released, 'closing the chart viewer lets its decoded images go');
     await page.close();
