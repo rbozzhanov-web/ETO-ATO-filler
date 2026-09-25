@@ -84,3 +84,39 @@ test('working the flight keeps its resume copy fresh', async () => {
     assert.ok(await OFPStorage.resumeRecord());
   });
 });
+
+/* Reopening used to read the whole PDF back out of IndexedDB and hash it
+   before anything reached the screen. The stored reading is enough for the
+   screen; the bytes are fetched afterwards, and checked then. */
+test('a reopened flight comes back from its stored reading without its PDF', async () => {
+  await withDevice(async () => {
+    const buf = new Uint8Array([1, 2, 3, 4]);
+    const hash = await OFPStorage.digestOf(buf);
+    assert.equal(await OFPStorage.keepSession('f.pdf', 4, hash, buf, { pairs: [1] }), true);
+    const rec = await OFPStorage.resumeRecord();
+    assert.deepEqual(rec.parsed, { pairs: [1] });
+    assert.equal(rec.buf, null, 'the PDF itself is not read on the way back');
+    assert.equal(rec.hash, hash);
+    assert.deepEqual([...new Uint8Array(await OFPStorage.readPdf(hash))], [1, 2, 3, 4]);
+  });
+});
+
+test('a stored PDF that does not match its flight is refused, not written from', async () => {
+  await withDevice(async () => {
+    const buf = new Uint8Array([1, 2, 3, 4]);
+    await OFPStorage.keepSession('f.pdf', 4, 'not-its-digest', buf, { pairs: [1] });
+    await assert.rejects(() => OFPStorage.readPdf('not-its-digest'), /does not match/);
+  });
+});
+
+test('without a stored reading the PDF is read and checked as before', async () => {
+  await withDevice(async () => {
+    const buf = new Uint8Array([5, 6, 7]);
+    const hash = await OFPStorage.digestOf(buf);
+    await OFPStorage.keepSession('f.pdf', 3, hash, buf);           // no reading kept
+    const rec = await OFPStorage.resumeRecord();
+    assert.ok(rec.buf, 'the PDF comes back with the record');
+    await OFPStorage.dropSession();
+    assert.equal(await OFPStorage.resumeRecord(), null);
+  });
+});
