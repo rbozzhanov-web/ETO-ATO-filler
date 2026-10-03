@@ -194,6 +194,135 @@ function abeamAt(result, isSkipped, hasTime, passed){
   return (logged || passed(result[cur])) ? { ci: cur, ni: -1 } : { ci: -1, ni: cur };
 }
 
+/* ---------- mandatory reads ----------
+   Ported from the OFP viewer, where it was checked against a real Air Astana
+   package; kept here, away from the DOM, so the tests can drive it.
+
+   A "MAN nnn-yy" attachment sets its prose in a proportional, justified font
+   instead of the plan's own monospace body text. Justification can place a
+   line's punctuation to the left of the word it follows, so sorting a line's
+   characters by x — safe below for the plan's fixed-width tables, which this
+   never touches — reads a page like this out of order (a colon landing inside
+   a word). The content stream draws every page in the order it is meant to be
+   read in, so this walks that order directly instead of re-sorting it.
+
+   Every page of a document carries the same "MAN nnn-yy / Issue / Revision"
+   head and a "MAN nnn-yy … page n of m" foot, but only the first carries the
+   MANDATORY READ title — so the head and foot are what mark a page as part of
+   one, and the title only marks where it starts. Keyed on the title alone, the
+   pages after the first were dropped and every document stopped mid-sentence.
+   Empty lines are kept: they are the only paragraph breaks the page has. */
+function manPage(items, page){
+  if (items.length < 30) return null;
+  const rows = [];
+  let cur = null;
+  for (const it of items){
+    const y = Math.round(it.y * 2) / 2;
+    if (!cur || cur.y !== y){ cur = { y, s: '' }; rows.push(cur); }
+    cur.s += it.str;
+  }
+  rows.sort((a, b) => b.y - a.y);
+  // The text is WinAnsi, and its quotes, dashes and bullets sit at 0x80–0x9F,
+  // which come through as invisible control codes rather than as “ ” – •;
+  // mapped back here, or "C0070 – Airports" loses its dash and a sentence
+  // ending in a closing quote is not seen to end. The bullet of a list line is
+  // a symbol-font glyph with no table at all, landing as a NUL ahead of an "x"
+  // that is not part of the next word. A line set in a two-byte font (a menu
+  // path drawn as keycaps) comes through as NUL-studded glyph numbers; it is
+  // marked with a lone NUL, which no cleaned line can otherwise contain.
+  const C1 = ['€','','‚','ƒ','„','…','†','‡','ˆ','‰','Š','‹','Œ','','Ž','',
+              '','‘','’','“','”','•','–','—','˜','™','š','›','œ','','ž','Ÿ'];
+  const lines = rows.map(r => {
+    const nul = (r.s.match(/\u0000/g) || []).length;
+    if (nul >= 4 && nul * 4 > r.s.length) return '\u0000';
+    return r.s.replace(/^\s*\u0000x\s+/, '• ')
+      .replace(/[\u0080-\u009f]/g, c => C1[c.charCodeAt(0) - 0x80])
+      .replace(/[\u0000-\u0008\u000b-\u001f]/g, '').replace(/\s+/g, ' ').trim();
+  });
+  while (lines.length && !lines[0]) lines.shift();
+
+  const hm = (lines[0] || '').match(/^MAN\s+(\d{2,4}-\d{2})$/i);
+  if (!hm) return null;
+  const man = hm[1];
+  const foot = lines.findIndex(l => new RegExp('^MAN\\s+' + man + '\\b.*\\bpage\\s*\\d+\\s*of\\s*\\d+', 'i').test(l));
+  if (foot < 0) return null;
+
+  let i = 1, issue = null, rev = null, m;
+  for (; i < lines.length && i < 4; i++){
+    if ((m = lines[i].match(/^Issue\s+(\S+)/i))) issue = m[1];
+    else if ((m = lines[i].match(/^Revision\s+(\S+)/i))) rev = m[1];
+    else break;
+  }
+  const readAt = lines.findIndex(l => /^MANDATORY READ\b/i.test(l));
+  const field = re => { const k = lines.findIndex(l => re.test(l)); return k < 0 ? null : lines[k].replace(re, '').trim(); };
+  const subject = field(/^SUBJECT:\s*/i), applic = field(/^APPLICABILITY:\s*/i);
+  const body = lines.slice(readAt >= 0 ? readAt + 1 : i, foot)
+    .filter(l => !/^(SUBJECT|APPLICABILITY):/i.test(l));
+  // Blank space under the head and over the foot is layout, not a paragraph
+  // break: a sentence that runs over the page carries straight on.
+  while (body.length && !body[0]) body.shift();
+  while (body.length && !body[body.length - 1]) body.pop();
+
+  return { man, first: readAt >= 0, issue, rev, subject, applic, page,
+           body: body.map(t => ({ t, page })) };
+}
+
+/* Printed lines back into paragraphs. A line that stops well short of the
+   measure after a full stop ended its paragraph; a short line with no closing
+   punctuation, standing on its own, is a section heading; a bullet starts an
+   item of its own. A line manPage could not decode (marked with a lone NUL)
+   is shown as a pointer to its page rather than as noise that reads like
+   text. A paragraph that sends the reader to something the text cannot carry —
+   the picture below, the figure above — remembers the page it says so on, so
+   it can open that page. */
+const MAN_REDIR = /\b(?:pictures?|figures?|fig\.|images?|diagrams?|illustrations?|screenshots?|photos?|drawings?|maps?)\b|\b(?:shown|see|as follows)\b[^.]{0,40}\b(?:below|above|overleaf)\b/i;
+function manParas(lines){
+  const measure = Math.max(0, ...lines.map(l => l.t.length));
+  const out = [];
+  let para = null, prev = '';
+  const flush = () => { if (para) out.push(para); para = null; };
+  for (const { t, page } of lines){
+    if (!t){ flush(); prev = ''; continue; }
+    if (t === '\u0000'){ flush(); out.push({ kind: 'lost', page }); prev = ''; continue; }
+    const bullet = /^•\s/.test(t);
+    const ended = !prev || (/[.:!?]["”’)]?$/.test(prev) && prev.length < measure * 0.8);
+    if (!bullet && ended && t.split(' ').length <= 4 && !/[.,;:)"”’]$/.test(t)){
+      flush(); out.push({ kind: 'h', text: t }); prev = ''; continue;
+    }
+    if (!para || bullet || /^Note:/i.test(t) || ended){
+      flush(); para = { kind: bullet ? 'li' : 'p', text: t.replace(/^•\s*/, '') };
+    } else para.text += ' ' + t;
+    if (para.ref === undefined && MAN_REDIR.test(para.text)) para.ref = page;
+    prev = t;
+  }
+  flush();
+  return out;
+}
+
+// A "MAN nnn-yy" document can run several pages, each carrying its own copy of
+// the header and footer; grouped here by that number, in the order its pages
+// were read, so a document that spans a page break reads as the one document.
+// Only a number whose first page carried the MANDATORY READ title counts. The
+// sign-off under "Issued By:" is two columns of names and titles that read
+// interleaved line by line; it is left to the PDF.
+function mandatoryReads(manPages){
+  const by = new Map();
+  for (const r of manPages){
+    if (!by.has(r.man)) by.set(r.man, { man: r.man, first: false, issue: null, rev: null,
+                                        subject: null, applic: null, pages: [], lines: [] });
+    const d = by.get(r.man);
+    d.first = d.first || r.first;
+    for (const k of ['issue', 'rev', 'subject', 'applic']) if (r[k] && !d[k]) d[k] = r[k];
+    d.pages.push(r.page);
+    d.lines.push(...r.body);
+  }
+  return [...by.values()].filter(d => d.first).map(d => {
+    const cut = d.lines.findIndex(l => /^Issued By:/i.test(l.t));
+    const { lines, first, ...rest } = d;
+    return { ...rest, paras: manParas(cut < 0 ? lines : lines.slice(0, cut)) };
+  });
+}
+
 /* ---------- stored flight data ----------
    A plan's saved state is keyed by the PDF's own SHA-256, so two files share a
    key only if they are the same file. legacyKeyFor is the name-and-size key
@@ -247,4 +376,5 @@ function prunePlans(store, now, retainDays, maxPlans){
 if (typeof module !== 'undefined' && module.exports)
   module.exports = { norm, fmt, hhmm, parseTime, validFuelEntry, wrapMin, sinceDueAt, sinceDueFrom, computeResult,
                      hourlyChecks, fuelBox, fuelChecks, directSkips, abeamAt,
+                     manPage, manParas, mandatoryReads, MAN_REDIR,
                      PLAN_PREFIX, SETTING_KEYS, legacyKeyFor, planKeyFor, planKeysIn, prunePlans };
