@@ -615,6 +615,7 @@ async function loadBuffer(name, size, buf, resumed, known = {}){
     showFigs(r.figs);
     showWx(r.wx);
     showCharts(r.charts);
+    showMan(r.mandatoryReads);
     const s1 = PLAN.filter(p => p.sec === 1).length;
     msg('#m1', `Found: ${s1} main route waypoints`
              + (PLAN.length - s1 ? `, ${PLAN.length - s1} alternate` : '')
@@ -884,15 +885,22 @@ function showWx(w){
   const card = $('#c7'), sel = $('#wxApt');
   if (!WX){ card.classList.add('hide'); clear(sel); clear($('#wxOut')); return; }
   clear(sel);
+  // An overflown area carrying a company notice — a special restricted area,
+  // say — is listed with this flight's own aerodromes rather than left in the
+  // long list of every FIR the route crosses, most of which say nothing.
+  const noticed = a => a.group === 'fir' && a.co.length > 0;
+  const inGroup = (a, g) => g === 'flight' ? (a.group === 'flight' || noticed(a))
+                          : g === 'fir' ? (a.group === 'fir' && !noticed(a)) : a.group === g;
   for (const [g, label] of GROUPS){
-    const items = WX.airports.map((a, n) => [a, n]).filter(([a]) => a.group === g);
+    const items = WX.airports.map((a, n) => [a, n]).filter(([a]) => inGroup(a, g));
     if (!items.length) continue;
     const grp = document.createElement('optgroup');
     grp.label = label;
     for (const [a, n] of items){
       const op = document.createElement('option');
       op.value = String(n);
-      op.textContent = a.icao + (a.role ? ' — ' + a.role : a.name ? ' — ' + a.name : '');
+      op.textContent = a.icao + (noticed(a) ? ' — area, company notice'
+                                : a.role ? ' — ' + a.role : a.name ? ' — ' + a.name : '');
       grp.appendChild(op);
     }
     sel.appendChild(grp);
@@ -966,10 +974,66 @@ function renderWx(){
 }
 $('#wxApt').onchange = renderWx;
 
+/* ================= mandatory reads =================
+   Company documents the crew is meant to have read before dispatch, carried at
+   the back of the package. Collapsed by default since some run to several
+   paragraphs, but never hidden: a package that carries one says so here rather
+   than leaving it to be found by paging through the PDF. Everything here is
+   document text, so it is written as text. A passage pointing at something the
+   text cannot carry — a picture, a figure — and a line in a font that could not
+   be decoded link to the original page, opened in the chart viewer. */
+function showMan(list){
+  const card = $('#c9'), out = $('#manOut');
+  const docs = list || [];
+  clear(out);
+  card.classList.toggle('hide', !docs.length);
+  $('#manSum').textContent = docs.length ? String(docs.length) : '';
+  for (const m of docs){
+    const det = mk('details', 'man');
+    const sum = mk('summary', null, m.subject || 'MAN ' + m.man);
+    const first = m.pages[0] + 1, last = m.pages[m.pages.length - 1] + 1;
+    const pg = m.pages.length > 1 ? `pp. ${first}\u2013${last}` : `p. ${first}`;
+    sum.appendChild(mk('small', null,
+      ['MAN ' + m.man, m.issue && 'issue ' + m.issue, m.rev && 'rev ' + m.rev, pg].filter(Boolean).join(' · ')));
+    if (m.applic) sum.appendChild(mk('small', null, 'For ' + m.applic));
+    det.appendChild(sum);
+    const go = (at, label) => {
+      const b = mk('button', 'pg', label);
+      b.type = 'button';
+      b.onclick = () => openPages(m.pages, at);
+      return b;
+    };
+    const orig = mk('div', 'orig', 'As printed: ');
+    m.pages.forEach((pp, k) => {
+      if (k) orig.appendChild(document.createTextNode(' · '));
+      orig.appendChild(go(pp, `p. ${pp + 1}`));
+    });
+    det.appendChild(orig);
+    for (const q of m.paras){
+      let el;
+      if (q.kind === 'h') el = mk('h4', null, q.text);
+      else if (q.kind === 'lost'){
+        el = mk('p', 'lost', 'A line here is set in a font this reader cannot decode \u2014 ');
+        el.appendChild(go(q.page, `open page ${q.page + 1} \u2197`));
+      } else {
+        el = mk('p', q.kind === 'li' ? 'li' : null, q.text);
+        if (q.ref !== undefined && q.ref !== null){
+          el.appendChild(document.createTextNode(' '));
+          el.appendChild(go(q.ref, `see p. ${q.ref + 1} \u2197`));
+        }
+      }
+      det.appendChild(el);
+    }
+    out.appendChild(det);
+  }
+}
+
 /* ================= chart viewer =================
    Decoding a 1800x1451 bitmap is not free, so it happens when the crew asks for
    the page and the object URL is kept for the rest of the session. */
-let CHARTS = [], chartAt = 0;
+// The sheets on show: the charts, or the original pages of a mandatory read
+// opened from one of its page links.
+let CHARTS = [], SHEETS = [], chartAt = 0;
 function showCharts(list){
   for (const c of CHARTS) if (c.url) URL.revokeObjectURL(c.url);
   CHARTS = (list || []).map(c => ({ ...c, url: null }));
@@ -981,27 +1045,49 @@ function showCharts(list){
 }
 
 async function paintChart(){
-  const c = CHARTS[chartAt];
+  const c = SHEETS[chartAt];
   if (!c) return;
-  $('#chartTitle').textContent = `Chart ${chartAt + 1} of ${CHARTS.length}  ·  page ${c.page + 1}`;
+  $('#chartTitle').textContent = c.orig
+    ? `Page ${c.page + 1} of the PDF` + (SHEETS.length > 1 ? `  ·  ${chartAt + 1} of ${SHEETS.length}` : '')
+    : `Chart ${chartAt + 1} of ${SHEETS.length}  ·  page ${c.page + 1}`;
   $('#chartPrev').disabled = chartAt === 0;
-  $('#chartNext').disabled = chartAt === CHARTS.length - 1;
+  $('#chartNext').disabled = chartAt === SHEETS.length - 1;
   const box = $('#chartBox');
   const only = node => { clear(box); box.appendChild(node); };
   if (!c.url){
     only(mk('p', 'disc', 'Decoding…'));
-    try { await ensureRaw(); const doc = ensureDoc(); c.url = await chartUrl(doc, doc.pages()[c.page], c.key); }
-    catch (e){ only(mk('p', 'disc', 'Could not read this chart: ' + e.message)); return; }
-    if (CHARTS[chartAt] !== c) return;              // paged on while decoding
+    try {
+      await ensureRaw();
+      const doc = ensureDoc();
+      c.url = c.orig
+        ? URL.createObjectURL(new Blob([PDFMini.pagePdf(doc, c.page)], { type: 'application/pdf' }))
+        : await chartUrl(doc, doc.pages()[c.page], c.key);
+    }
+    catch (e){ only(mk('p', 'disc', 'Could not read this page: ' + e.message)); return; }
+    if (SHEETS[chartAt] !== c) return;              // paged on while decoding
   }
   const img = document.createElement('img');
   img.src = c.url;                                  // a blob: URL this app made itself
-  img.alt = `Chart on page ${c.page + 1}`;
+  img.alt = c.orig ? `Page ${c.page + 1}` : `Chart on page ${c.page + 1}`;
+  // An original page is a one-page PDF, which Safari draws as a picture like any
+  // other, at its size in points; it is laid out at twice that so there is
+  // detail left to zoom into. Where a browser cannot draw a PDF as a picture,
+  // the page is offered to its own PDF viewer instead.
+  if (c.orig){
+    img.dataset.k = '2';
+    img.onerror = () => {
+      const msgP = mk('p', 'disc', 'This browser cannot show a PDF page here. ');
+      const a = mk('a', null, `Open page ${c.page + 1} in its PDF viewer`);
+      a.href = c.url; a.target = '_blank'; a.rel = 'noopener';
+      msgP.appendChild(a);
+      only(msgP);
+    };
+  }
   only(img);
   chartZoomW = null;
   box.classList.remove('zoom');
   img.style.width = '';
-  img.onload = () => scrollHint(box);
+  img.onload = () => { img.style.width = chartFitWidth(img); scrollHint(box); };
   $('#chartZoom').textContent = 'Zoom';
   box.scrollTop = box.scrollLeft = 0;
 }
@@ -1015,6 +1101,12 @@ async function paintChart(){
 const CHART_ZOOM_MIN = 0.3, CHART_ZOOM_MAX = 6;   // multiples of the image's natural width
 let chartZoomW = null, chartPinch = null, chartLastTap = 0;
 const chartImg = () => document.querySelector('#chartBox img');
+// The width an image counts as at 1:1 — twice its points for an original page.
+const chartNatural = img => img.naturalWidth * (+img.dataset.k || 1);
+// Fit is the CSS default for a chart; an original page is set to fill the box
+// (up to twice its points) rather than sit at its small size in points.
+const chartFitWidth = img => (+img.dataset.k || 1) === 1 ? ''
+  : Math.min($('#chartBox').clientWidth || Infinity, chartNatural(img)) + 'px';
 function chartScaleW(){
   const img = chartImg();
   if (!img) return 0;
@@ -1026,11 +1118,11 @@ function setChartZoom(w, anchor){
   const before = chartScaleW();
   if (w == null) chartZoomW = null;
   else {
-    const min = img.naturalWidth * CHART_ZOOM_MIN, max = img.naturalWidth * CHART_ZOOM_MAX;
+    const min = chartNatural(img) * CHART_ZOOM_MIN, max = chartNatural(img) * CHART_ZOOM_MAX;
     chartZoomW = Math.min(max, Math.max(min, w));
   }
   box.classList.toggle('zoom', chartZoomW != null);
-  img.style.width = chartZoomW != null ? chartZoomW + 'px' : '';
+  img.style.width = chartZoomW != null ? chartZoomW + 'px' : chartFitWidth(img);
   $('#chartZoom').textContent = chartZoomW != null ? 'Fit' : 'Zoom';
   if (anchor){
     // hold the point under the fingers still while the scale changes around it
@@ -1076,21 +1168,32 @@ $('#chartBox').addEventListener('touchend', e => {
 // once drawn — so none is kept once the viewer closes: they are decoded again
 // the next time it opens. Memory the page holds on to while the crew is in
 // another app is what gets it unloaded.
-const openCharts = on => {
+// An original page is a copy of the whole file with one page made its own, so
+// it goes the same way.
+const openCharts = (on, list, at) => {
   $('#charts').classList.toggle('hide', !on);
   document.body.style.overflow = on ? 'hidden' : '';
-  if (on){ paintChart(); return; }
+  if (on){
+    if (list){ SHEETS = list; chartAt = Math.max(0, at || 0); }
+    else { if (SHEETS !== CHARTS) chartAt = 0; SHEETS = CHARTS; }
+    paintChart();
+    return;
+  }
   clear($('#chartBox'));
-  for (const c of CHARTS) if (c.url){ URL.revokeObjectURL(c.url); c.url = null; }
+  for (const c of [...CHARTS, ...SHEETS]) if (c.url){ URL.revokeObjectURL(c.url); c.url = null; }
 };
+// A mandatory read's page link: that page, with the rest of the document's
+// pages either side of it for Prev and Next.
+const openPages = (pages, at) =>
+  openCharts(true, pages.map(page => ({ page, orig: true, url: null })), pages.indexOf(at));
 $('#chartOpen').onclick = () => openCharts(true);
 $('#chartClose').onclick = () => openCharts(false);
 $('#charts').onclick = e => { if (e.target === $('#charts')) openCharts(false); };
 $('#chartPrev').onclick = () => { if (chartAt > 0){ chartAt--; paintChart(); } };
-$('#chartNext').onclick = () => { if (chartAt < CHARTS.length - 1){ chartAt++; paintChart(); } };
+$('#chartNext').onclick = () => { if (chartAt < SHEETS.length - 1){ chartAt++; paintChart(); } };
 $('#chartZoom').onclick = () => {
   const img = chartImg();
-  setChartZoom(chartZoomW == null && img ? img.naturalWidth : null);
+  setChartZoom(chartZoomW == null && img ? chartNatural(img) : null);
   scrollHint($('#chartBox'));
 };
 
@@ -1510,6 +1613,7 @@ async function parse(buf){
   const doc = new PDFMini.Doc(new Uint8Array(buf));
   const pages = doc.pages();
   const dotRows = [], headers = [], rawFields = [], page0 = [], allLines = [], charts = [], openQ = [];
+  const manPages = [];
   let anchor = 0, fpl = null;
 
   for (let p = 0; p < pages.length; p++){
@@ -1517,6 +1621,11 @@ async function parse(buf){
     pages[p].openQ = openQ[p] = items.openQ;   // for the overlay to close before it draws
     const font = courierName(doc, pages[p]);
     chartPage(doc, pages[p], p, items.length, charts);
+    // A mandatory read is set in a proportional font at a size the plan's own
+    // tables never use, so the lines below never collect it; it is read on a
+    // path of its own (manPage, in ofp-core.js).
+    const man = manPage(items, p);
+    if (man) manPages.push(man);
     const byLine = new Map();
     for (const it of items){
       if (it.size < 9 || it.size > 13) continue;
@@ -1626,7 +1735,7 @@ async function parse(buf){
   const icao = icaoPlan(allLines);
   return { doc, pairs, headers, anchor, fields, fpl, icao, charts, openQ,
            ofp: ofpIdent(allLines), figs: keyFigures(allLines),
-           wx: weatherNotams(allLines, icao) };
+           wx: weatherNotams(allLines, icao), mandatoryReads: mandatoryReads(manPages) };
 }
 
 /* ---- the PDF itself, only when it is needed ----
@@ -2799,7 +2908,7 @@ $('#reset').onclick = () => {
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
-  showIcao(null); showOfp(null); showFigs(null); showWx(null); showCharts(null); openCharts(false);
+  showIcao(null); showOfp(null); showFigs(null); showWx(null); showCharts(null); showMan(null); openCharts(false);
   $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
   $('#fname').textContent = ''; $('#saved').textContent = '';
   drop.classList.remove('loaded');

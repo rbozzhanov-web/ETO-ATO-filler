@@ -347,6 +347,27 @@ shown as such: the most recent one sets how far the flight is running from the p
 later waypoint is judged against that, shown as, for example, `-12 on plan`. A fuel window left with
 nothing to overfly after a direct is dropped rather than sitting red for the rest of the flight.
 
+## Mandatory reads
+
+**Reading aid only.** The text is read back out of the package for convenience; the document in
+the PDF itself is the one the crew is accountable for having read.
+
+A package can carry company documents the crew is meant to have read before dispatch —
+"MAN nnn-yy" attachments, each headed MANDATORY READ. They get a card of their own under the
+load box, one collapsed entry per document, named by its subject, with its MAN number, issue,
+revision and pages under the name. Opened, it reads as the document does: in paragraphs, with
+its headings and bullets and its quotes and dashes, to its last page. The two-column sign-off
+under "Issued By:" is left to the PDF.
+
+What the text cannot carry is linked to the page itself. A passage that points at something
+— "as shown at the picture below", a figure, a map — ends with a **see p. N** link, a line set
+in a font the app cannot decode becomes **open page N**, and each document lists its pages as
+printed. A link opens that page of the original PDF in the chart viewer, with the document's
+other pages either side of it for Prev and Next. The page is cut out of the package as a
+one-page PDF — the original bytes left untouched — and Safari draws it like a picture; a
+browser that cannot is offered the page in its own PDF viewer instead. It is let go when the
+viewer closes. (Ported from the OFP viewer.)
+
 ## Weather and NOTAMs
 
 **Document-view convenience only.** This section does not provide live operational information and no highlight is an approved decision aid. The authoritative source remains the airline-approved briefing / EFB process.
@@ -356,6 +377,10 @@ aerodrome from the dropdown and its reports are listed: METAR and TAF raw as pri
 each NOTAM with its number, validity and subject line above the text, then the Air Astana
 company NOTAMs. A busy aerodrome runs to eighty-odd NOTAMs, so the list scrolls inside the
 card instead of pushing the rest of the page away.
+
+An overflown FIR carrying an Air Astana company notice — a special restricted area, say — is
+listed among this flight's own aerodromes at the top of the picker, marked "area, company
+notice", rather than left in the long list of every FIR the route crosses.
 
 The dropdown holds everything the package covers, in three groups: **this flight** (departure,
 destination, alternate and en-route alternate), **areas along the route** (the FIRs from the

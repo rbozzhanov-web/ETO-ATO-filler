@@ -520,6 +520,58 @@ const PDFMini = (() => {
     return out;
   }
 
+  /* ---------- one page as a PDF of its own ----------
+     What the app cannot set out itself — a line in a font it cannot decode, the
+     screenshot a mandatory read says is "below" — is shown from the PDF. One
+     page is made a PDF of its own by an incremental update: a copy of its page
+     object under a new one-page tree and catalog, appended after the original
+     bytes, which are not touched. Everything the page draws with stays where it
+     was, found through the original cross-reference table by /Prev. Ported from
+     the OFP viewer, with two changes: a reference keeps the generation it was
+     read with, and /Prev is the section the reader actually followed. */
+  function pagePdf(doc, p){
+    const pg = doc.pages()[p];
+    if (!pg) throw new Error('no page ' + (p + 1) + ' in this PDF');
+    const hex = s => '<' + [...s].map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('') + '>';
+    const nm = s => '/' + s.replace(/[^!-~]|[#%()<>[\]{}/]/g,
+      c => '#' + c.charCodeAt(0).toString(16).padStart(2, '0'));
+    const ser = v => v === null || v === undefined ? 'null'
+      : typeof v === 'number' ? String(Number.isInteger(v) ? v : +v.toFixed(6))
+      : typeof v === 'boolean' ? String(v)
+      : Array.isArray(v) ? '[' + v.map(ser).join(' ') + ']'
+      : 'ref' in v ? v.ref + ' ' + (v.gen || 0) + ' R'
+      : 'name' in v ? nm(v.name)
+      : 'text' in v ? hex(v.text)
+      : '<<' + Object.keys(v).map(k => nm(k) + ' ' + ser(v[k])).join(' ') + '>>';
+
+    const size = doc.get(doc.trailer.Size);
+    const N = Math.max(typeof size === 'number' ? size : 0, ...doc.xref.keys()) + 1;
+    // Annotations point at pages of the whole document, which this one is not.
+    const { Annots, B, ...own } = pg.dict;
+    const page = { ...own, Parent: { ref: N + 1, gen: 0 },
+                   Resources: own.Resources !== undefined ? own.Resources : pg.Resources,
+                   MediaBox: own.MediaBox !== undefined ? own.MediaBox : pg.MediaBox };
+    const objs = [ser(page),
+                  `<< /Type /Pages /Kids [${N} 0 R] /Count 1 >>`,
+                  `<< /Type /Catalog /Pages ${N + 1} 0 R >>`];
+    const base = doc.bytes.length;
+    let tail = '\n';
+    const offs = objs.map((o, k) => {
+      const at = base + tail.length;
+      tail += `${N + k} 0 obj\n${o}\nendobj\n`;
+      return at;
+    });
+    const xref = base + tail.length;
+    tail += `xref\n${N} ${objs.length}\n`
+          + offs.map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('')
+          + `trailer\n<< /Size ${N + objs.length} /Root ${N + 2} 0 R /Prev ${doc.startxref} >>\n`
+          + `startxref\n${xref}\n%%EOF\n`;
+    const t = toBytes(tail), out = new Uint8Array(base + t.length);
+    out.set(doc.bytes, 0);
+    out.set(t, base);
+    return out;
+  }
+
   /* ---------- drawing operator builder ---------- */
   class Ops {
     constructor(){ this.b = ['q\n']; }
@@ -535,7 +587,7 @@ const PDFMini = (() => {
   }
   const f = n => (Math.round(n * 1000) / 1000).toString();
 
-  return { Doc, Lexer, textItems, append, Ops, toStr, toBytes, LIMITS };
+  return { Doc, Lexer, textItems, append, pagePdf, Ops, toStr, toBytes, LIMITS };
 })();
 
 // In the browser this file is a classic script and PDFMini is simply a global.

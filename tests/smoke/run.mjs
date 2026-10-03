@@ -38,6 +38,9 @@ const PDFMini = require('../../pdfmini.js');
 // ETO line (name ... ET) and an ATO line (... T/T REM), each ending in the four
 // dots the ETO and ATO boxes are found by.
 function ofpPdf(ets){
+  return [...buildPdf({ text: ofpText(ets), compress: false })];
+}
+function ofpText(ets){
   let t = 'BT /F1 10 Tf 50 720 Td (WPT  FL   ET  ETO) Tj ET\nBT /F1 10 Tf 480 720 Td (ATO) Tj ET\n';
   let y = 700, cum = 0;
   ets.forEach((et, k) => {
@@ -48,8 +51,9 @@ function ofpPdf(ets){
        + `BT /F1 10 Tf 470 ${y - 12} Td (....) Tj ET\n`;
     y -= 30;
   });
-  return [...buildPdf({ text: t, compress: false })];
+  return t;
 }
+const { buildPages, manPageContent, PAGE1, PAGE2 } = require('../helpers/make-pages-pdf.js');
 
 const failures = [];
 const check = (ok, what) => { if (!ok) failures.push(what); else console.log('  ok  ' + what); };
@@ -750,6 +754,67 @@ try {
     check(back.y === 600, 'the page comes back where it was scrolled' + (back.y === 600 ? '' : ` (at ${back.y})`));
     check(etos.join(' ') === '1000 1020 1100 1200', 'a reopened flight still saves its ETOs into the PDF');
     check(released, 'closing the chart viewer lets its decoded images go');
+    await page.close();
+  }
+
+  /* ---- mandatory reads ----
+     Ported from the OFP viewer: a "MAN nnn-yy" document at the back of the
+     package is shown as its own card, read to its last page, and a passage
+     pointing at a picture opens that original page in the chart viewer. */
+  {
+    const { page, problems } = await open('index.html');
+    const bytes = [...buildPages([ofpText([0, 20, 40, 60]), manPageContent(PAGE1), manPageContent(PAGE2)])];
+    const card = await page.evaluate(async a => {
+      await loadBuffer('MAN.pdf', a.length, new Uint8Array(a).buffer, false);
+      const c9 = document.querySelector('#c9');
+      return {
+        shown: !c9.classList.contains('hide'),
+        docs: c9.querySelectorAll('details.man').length,
+        title: c9.querySelector('summary') && c9.querySelector('summary').firstChild.textContent,
+        links: [...c9.querySelectorAll('button.pg')].map(b => b.textContent),
+        heading: !!c9.querySelector('h4'),
+        bullets: c9.querySelectorAll('p.li').length
+      };
+    }, bytes);
+    check(card.shown && card.docs === 1, 'a mandatory read in the package gets its own card');
+    check(card.title === 'ACARS LOGON PROCEDURE', 'named by its subject');
+    check(card.heading && card.bullets === 2, 'read back as headings, paragraphs and bullets');
+    check(card.links.includes('see p. 2 \u2197') && card.links.includes('open page 2 \u2197')
+          && card.links.includes('p. 3'), 'with links to the pages it points at, and to every page');
+
+    const viewer = await page.evaluate(async () => {
+      [...document.querySelectorAll('#c9 button.pg')].find(b => b.textContent.startsWith('see p.')).click();
+      const box = document.querySelector('#chartBox');
+      for (let i = 0; i < 100; i++){
+        const img = box.querySelector('img'), a = box.querySelector('a');
+        if ((img && img.complete && img.naturalWidth) || a) break;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      const img = box.querySelector('img'), a = box.querySelector('a');
+      const out = {
+        open: !document.querySelector('#charts').classList.contains('hide'),
+        title: document.querySelector('#chartTitle').textContent,
+        shown: !!(img && img.naturalWidth) || !!(a && a.href.startsWith('blob:'))
+      };
+      openCharts(false);
+      out.released = box.childElementCount === 0 && SHEETS.every(x => x.url === null);
+      return out;
+    });
+    check(viewer.open && viewer.title.startsWith('Page 2 of the PDF'), 'a page link opens that original page');
+    check(viewer.shown, 'drawn from a one-page PDF cut out of the package, or offered to the PDF viewer');
+    check(viewer.released, 'and let go when the viewer closes');
+
+    const fir = await page.evaluate(() => {
+      const n = (icao, group, co) => ({ icao, group, role: group === 'flight' ? 'departure' : null,
+        name: null, metar: [], taf: [], notams: [], co });
+      showWx({ airports: [n('UAAA', 'flight', []), n('UTTR', 'fir', [{ id: 'X', text: 'RESTRICTED AREA' }]),
+                          n('UTSD', 'fir', [{ id: 'Y', text: '' }].slice(1))] });
+      const first = document.querySelector('#wxApt optgroup');
+      return [...first.querySelectorAll('option')].map(o => o.textContent);
+    });
+    check(fir.includes('UTTR — area, company notice') && !fir.some(t => t.startsWith('UTSD')),
+          'an area carrying a company notice is listed with the flight\u2019s own aerodromes');
+    check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
     await page.close();
   }
 

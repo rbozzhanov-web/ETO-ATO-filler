@@ -166,6 +166,22 @@ html[data-resuming] .wrap > :not(.hd){visibility:hidden}
 html[data-resuming] *,html[data-resuming] *::before,html[data-resuming] *::after{transition:none!important;animation:none!important}
 html[data-resuming] .wrap::after{content:"Reopening the open flight\2026";position:fixed;left:0;right:0;
   top:45%;text-align:center;font-size:14px;color:var(--dim);pointer-events:none}
+/* ---- mandatory reads ---- */
+.mansum{margin-left:auto;font-size:12px;font-weight:600;color:var(--dim)}
+.man{padding:11px 0;border-top:1px solid var(--line)}
+.man:first-child{border-top:0;padding-top:4px}
+.man summary{cursor:pointer;font-size:14px;font-weight:600;list-style:revert}
+.man summary small{display:block;margin-top:2px;font-size:11.5px;font-weight:400;color:var(--dim)}
+.man p{margin:10px 0 0;font-size:13.5px;line-height:1.55}
+.man h4{margin:16px 0 0;font:600 11px/1.3 -apple-system,system-ui,sans-serif;
+  letter-spacing:.8px;text-transform:uppercase;color:var(--gold)}
+.man p.li{margin-top:6px;padding-left:16px;position:relative}
+.man p.li::before{content:"\2022";position:absolute;left:3px;color:var(--dim)}
+.man p.lost{font-style:italic;color:var(--warn)}
+.man .orig{margin-top:10px;font-size:12px;color:var(--dim)}
+.man button.pg{background:none;border:0;border-radius:4px;padding:2px 3px;min-height:0;width:auto;
+  font:inherit;font-style:normal;font-weight:600;color:var(--acc);cursor:pointer}
+.man button.pg:active{opacity:.55}
 .disc{display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:12.5px;color:var(--dim)}
 .fplbox{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);overflow:hidden}
 .fplhead{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);
@@ -596,6 +612,13 @@ td.diff{text-align:right;font-weight:700}
     <div class="msg" id="m1"></div>
   </div>
 
+  <!-- Company documents the crew is meant to have read before dispatch, carried
+       at the back of the package (app.js, showMan). -->
+  <div class="card hide" id="c9">
+    <div class="step"><i>MAN</i> Mandatory reads <span class="mansum" id="manSum"></span></div>
+    <div id="manOut"></div>
+  </div>
+
   <div class="card hide" id="c4">
     <div class="step" id="c4Head"><i>2</i> Document fields
       <span class="fldsum" id="fldSum"></span>
@@ -795,7 +818,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.20 &nbsp;·&nbsp; Build 20260925.1 &nbsp;·&nbsp; 25 Sep 2026</span></p>
+      <span class="build">RC1.8.21 &nbsp;·&nbsp; Build 20261003.1 &nbsp;·&nbsp; 3 Oct 2026</span></p>
 
     </div>
   </div>
