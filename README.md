@@ -349,24 +349,18 @@ nothing to overfly after a direct is dropped rather than sitting red for the res
 
 ## Mandatory reads
 
-**Reading aid only.** The text is read back out of the package for convenience; the document in
-the PDF itself is the one the crew is accountable for having read.
-
 A package can carry company documents the crew is meant to have read before dispatch —
-"MAN nnn-yy" attachments, each headed MANDATORY READ. They get a card of their own under the
-load box, one collapsed entry per document, named by its subject, with its MAN number, issue,
-revision and pages under the name. Opened, it reads as the document does: in paragraphs, with
-its headings and bullets and its quotes and dashes, to its last page. The two-column sign-off
-under "Issued By:" is left to the PDF.
+"MAN nnn-yy" attachments, each headed MANDATORY READ. They are listed on a card of their own
+under the load box, one row per document: its subject, with its MAN number, issue, revision,
+pages and the fleet it applies to underneath. **Open** shows the document as it was printed —
+its own pages of the original PDF, in the chart viewer, starting at its first page, with Prev
+and Next through the rest of it. Nothing of the document is re-set as text: the PDF is the
+document.
 
-What the text cannot carry is linked to the page itself. A passage that points at something
-— "as shown at the picture below", a figure, a map — ends with a **see p. N** link, a line set
-in a font the app cannot decode becomes **open page N**, and each document lists its pages as
-printed. A link opens that page of the original PDF in the chart viewer, with the document's
-other pages either side of it for Prev and Next. The page is cut out of the package as a
-one-page PDF — the original bytes left untouched — and Safari draws it like a picture; a
-browser that cannot is offered the page in its own PDF viewer instead. It is let go when the
-viewer closes. (Ported from the OFP viewer.)
+Each page is cut out of the package as a one-page PDF — the original bytes left untouched — and
+Safari draws it like a picture; a browser that cannot is offered the page in its own PDF viewer
+instead. It is let go when the viewer closes. The pages are recognised by the "MAN nnn-yy" head
+and "page n of m" foot each one carries (ported from the OFP viewer).
 
 ## Weather and NOTAMs
 

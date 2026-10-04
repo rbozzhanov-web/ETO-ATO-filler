@@ -758,32 +758,27 @@ try {
   }
 
   /* ---- mandatory reads ----
-     Ported from the OFP viewer: a "MAN nnn-yy" document at the back of the
-     package is shown as its own card, read to its last page, and a passage
-     pointing at a picture opens that original page in the chart viewer. */
+     A "MAN nnn-yy" document at the back of the package is listed on a card of
+     its own and opened as printed: its pages of the original PDF, in the chart
+     viewer, released again when the viewer closes. */
   {
     const { page, problems } = await open('index.html');
     const bytes = [...buildPages([ofpText([0, 20, 40, 60]), manPageContent(PAGE1), manPageContent(PAGE2)])];
     const card = await page.evaluate(async a => {
       await loadBuffer('MAN.pdf', a.length, new Uint8Array(a).buffer, false);
-      const c9 = document.querySelector('#c9');
-      return {
-        shown: !c9.classList.contains('hide'),
-        docs: c9.querySelectorAll('details.man').length,
-        title: c9.querySelector('summary') && c9.querySelector('summary').firstChild.textContent,
-        links: [...c9.querySelectorAll('button.pg')].map(b => b.textContent),
-        heading: !!c9.querySelector('h4'),
-        bullets: c9.querySelectorAll('p.li').length
-      };
+      const c9 = document.querySelector('#c9'), rows = c9.querySelectorAll('button.man');
+      return { shown: !c9.classList.contains('hide'), docs: rows.length,
+               title: rows[0] && rows[0].querySelector('b').textContent,
+               meta: rows[0] && rows[0].querySelector('small').textContent,
+               text: !!c9.querySelector('p, h4, details') };
     }, bytes);
-    check(card.shown && card.docs === 1, 'a mandatory read in the package gets its own card');
-    check(card.title === 'ACARS LOGON PROCEDURE', 'named by its subject');
-    check(card.heading && card.bullets === 2, 'read back as headings, paragraphs and bullets');
-    check(card.links.includes('see p. 2 \u2197') && card.links.includes('open page 2 \u2197')
-          && card.links.includes('p. 3'), 'with links to the pages it points at, and to every page');
+    check(card.shown && card.docs === 1, 'a mandatory read in the package is listed on its own card');
+    check(card.title === 'ACARS LOGON PROCEDURE' && card.meta.startsWith('MAN 123-24 · issue 2 · rev 1 · pp. 2\u20133'),
+          'by its subject, MAN number, issue and pages');
+    check(!card.text, 'and nothing of it is re-set as text');
 
     const viewer = await page.evaluate(async () => {
-      [...document.querySelectorAll('#c9 button.pg')].find(b => b.textContent.startsWith('see p.')).click();
+      document.querySelector('#c9 button.man').click();
       const box = document.querySelector('#chartBox');
       for (let i = 0; i < 100; i++){
         const img = box.querySelector('img'), a = box.querySelector('a');
@@ -794,13 +789,15 @@ try {
       const out = {
         open: !document.querySelector('#charts').classList.contains('hide'),
         title: document.querySelector('#chartTitle').textContent,
+        next: !document.querySelector('#chartNext').disabled,
         shown: !!(img && img.naturalWidth) || !!(a && a.href.startsWith('blob:'))
       };
       openCharts(false);
       out.released = box.childElementCount === 0 && SHEETS.every(x => x.url === null);
       return out;
     });
-    check(viewer.open && viewer.title.startsWith('Page 2 of the PDF'), 'a page link opens that original page');
+    check(viewer.open && viewer.title === 'Page 2 of the PDF  ·  1 of 2' && viewer.next,
+          'opening it shows its first page, with Next to the rest of it');
     check(viewer.shown, 'drawn from a one-page PDF cut out of the package, or offered to the PDF viewer');
     check(viewer.released, 'and let go when the viewer closes');
 
