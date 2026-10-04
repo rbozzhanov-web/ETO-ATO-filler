@@ -60,10 +60,9 @@ function manPageContent(lines){
   return t;
 }
 
-// A two-page mandatory read with each thing the reader has to cope with: the
-// WinAnsi quotes, a symbol-font bullet, a line in a two-byte font, a passage
-// pointing at a picture, a heading, a paragraph running over the page, and the
-// two-column sign-off.
+// A two-page mandatory read as these packages carry one: the head and foot on
+// both pages, the title and SUBJECT on the first, and the sort of body a real
+// one has (WinAnsi quotes, a symbol-font bullet, a line in a two-byte font).
 const PAGE1 = [
   'MAN 123-24', 'Issue 2', 'Revision 1', 'MANDATORY READ',
   'SUBJECT: ACARS LOGON PROCEDURE', 'APPLICABILITY: A320 FLEET', '',

@@ -5,8 +5,10 @@ const PDFMini = require('../pdfmini.js');
 const { manPage, mandatoryReads } = require('../ofp-core.js');
 const { buildPages, manPageContent, PAGE1, PAGE2 } = require('./helpers/make-pages-pdf.js');
 
-/* Mandatory reads, ported from the OFP viewer. The fixture is a two-page
-   document set the way Air Astana sets one (see make-pages-pdf.js). */
+/* Mandatory reads are opened as the PDF itself; what is tested here is that
+   their pages are found and grouped, and that one page can be cut out to show.
+   The fixture is a two-page document set the way Air Astana sets one (see
+   make-pages-pdf.js). */
 const pdf = () => buildPages([
   'BT /F1 10 Tf 50 700 Td (WPT01 FL350 0 1234) Tj ET\n',          // a plan page, not a read
   manPageContent(PAGE1),
@@ -30,30 +32,11 @@ test('both pages of a mandatory read are found by their head and foot', async ()
                    ['123-24', '2', '1', 'ACARS LOGON PROCEDURE', 'A320 FLEET', [1, 2]]);
 });
 
-test('its lines come back as paragraphs, headings and bullets, to the last page', async () => {
-  const { reads } = await readAll(pdf());
-  const paras = reads[0].paras;
-  const kinds = paras.map(q => q.kind);
-  assert.equal(paras[0].kind, 'p');
-  assert.match(paras[0].text, /^Crews shall log on .* available to the operator\.$/, 'two lines, one paragraph');
-  assert.ok(paras.some(q => q.kind === 'p' && q.text.includes('“LOGON ACCEPTED”')),
-            'WinAnsi quotes come back as quotes');
-  assert.deepEqual(paras.filter(q => q.kind === 'li').map(q => q.text),
-    ['Check the flight number entered in the INIT page', 'Check the departure and destination codes']);
-  assert.ok(paras.some(q => q.kind === 'h' && q.text === 'PROCEDURE'), 'the heading on page 2');
-  assert.ok(paras.some(q => /voice clearance as the primary means\.$/.test(q.text || '')),
-            'the second page is read, not dropped');
-  assert.ok(!paras.some(q => /Chief Pilot|Issued By/.test(q.text || '')), 'the sign-off is left to the PDF');
-  assert.ok(kinds.includes('lost'));
-});
-
-test('a pointer at a picture, and an undecodable line, link to their page', async () => {
-  const { reads } = await readAll(pdf());
-  const paras = reads[0].paras;
-  const pic = paras.find(q => /picture below/.test(q.text || ''));
-  assert.equal(pic.ref, 1);
-  assert.deepEqual(paras.find(q => q.kind === 'lost'), { kind: 'lost', page: 1 });
-  assert.equal(paras[0].ref, undefined, 'plain prose carries no link');
+test('a document left without its MANDATORY READ title is not listed', async () => {
+  const doc = new PDFMini.Doc(buildPages([manPageContent(PAGE2)]));
+  const r = manPage(PDFMini.textItems(await doc.content(doc.pages()[0])), 0);
+  assert.equal(r.man, '123-24', 'its page is still recognised');
+  assert.deepEqual(mandatoryReads([r]), [], 'but a continuation page alone is no document');
 });
 
 test('a page is cut out as a PDF of its own, the original bytes untouched', async () => {

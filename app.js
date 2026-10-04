@@ -976,12 +976,10 @@ $('#wxApt').onchange = renderWx;
 
 /* ================= mandatory reads =================
    Company documents the crew is meant to have read before dispatch, carried at
-   the back of the package. Collapsed by default since some run to several
-   paragraphs, but never hidden: a package that carries one says so here rather
-   than leaving it to be found by paging through the PDF. Everything here is
-   document text, so it is written as text. A passage pointing at something the
-   text cannot carry — a picture, a figure — and a line in a font that could not
-   be decoded link to the original page, opened in the chart viewer. */
+   the back of the package. Each is listed by its subject and opened as it was
+   printed: its own pages of the original PDF, in the chart viewer, with Prev
+   and Next through the rest of the document. Nothing of the document is
+   re-set as text — the PDF is the document. */
 function showMan(list){
   const card = $('#c9'), out = $('#manOut');
   const docs = list || [];
@@ -989,42 +987,17 @@ function showMan(list){
   card.classList.toggle('hide', !docs.length);
   $('#manSum').textContent = docs.length ? String(docs.length) : '';
   for (const m of docs){
-    const det = mk('details', 'man');
-    const sum = mk('summary', null, m.subject || 'MAN ' + m.man);
     const first = m.pages[0] + 1, last = m.pages[m.pages.length - 1] + 1;
     const pg = m.pages.length > 1 ? `pp. ${first}\u2013${last}` : `p. ${first}`;
-    sum.appendChild(mk('small', null,
-      ['MAN ' + m.man, m.issue && 'issue ' + m.issue, m.rev && 'rev ' + m.rev, pg].filter(Boolean).join(' · ')));
-    if (m.applic) sum.appendChild(mk('small', null, 'For ' + m.applic));
-    det.appendChild(sum);
-    const go = (at, label) => {
-      const b = mk('button', 'pg', label);
-      b.type = 'button';
-      b.onclick = () => openPages(m.pages, at);
-      return b;
-    };
-    const orig = mk('div', 'orig', 'As printed: ');
-    m.pages.forEach((pp, k) => {
-      if (k) orig.appendChild(document.createTextNode(' · '));
-      orig.appendChild(go(pp, `p. ${pp + 1}`));
-    });
-    det.appendChild(orig);
-    for (const q of m.paras){
-      let el;
-      if (q.kind === 'h') el = mk('h4', null, q.text);
-      else if (q.kind === 'lost'){
-        el = mk('p', 'lost', 'A line here is set in a font this reader cannot decode \u2014 ');
-        el.appendChild(go(q.page, `open page ${q.page + 1} \u2197`));
-      } else {
-        el = mk('p', q.kind === 'li' ? 'li' : null, q.text);
-        if (q.ref !== undefined && q.ref !== null){
-          el.appendChild(document.createTextNode(' '));
-          el.appendChild(go(q.ref, `see p. ${q.ref + 1} \u2197`));
-        }
-      }
-      det.appendChild(el);
-    }
-    out.appendChild(det);
+    const b = mk('button', 'man');
+    b.type = 'button';
+    b.appendChild(mk('b', null, m.subject || 'MAN ' + m.man));
+    b.appendChild(mk('small', null,
+      ['MAN ' + m.man, m.issue && 'issue ' + m.issue, m.rev && 'rev ' + m.rev, pg].filter(Boolean).join(' · ')
+      + (m.applic ? ' · for ' + m.applic : '')));
+    b.appendChild(mk('span', 'go', 'Open \u2197'));
+    b.onclick = () => openPages(m.pages, m.pages[0]);
+    out.appendChild(b);
   }
 }
 
