@@ -393,7 +393,11 @@ function prunePlans(store, now, retainDays, maxPlans){
    there: a taxiway NOT AVBL is not a navaid, and a VOR named in a procedure
    still in use is not out. LOC alone also means "location" in Doc 8400, so it
    counts only beside a runway, a slash or a DME; an RNAV (GNSS) approach is a
-   procedure, not the satellites, so its name is set aside before GNSS is read. */
+   procedure, not the satellites, so its name is set aside before GNSS is read.
+   So is any approach or departure merely not available — "IAC DVOR/DME X RWY 12
+   APCH ... NOT AVBL" withdraws the procedure, and the beacon it is named after
+   may be working; only a word that puts the equipment itself out (U/S, on test,
+   withdrawn ...) still marks one. */
 const RE_NAVAID = new RegExp('\\b(?:' + [
   'D?VOR', 'CVOR', 'VORTAC', 'TACAN', 'DME', 'NDB', 'ILS', 'LLZ', 'LOCALI[SZ]ER',
   'LOC(?=\\s*(?:\\/|RWY|DME|U\\/S|\\d))', 'GP', 'GLIDE\\s*(?:PATH|SLOPE)', 'MLS', 'GBAS', 'GLS',
@@ -404,9 +408,12 @@ const RE_OUT_OF_USE = new RegExp([
   '\\bUNAVAILABLE\\b', '\\bOUT\\s+OF\\s+SERVICE\\b', '\\bOTS\\b', '\\bON\\s+TEST\\b', '\\bDO\\s+NOT\\s+USE\\b',
   '\\bWITHDRAWN\\b', '\\bDECOMMISSIONED\\b', '\\bINOP(?:ERATIVE)?\\b'
 ].join('|'));
+const RE_PROCEDURE = /\b(?:IAC|APCH|APPROACH|IAF|SID|STAR|PROC(?:EDURE)?S?)\b/;
+const RE_EQUIP_OUT = /\bU\/S\b|\bUNSERVICEABLE\b|\bOUT\s+OF\s+SERVICE\b|\bOTS\b|\bON\s+TEST\b|\bDO\s+NOT\s+USE\b|\bWITHDRAWN\b|\bDECOMMISSIONED\b|\bINOP(?:ERATIVE)?\b/;
 function navaidOut(text){
   const t = String(text || '').toUpperCase().replace(/\bRNAV\s*\(\s*GNSS\s*\)/g, 'RNAV');
-  return RE_NAVAID.test(t) && RE_OUT_OF_USE.test(t);
+  if (!RE_NAVAID.test(t) || !RE_OUT_OF_USE.test(t)) return false;
+  return !RE_PROCEDURE.test(t) || RE_EQUIP_OUT.test(t);
 }
 
 // In the browser this file is a classic script and these are simply globals.

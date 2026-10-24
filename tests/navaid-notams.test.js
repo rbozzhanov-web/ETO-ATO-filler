@@ -18,6 +18,7 @@ test('a navigation aid out of use is recognised however the NOTAM words it', () 
     'VOR ABC WITHDRAWN FOR MAINT',
     'OUTER MARKER RWY 06 OUT OF SERVICE',
     'GNSS UNAVBL WI 50NM RADIUS',
+    'ILS RWY 25 U/S. ILS APCH NOT AVBL',
     'glide path rwy 33 unserviceable',
   ]) assert.ok(navaidOut(t), t);
 });
@@ -32,6 +33,8 @@ test('outages that are not navaids, and navaids that are not out, are left alone
     'VOR/DME ABC RESTORED',
     'STAND 5 LOC NOT AVBL',
     'ILS RWY 07 CAT I AVBL',
+    'IAC DVOR/DME X RWY 12 (AD-2-UCFO-DVOR/DME X 12-1) APCH FM IAF NAMANGAN NOT AVBL UNTIL FURTHER NOTICE.',
+    'IAC ILS X RWY 12 (AD-2-UCFO-ILS X 12-1) APCH FM IAF NAMANGAN NOT AVBL UNTIL FURTHER NOTICE.',
     '',
   ]) assert.ok(!navaidOut(t), t);
 });

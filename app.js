@@ -990,6 +990,7 @@ function renderWx(){
     if (n.from)
       d.appendChild(mk('span', 'val',
         `${stamp(n.from)} → ${stamp(n.to || '?')}${n.est ? ' EST' : ''}`));
+    if (n.fresh) d.appendChild(mk('span', 'newtag', 'NEW'));
     if (hz === 'nav') d.appendChild(mk('span', 'navtag', 'NAVAID U/S'));
     if (n.subject) d.appendChild(mk('span', 'subj', n.subject));
     d.appendChild(mk('p', null, n.text));
@@ -1584,11 +1585,23 @@ function keyFigures(lines){
 // ("SPECIZLIC"), exactly as it does for NOTAMs, hence \s* rather than \s+.
 const RE_METAR  = /^(?:METAR|SPECI)(?:\s+(?:COR|AMD))?\s*([A-Z]{4})\s+\d{6}Z/;
 const RE_TAF    = /^TAF(?:\s+(?:AMD|COR))?\s*([A-Z]{4})\s+\d{6}Z/;
-// "- UAAA A3725/26 30JUN0500-30SEP0500" and the run-together "NOTAMUAAA A4947/26 ...".
+// "- UAAA A3725/26 30JUN0500-30SEP0500", the run-together "NOTAMUAAA A4947/26 ...",
+// and "NEW  OAKN G0348/26 ..." — a NOTAM issued since the last briefing, flagged
+// in the margin where the others carry their dash. Missing that last one ran each
+// new NOTAM, and the subject line above it, into the end of the one before.
+// A NOTAM for more than one place names each, as item A) does: "NOTAMOPKR OPLR
+// A0590/26 ..." is both Pakistani FIRs, "- UCFM UCFO A0110/26" the FIR and the
+// aerodrome, and it is listed under each.
 // The validity that follows comes in half a dozen shapes — PERM, a trailing EST,
 // and a spanning year that may sit against either date — so it is captured whole
 // and split on its first hyphen rather than enumerated.
-const RE_NTM    = /^(?:-\s*|NOTAM)([A-Z]{4})\s+([A-Z]\d{3,4}\/\d{2})\s+((?:\d{2}[A-Z]{3}\d{4}|WIE)\b[^]*?)\s*$/;
+const RE_NTM    = /^(?:-\s*|NOTAM\s*|(NEW)\s+)([A-Z]{4}(?:\s+[A-Z]{4})*)\s+([A-Z]\d{3,4}\/\d{2})\s+((?:\d{2}[A-Z]{3}\d{4}|WIE)\b[^]*?)\s*$/;
+// The same flag on a NOTAM whose header has no room for it is on its first line
+// instead: "NEW   NDB HRT FREQ 412KHZ U/S", out in the margin with the headers
+// where the NOTAM's own text is indented — which is how it is told from a NOTAM
+// that simply says "NEW WPT ... ESTABLISHED". It is the briefing's mark, not the
+// NOTAM's words, so it is shown as a tag and kept out of the text.
+const RE_NEWMARK = /^NEW\s+/;
 
 function validity(s){
   const i = s.indexOf('-');
@@ -1624,7 +1637,8 @@ function weatherNotams(lines, icao){
                                       metar: [], taf: [], notams: [], co: [] });
     return by.get(code);
   };
-  const src = lines.filter(l => l.text.trim() && !CHROME(l.text.trim())).map(l => l.text.trim());
+  const kept = lines.filter(l => l.text.trim() && !CHROME(l.text.trim()));
+  const src = kept.map(l => l.text.trim()), xs = kept.map(l => l.x);
 
   let open = null, pending = null, subject = null, coCat = null;
   const close = () => {
@@ -1634,7 +1648,7 @@ function weatherNotams(lines, icao){
       if (open.kind === 'notams')
         for (const c of open.codes)
           at(c).notams.push({ id: open.id, from: open.from, to: open.to, est: open.est,
-                              subject: open.subject, text: body });
+                              subject: open.subject, text: body, fresh: open.fresh });
       else if (open.kind === 'co')
         for (const c of open.codes)
           at(c).co.push({ id: open.id, from: open.from, to: open.to, text: body });
@@ -1673,10 +1687,11 @@ function weatherNotams(lines, icao){
     if ((m = t.match(RE_TAF)))  { close(); open = { kind: 'taf',   code: m[1], buf: [t] }; continue; }
 
     if ((m = t.match(RE_NTM))){
-      const v = validity(m[3]);
+      const v = validity(m[4]);
       if (v){
         close();
-        open = { kind: 'notams', codes: [m[1]], id: m[2], ...v, subject, buf: [] };
+        open = { kind: 'notams', codes: [...new Set(m[2].split(/\s+/))], id: m[3], ...v, subject, fresh: !!m[1],
+                 x: xs[i], buf: [] };
         continue;
       }
     }
@@ -1695,10 +1710,19 @@ function weatherNotams(lines, icao){
       open.from = m[1]; open.to = m[2]; continue;
     }
 
+    // The briefing's own divider between groups of NOTAMs ("..D..") and the
+    // heading of each FIR's ("Fir: OPKR Region: KARACHI") belong to neither side.
+    if (/^\.+[A-Z]?\.+$/.test(t) || /^Fir:\s*[A-Z]{4}\b/.test(t)){ close(); subject = null; continue; }
     // A bare short line directly above a NOTAM item is that item's subject
     // ("ILS III", "APCH LGT"), not a continuation of the item above it.
     if (t.length <= 40 && !/[.,:]$/.test(t) && RE_NTM.test(src[i + 1] || '')){
       close(); subject = t; continue;
+    }
+    if (open && open.kind === 'notams' && !open.buf.length && RE_NEWMARK.test(t)
+        && xs[i] != null && open.x != null && xs[i] < open.x + 8){
+      open.fresh = true;
+      open.buf.push(t.replace(RE_NEWMARK, ''));
+      continue;
     }
     if (open) open.buf.push(t);
   }
@@ -1780,7 +1804,7 @@ async function parse(buf){
              ? (f.pre.filter(t => /^\d{3,6}$/.test(t)).pop() || null) : null }));
       }
       const tk = tokenize(chars, cw);
-      allLines.push({ page: p, base: last.base, text: tk.join(' ') });
+      allLines.push({ page: p, base: last.base, x: chars[0].x, text: tk.join(' ') });
       if (tk[tk.length - 1] === 'ATO' && last.x > 460 && last.x < 540){
         headers.push({ page: p, base: last.base, size: last.size, cw, font });
         continue;
