@@ -684,7 +684,11 @@ try {
      behind an empty load screen that then jumped to the plan. The reading is
      kept with the PDF now: the flight comes back from it without a parse, says
      it is reopening rather than showing the load screen, returns to where it was
-     scrolled, and still saves a complete PDF. */
+     scrolled, and still saves a complete PDF.
+     And the one after it: the reading came out of IndexedDB, which answers only
+     once the page has been drawn, so the first frame was a blank page and the
+     flight appeared over it. Read from its localStorage copy it is back before
+     the page has even finished loading — its first frame is the flight. */
   {
     const { page } = await open('index.html');
     await page.evaluate(async a => {
@@ -711,28 +715,32 @@ try {
       // (Before any markup is parsed there is no documentElement yet to watch.)
       window.__marked = false;
       new MutationObserver(() => {
-        if (document.documentElement && document.documentElement.hasAttribute('data-resuming')) window.__marked = true;
+        const html = document.documentElement;
+        if (html && html.hasAttribute('data-resuming')) window.__marked = true;
+        // The same room to scroll as before the reload, from the start: on the
+        // tall iPad viewport the plan alone is shorter than the offset being
+        // restored, and it is restored before the page has finished loading.
+        if (html && !html.style.minHeight) html.style.minHeight = '4000px';
       }).observe(document, { attributes: true, subtree: true, childList: true, attributeFilter: ['data-resuming'] });
-      // Count parses of the package: parse() is a global, wrapped once app.js
-      // has defined it and before the reopen — which waits on IndexedDB — calls it.
-      window.__parses = 0;
-      addEventListener('DOMContentLoaded', () => {
-        // The same room to scroll as before the reload: on the tall iPad
-        // viewport the plan alone is shorter than the offset being restored.
-        document.body.style.minHeight = '4000px';
-        const real = window.parse;
-        window.parse = (...a) => { window.__parses++; return real(...a); };
-      });
     });
-    await page.reload({ waitUntil: 'load' });
-    // Until the mark clears the reopen is not finished: the scroll position is
-    // restored after the plan's rows exist, just before the page is shown.
-    await page.waitForFunction(() => RESULT.length === 4
-      && !document.documentElement.hasAttribute('data-resuming'), null, { timeout: 10000 });
-    const back = await page.evaluate(() => ({
-      marked: window.__marked, cleared: !document.documentElement.hasAttribute('data-resuming'),
-      parses: window.__parses, y: Math.round(scrollY)
-    }));
+    // Parses are counted by app.js's own performance mark, one per reading of
+    // a package — on the page's own timeline, which starts again with each load.
+    const reopen = async () => {
+      await page.reload({ waitUntil: 'load' });
+      // Until the mark clears the reopen is not finished: the scroll position is
+      // restored after the plan's rows exist, just before the page is shown.
+      await page.waitForFunction(() => RESULT.length === 4
+        && !document.documentElement.hasAttribute('data-resuming'), null, { timeout: 10000 });
+      return page.evaluate(() => {
+        const nav = performance.getEntriesByType('navigation')[0];
+        const resumed = performance.getEntriesByName('ofp:resumed')[0];
+        return { marked: window.__marked, cleared: !document.documentElement.hasAttribute('data-resuming'),
+                 parses: performance.getEntriesByName('ofp:parse').length, y: Math.round(scrollY),
+                 resumed: !!resumed,
+                 early: !!resumed && !!nav && resumed.startTime <= nav.domContentLoadedEventStart };
+      });
+    };
+    const back = await reopen();
     // The PDF's bytes are read after the flight is on screen; Save waits for them.
     const saved = await page.evaluate(async () => { await ensureRaw(); return [...new Uint8Array(await build().arrayBuffer())]; });
     // A decoded chart is released when the viewer closes, not kept in memory.
@@ -752,8 +760,48 @@ try {
     check(back.parses === 0, 'the flight comes back from its stored reading, without parsing the PDF again'
           + (back.parses ? ` (parsed ${back.parses}x)` : ''));
     check(back.y === 600, 'the page comes back where it was scrolled' + (back.y === 600 ? '' : ` (at ${back.y})`));
+    check(back.early, 'the flight is back before the page has finished loading, so its first frame is the flight');
     check(etos.join(' ') === '1000 1020 1100 1200', 'a reopened flight still saves its ETOs into the PDF');
     check(released, 'closing the chart viewer lets its decoded images go');
+
+    // Without its localStorage copy — too big for a device's quota, say — the
+    // flight still comes back, the slower way, from IndexedDB, and unparsed.
+    await page.evaluate(() => {
+      localStorage.removeItem('etofill:reading');
+      scrollTo(0, 600);
+      dispatchEvent(new Event('pagehide'));
+    });
+    const slow = await reopen();
+    check(slow.resumed && slow.parses === 0 && slow.y === 600,
+          'without that copy the flight still comes back from IndexedDB, unparsed and where it was'
+          + ` (${JSON.stringify(slow)})`);
+    await page.close();
+  }
+
+  /* ---- a reopened flight's table is already in place ----
+     The waypoint table follows the flight: with no touch for a while it scrolls
+     itself to the tracked row, smoothly. On a reopened flight there has been no
+     touch at all, so it did that the moment the page appeared — the table
+     gliding down in front of the crew, one more thing moving on a page that
+     should simply be there. While a flight is being reopened it is put there
+     at once. */
+  {
+    const { page } = await open('index.html');
+    const r = await page.evaluate(async a => {
+      await loadBuffer('T.pdf', a.length, new Uint8Array(a).buffer, false);
+      document.querySelector('#etd').value = '1000';
+      document.querySelector('#calc').click();
+      const box = document.querySelector('.tblbox');
+      box.style.maxHeight = '200px';                     // a box with somewhere to scroll
+      box.scrollTop = 0;
+      document.documentElement.setAttribute('data-resuming', '');
+      scrollRowToTop(rowOf(RESULT[RESULT.length - 2].i));
+      const at = box.scrollTop;                           // where it is straight away, no frame later
+      document.documentElement.removeAttribute('data-resuming');
+      return { at, room: box.scrollHeight - box.clientHeight };
+    }, ofpPdf(Array.from({ length: 22 }, () => 10)));
+    check(r.room > 0 && r.at > 0, 'while a flight is reopened its table is put on the tracked row at once, not scrolled there'
+          + ` (at ${r.at} of ${r.room})`);
     await page.close();
   }
 

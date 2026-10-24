@@ -38,7 +38,7 @@ sw.js                 the offline cache
 manifest.webmanifest
 icon-192.png
 icon-512.png
-splash/               dark launch screens for each iPad size and orientation
+splash/               light and dark launch screens for each iPad size and orientation
 ```
 
 There are two pages: `index.html` is the OFP companion described below, and
@@ -105,14 +105,20 @@ which in flight, with the EFB apps open, is often. Coming back then starts the
 page from cold, and so does every crossing between the OFP and the Journey Log.
 The open flight comes straight back all the same. What reading its PDF produced
 is kept as a small record of its own, and the flight is put back on screen from
-that alone: the PDF itself is fetched and checked against its digest afterwards,
-in the background, and Save waits for it if it is ever asked for sooner. While
-the flight is being reopened the page is held back — only the header and one
-line saying it is reopening the flight — and it then appears once, complete and
-scrolled to where it was left, instead of an empty load screen that fills in
-and jumps. Coming back from the Journey Log still starts at the top. The stored
-reading belongs to one build — after an update the PDF is read once more, the
-first time it is opened.
+that alone: the PDF itself is fetched and checked against its digest a few
+seconds later, in the background, and Save waits for it if it is ever asked for
+sooner. That record is kept twice — in IndexedDB, and in localStorage, which
+answers at once where IndexedDB answers only after the page has been drawn. So
+the flight is rebuilt and scrolled to where it was left before the page has
+finished loading, and the first frame iPadOS draws after its launch screen is
+the flight itself: no blank page, no "reopening" line, nothing that then jumps.
+The waypoint table is put on its tracked row at once rather than gliding there
+as the page appears. Only if the localStorage copy is missing — a package too
+big for what is left of the device's localStorage — does the reopen wait on
+IndexedDB, behind a plain page in the theme's colour, with a line saying it is
+reopening the flight should that take more than a moment. Coming back from the
+Journey Log still starts at the top. The stored reading belongs to one build —
+after an update the PDF is read once more, the first time it is opened.
 
 What the app holds in memory counts towards iPadOS choosing it to unload, so it
 keeps as little as it can: the text copy of the PDF that reading it needs is let
@@ -120,10 +126,17 @@ go straight afterwards and rebuilt only for Save or a chart, and a decoded chart
 — some ten megabytes once drawn — is released when the chart viewer closes.
 
 iPadOS relaunches an unloaded app behind its launch screen, which is plain white
-unless the app supplies one. `index.html` links a dark launch image for each
-iPad screen size and orientation (`splash/`, written by `scripts/make-splash.js`).
-iPadOS reads these when the app is added to the Home Screen, so an icon added
-before they existed has to be removed and added again once to pick them up.
+unless the app supplies one. `index.html` links a launch image for each iPad
+screen size and orientation, in the page's own background colour — light or dark
+by the iPad's appearance setting (`splash/`, written by `scripts/make-splash.js`).
+Only a dark one used to be offered, so a light page was relaunched behind black:
+a flash of its own on every return. The browser's colour for the page
+(`theme-color`) follows the theme from the first frame too. iPadOS reads the
+launch images, and picks light or dark, when the app is added to the Home
+Screen — so an icon added before these existed, or before the iPad's appearance
+was changed, has to be removed and added again once to pick them up. A Home
+Screen icon keeps its own storage: stored flights do not carry over to the new
+icon, so this is done between flights.
 
 ---
 

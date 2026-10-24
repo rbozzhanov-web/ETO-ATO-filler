@@ -1744,6 +1744,9 @@ function weatherNotams(lines, icao){
 }
 
 async function parse(buf){
+  // One mark per reading of a package, so how often one is read again can be
+  // seen from outside — a reopened flight is meant to need none.
+  performance.mark('ofp:parse');
   const doc = new PDFMini.Doc(new Uint8Array(buf));
   const pages = doc.pages();
   const dotRows = [], headers = [], rawFields = [], page0 = [], allLines = [], charts = [], openQ = [];
@@ -2341,7 +2344,11 @@ function scrollRowToTop(row){
   autoTarget = want;
   clearTimeout(autoT);
   autoT = setTimeout(() => { autoTarget = null; }, 3000);
-  box.scrollTo({ top: want, behavior: 'smooth' });
+  // A flight being reopened is shown already in place: a table gliding to its
+  // row as the page appears is one more thing moving on a page that should
+  // simply be there.
+  const reopening = document.documentElement.hasAttribute('data-resuming');
+  box.scrollTo({ top: want, behavior: reopening ? 'instant' : 'smooth' });
 }
 
 function markAbeam(row, want){
@@ -3011,21 +3018,31 @@ async function dropSession(){ return OFPStorage.dropSession(); }
 // While a flight is being reopened the page is held back — theme-init.js marks
 // it before its first paint whenever there is a flight to reopen — and it is
 // shown once, complete and scrolled to where it was left, instead of an empty
-// load screen that fills in and then jumps. The PDF's bytes are read only
-// after that, in the background: nothing on screen needs them.
+// load screen that fills in and then jumps.
+//
+// Normally it is never seen held back at all. The stored reading comes out of
+// localStorage, so nothing on the way to the screen waits on anything: this
+// runs to the end in the same turn as the script itself, before the page has
+// finished loading, and the first frame drawn is the flight. Only when that
+// copy is missing does the reopen wait on IndexedDB, behind a plain page in
+// the theme's own colour — the colour of the launch screen in front of it.
+//
+// The PDF's bytes are read only a few seconds later: nothing on screen needs
+// them, and reading 2 MB out of IndexedDB and checking its digest is not free
+// in the first moments the crew is using the page again.
 async function resumeSession(){
   let reopened = false;
   try {
     const rec = await OFPStorage.resumeRecord();
     reopened = !!rec && await loadBuffer(rec.name, rec.size, rec.buf, true, { hash: rec.hash, parsed: rec.parsed });
-    if (reopened) restoreView();
+    if (reopened){ restoreView(); performance.mark('ofp:resumed'); }
   } finally {
     delete document.documentElement.dataset.resuming;
   }
   if (reopened && !RAW) setTimeout(() => ensureRaw().catch(err => {
     console.error('Stored PDF unreadable:', err);
     msg('#m3', 'The stored copy of this PDF could not be read. Open the PDF again before saving.', 'err');
-  }), 250);
+  }), 3000);
 }
 
 // Where the page was scrolled to, so a flight reopened after iPadOS unloaded
