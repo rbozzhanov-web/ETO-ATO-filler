@@ -881,6 +881,51 @@ try {
     await page.close();
   }
 
+  /* ---- the order the NOTAMs are listed in ----
+     As printed, or the relevant ones first: in effect for the flight ahead of
+     the rest, a closure or the runway before a taxiway, then what is marked but
+     not in effect, then the remainder in printed order after a divider. */
+  {
+    const { page, problems } = await open('index.html');
+    const r = await page.evaluate(() => {
+      try { localStorage.removeItem('etofill:ntmorder'); localStorage.removeItem('etofill:wxhi'); } catch(e){}
+      ICAO = { oneLine: '(FPL-KZR123-IS -A321/M-SDE2E3FGHIRWY/LB1 -UAAA1000 -N0450F350 DCT -UTTT0500 DOF/261024)', lines: [] };
+      FPL = { ETD: '1000', ETA: '1500' };
+      const n = (id, text, from, to) => ({ id, text, from, to, est: false, subject: null });
+      const now = ['24OCT0800', '24OCT1200'], later = ['25OCT0000', '26OCT0000'];
+      showWx({ airports: [{ icao: 'UAAA', group: 'flight', role: 'departure', name: null,
+        metar: [], taf: [], co: [], notams: [
+          n('A1', 'APRON STAND 5 NOT AVBL', ...now),
+          n('B2', 'TWY C CLSD', ...later),
+          n('C3', 'OBST CRANE ERECTED', ...later),
+          n('D4', 'RWY 05R CLSD', ...later),
+          n('E5', 'AD CLSD DUE WX', ...now),
+          n('F6', 'BIRD ACTIVITY', ...later)] }] });
+      const ids = () => [...document.querySelectorAll('#wxOut .ntms > *')]
+        .map(e => e.classList.contains('ntmsep') ? '|' : e.querySelector('.id').textContent).join(' ');
+      const sel = document.querySelector('#wxOrder');
+      const out = { printed: ids(), defaultOrder: sel.value };
+      sel.value = 'relevant'; sel.dispatchEvent(new Event('change'));
+      out.relevant = ids();
+      out.kept = localStorage.getItem('etofill:ntmorder');
+      const hi = document.querySelector('#wxHi');
+      hi.checked = false; hi.dispatchEvent(new Event('change'));
+      out.offOrder = ids(); out.disabled = sel.disabled;
+      hi.checked = true; hi.dispatchEvent(new Event('change'));
+      sel.value = 'printed'; sel.dispatchEvent(new Event('change'));
+      out.back = ids();
+      return out;
+    });
+    check(r.defaultOrder === 'printed' && r.printed === 'A1 B2 C3 D4 E5 F6', 'NOTAMs are listed as printed by default');
+    check(r.relevant === 'E5 A1 D4 B2 | C3 F6', 'relevant first: in effect, then marked, then the rest as printed'
+          + (r.relevant === 'E5 A1 D4 B2 | C3 F6' ? '' : ` (${r.relevant})`));
+    check(r.kept === 'relevant', 'the order chosen is kept for the device');
+    check(r.offOrder === 'A1 B2 C3 D4 E5 F6' && r.disabled, 'with the highlights off the list is as printed and the order waits');
+    check(r.back === 'A1 B2 C3 D4 E5 F6', 'and as printed again when chosen');
+    check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
+    await page.close();
+  }
+
   /* ---- the Journey Log ---- */
   {
     const { page, problems } = await open('journey-log.html');

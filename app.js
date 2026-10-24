@@ -724,6 +724,17 @@ $('#wxHi').onchange = () => {
   try { localStorage.setItem('etofill:wxhi', WXHI ? '1' : '0'); } catch(e){}
   renderWx();
 };
+// The order the NOTAMs are listed in, kept for the device like the highlight it
+// sorts by: as printed, or the highlighted ones first. With the highlights off
+// there is nothing to sort by, so the list is as printed and the choice waits.
+let NTMORDER = 'printed';
+try { if (localStorage.getItem('etofill:ntmorder') === 'relevant') NTMORDER = 'relevant'; } catch(e){}
+$('#wxOrder').value = NTMORDER;
+$('#wxOrder').onchange = () => {
+  NTMORDER = $('#wxOrder').value === 'relevant' ? 'relevant' : 'printed';
+  try { localStorage.setItem('etofill:ntmorder', NTMORDER); } catch(e){}
+  renderWx();
+};
 // NOTAM validity is DDMMMHHMM, sometimes with a spanning year, or a word such
 // as PERM / WIE / UFN.
 const stamp = s => {
@@ -976,14 +987,34 @@ function renderWx(){
     d.appendChild(mk('p', null, n.text));
     return d;
   };
+  // Relevant first: what is in effect for the flight ahead of everything else —
+  // a closure or the runway before a taxiway before the rest — then what is
+  // marked but not in effect, then the remainder. Each group keeps the printed
+  // order, and a line marks where the reordered ones end.
+  $('#wxOrder').disabled = !WXHI;
+  const rank = n => {
+    const now = !!(tgt && notamActive(n, tgt.ms)), hz = notamHazard(n);
+    const tier = hz === 'closed' || hz === 'rwy' ? 0 : hz === 'twy' ? 1 : 2;
+    return now ? tier : tier < 2 ? 3 + tier : 5;
+  };
+  const items = list => {
+    if (!WXHI || NTMORDER !== 'relevant') return list.map(item);
+    const sorted = list.map((n, k) => ({ n, k, r: rank(n) })).sort((x, y) => x.r - y.r || x.k - y.k);
+    const nodes = [];
+    sorted.forEach((e, j) => {
+      if (e.r === 5 && j > 0 && sorted[j - 1].r < 5) nodes.push(mk('div', 'ntmsep', 'The rest, as printed'));
+      nodes.push(item(e.n));
+    });
+    return nodes;
+  };
   const out = $('#wxOut');
   clear(out);
   if (a.metar.length) out.appendChild(block('METAR', '', pre(a.metar)));
   if (a.taf.length)   out.appendChild(block('TAF', tgtNote, tafPre(a.taf)));
   if (a.notams.length)
     out.appendChild(block('NOTAM', `${a.notams.length} items${tgtNote ? ' · ' + tgtNote : ''}`,
-                          a.notams.map(item), true));
-  if (a.co.length) out.appendChild(block('Company NOTAMs', '', a.co.map(item), true));
+                          items(a.notams), true));
+  if (a.co.length) out.appendChild(block('Company NOTAMs', '', items(a.co), true));
   if (!out.firstChild) out.appendChild(mk('p', 'disc', 'Nothing recorded for this aerodrome.'));
   document.querySelectorAll('#wxOut .ntms').forEach(scrollHint);
 }

@@ -37,12 +37,21 @@ function fakeDevice(){
     put(val, key){ rows.set(key, val); },
     get(key){ const rq = {}; later(() => { rq.result = rows.get(key); rq.onsuccess && rq.onsuccess(); }); return rq; }
   });
+  const writes = [];                     // the keys each read-write transaction put
   const db = {
-    transaction(){ const tx = { objectStore: store }; later(() => tx.oncomplete && tx.oncomplete()); return tx; },
+    transaction(name, mode){
+      const keys = [];
+      if (mode === 'readwrite') writes.push(keys);
+      const tx = { objectStore: () => { const st = store(); const put = st.put;
+                   st.put = (val, key) => { keys.push(key); put(val, key); }; return st; } };
+      later(() => tx.oncomplete && tx.oncomplete());
+      return tx;
+    },
     close(){}
   };
   return {
-    indexedDB: { open(){ const rq = { result: db }; later(() => rq.onsuccess && rq.onsuccess()); return rq; } },
+    indexedDB: { open(){ const rq = { result: db }; later(() => rq.onsuccess && rq.onsuccess()); return rq; },
+                 writes },
     localStorage: {
       getItem: k => ls.has(k) ? ls.get(k) : null,
       setItem: (k, v) => ls.set(k, String(v)),
@@ -118,5 +127,19 @@ test('without a stored reading the PDF is read and checked as before', async () 
     assert.ok(rec.buf, 'the PDF comes back with the record');
     await OFPStorage.dropSession();
     assert.equal(await OFPStorage.resumeRecord(), null);
+  });
+});
+
+/* The bug this guards: the PDF and what reading it produced went into IndexedDB
+   in two transactions, one after the other. An app unloaded between them — iPadOS
+   does that without warning — left one flight's reading beside another flight's
+   PDF, and the flight then reopened with a stored copy that could not be saved
+   from. They are written together now, in one transaction, or not at all. */
+test('a flight is kept as one write: its PDF and its reading together', async () => {
+  await withDevice(async () => {
+    await OFPStorage.keepSession('f.pdf', 3, null, new Uint8Array([1, 2, 3]), { pairs: [] });
+    assert.deepEqual(indexedDB.writes, [['last', 'lastParsed']]);
+    await OFPStorage.dropSession();
+    assert.deepEqual(indexedDB.writes[1], ['last', 'lastParsed'], 'and dropped together');
   });
 });
