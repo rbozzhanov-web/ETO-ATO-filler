@@ -91,10 +91,14 @@ refresh behind the page, nothing to wait out. It reads from its cache and that
 is the whole of it.
 
 Offline it never updates, which means the version you leave the ground with is the version you
-fly with. The one reload the app ever does for an update is the one it asked for
-itself, on the ground with nothing open. A version downloaded earlier and left
-waiting takes over quietly on a later cold start and is simply in place from
-the next load, without reloading the page in front of you.
+fly with. On the ground with nothing open, a new version applies itself. With a
+plan or log open it is offered instead: a bar at the top says a new version is
+ready, with **Update now** and **Later**. Update now reloads into the new version
+with the same document back, everything entered kept; Later puts the bar away
+until the app is next brought to the front. Those are the only reloads the app
+ever does for an update. A version downloaded earlier and left waiting also
+takes over quietly on a later cold start and is simply in place from the next
+load, without reloading the page in front of you.
 
 iPadOS unloads a backgrounded web app whenever another app wants the memory,
 which in flight, with the EFB apps open, is often. Coming back then starts the
