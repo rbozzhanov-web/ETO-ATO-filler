@@ -176,6 +176,16 @@ button.man b{grid-column:1;font-size:14px;font-weight:600}
 button.man small{grid-column:1;margin-top:2px;font-size:11.5px;color:var(--dim)}
 button.man .go{grid-column:2;grid-row:1 / span 2;font-size:13px;font-weight:600;color:var(--acc)}
 button.man:active{opacity:.55}
+.pkghd{margin:14px 0 2px;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;
+  color:var(--warn)}
+.pkghd:first-child{margin-top:2px}
+.pkghd + button.man{border-top:0}
+.pkgtoc{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.pkgtoc summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--dim)}
+button.toc{display:flex;gap:12px;align-items:baseline;width:100%;min-height:0;margin:0;padding:7px 2px;
+  background:none;border:0;border-radius:0;text-align:left;color:var(--txt);font:inherit;font-size:13px;cursor:pointer}
+button.toc .pg{flex:0 0 46px;font-weight:600;color:var(--acc)}
+button.toc:active{opacity:.55}
 .disc{display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:12.5px;color:var(--dim)}
 .fplbox{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);overflow:hidden}
 .fplhead{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);
@@ -623,10 +633,11 @@ td.diff{text-align:right;font-weight:700}
     <div class="msg" id="m1"></div>
   </div>
 
-  <!-- Company documents the crew is meant to have read before dispatch, carried
-       at the back of the package, each opened as printed (app.js, showMan). -->
+  <!-- Everything the package carries beyond what the app sets out itself: the
+       documents attached behind the OFP, the company notices for every flight,
+       and the brief's own contents — each opened as printed (app.js, showPackage). -->
   <div class="card hide" id="c9">
-    <div class="step"><i>MAN</i> Mandatory reads <span class="mansum" id="manSum"></span></div>
+    <div class="step"><i>PKG</i> In this package <span class="mansum" id="manSum"></span></div>
     <div id="manOut"></div>
   </div>
 
@@ -844,7 +855,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.25 &nbsp;·&nbsp; Build 20261024.3 &nbsp;·&nbsp; 24 Oct 2026</span></p>
+      <span class="build">RC1.8.26 &nbsp;·&nbsp; Build 20261024.4 &nbsp;·&nbsp; 24 Oct 2026</span></p>
 
     </div>
   </div>

@@ -258,6 +258,84 @@ function mandatoryReads(manPages){
   return [...by.values()].filter(d => d.first).map(({ first, ...d }) => d);
 }
 
+/* ---------- what else the package carries ----------
+   A briefing package is the OFP's own numbered pages ("AIR ASTANA BRIEF PAGE 7
+   OF 80") and, behind them, whatever else was attached to this flight — an
+   operational briefing, an Operations Manual excerpt, a de-icing status table,
+   a mandatory read. Nothing in the app may hide any of it: what it does not set
+   out itself, it lists, so it is noticed, and opens as printed. These read the
+   package's shape, not a fixed list of what it may hold, so a section or an
+   attachment the airline adds later is listed the same way. */
+
+// The brief's own page marking, as one text item: "AIR ASTANA BRIEF PAGE 7 OF 80"
+// or the plain "PAGE 7 OF 80" it also prints.
+const BRIEF_MARK = /^(?:.*\bBRIEF\s+)?PAGE\s+\d+\s+OF\s+\d+$/i;
+const briefPage = items => items.some(it => BRIEF_MARK.test(it.str.trim()));
+
+// A title for an attached page: its largest type in the top part of the page,
+// taken in the order the page draws it — an attachment set in a proportional
+// font does not read in x order — and cleaned of what a symbol font leaves.
+function attachmentTitle(items, height){
+  const runs = [];
+  let cur = null;
+  for (const it of items){
+    if (!cur || Math.abs(it.y - cur.y) > it.size * 0.6 || Math.abs(it.size - cur.size) > 0.5){
+      cur = { y: it.y, size: it.size, s: '' };
+      runs.push(cur);
+    }
+    cur.s += it.str;
+  }
+  const clean = t => t.replace(/[\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim();
+  const top = runs.map(r => ({ ...r, s: clean(r.s) }))
+    .filter(r => r.y > height * 0.55 && /[A-Za-z]{3}/.test(r.s))
+    .sort((a, b) => b.size - a.size || b.y - a.y)[0];
+  return top ? (top.s.length > 90 ? top.s.slice(0, 89) + '…' : top.s) : null;
+}
+
+// The attached documents: every page the brief does not mark as its own, apart
+// from a mandatory read's, which are listed by subject on their own. Pages run
+// together into one document while they follow on and keep the same page size.
+function groupAttachments(pages, skip){
+  const out = [];
+  pages.forEach((pg, n) => {
+    if (pg.brief || skip.has(n)) return;
+    const last = out[out.length - 1];
+    if (last && last.pages[last.pages.length - 1] === n - 1 && last.size === pg.size)
+      last.pages.push(n);
+    else out.push({ pages: [n], size: pg.size, title: pg.title });
+  });
+  return out.map(({ size, ...d }) => d);
+}
+
+/* The brief's own sections, as a contents list with the page each starts on.
+   Its headings are recognised by how the brief sets them, not by name:
+   "--- OVERFLIGHT PERMITS", "START OF WIND AND TEMPERATURE SUMMARY …", a
+   heading underlined by a single run of dashes, a SIGMET / AIRMET / PIREP
+   report or the line saying there is none. The aerodrome reports and NOTAMs,
+   the FIR NOTAMs and the company NOTAMs are entered once each, where they
+   begin. lines: { page, text } in reading order, brief pages only. */
+function briefSections(lines){
+  const out = [], seen = new Set();
+  const add = (title, page) => { if (!seen.has(title)){ seen.add(title); out.push({ title, page }); } };
+  for (let i = 0; i < lines.length; i++){
+    const t = lines[i].text.trim(), next = (lines[i + 1] || {}).text || '', page = lines[i].page;
+    let m;
+    // A heading after the dashes starts with a word; a waypoint row whose
+    // frequency is printed as dashes ("------ 28 N2518.5 …") does not.
+    if ((m = t.match(/^-{2,}\s*([A-Z][A-Za-z]+\b[A-Za-z0-9 /&().,'-]*?)\s*-*$/))) add(m[1], page);
+    else if ((m = t.match(/^START OF (.+)$/))) add(m[1], page);
+    // The package-wide report searches only, not each aerodrome's missing TAF.
+    else if ((m = t.match(/^NO ([A-Z]+) REPORTS FOUND WITHIN\b/))) add(m[1] + ' — none found', page);
+    else if ((m = t.match(/^(SIGMET|AIRMET|PIREP)S?\b/))) add(m[1] + ' reports', page);
+    else if (/^(DEPARTURE|ARRIVAL):/.test(t)) add('Aerodrome weather and NOTAMs', page);
+    else if (/^Fir:\s*[A-Z]{4}\b/i.test(t)) add('FIR NOTAMs', page);
+    else if (/ COMPANY NOTAMS(?::\s*NIL)?$/.test(t)) add('Company NOTAMs', page);
+    else if (/^-{5,}$/.test(next.trim()) && /^[A-Z][A-Z0-9 /&().,'-]{5,}$/.test(t) && !/^END OF\b/.test(t))
+      add(t, page);
+  }
+  return out.sort((a, b) => a.page - b.page);
+}
+
 /* ---------- stored flight data ----------
    A plan's saved state is keyed by the PDF's own SHA-256, so two files share a
    key only if they are the same file. legacyKeyFor is the name-and-size key
@@ -311,5 +389,5 @@ function prunePlans(store, now, retainDays, maxPlans){
 if (typeof module !== 'undefined' && module.exports)
   module.exports = { norm, fmt, hhmm, parseTime, validFuelEntry, wrapMin, sinceDueAt, sinceDueFrom, computeResult,
                      hourlyChecks, fuelBox, fuelChecks, directSkips, abeamAt,
-                     manPage, mandatoryReads,
+                     manPage, mandatoryReads, briefPage, attachmentTitle, groupAttachments, briefSections,
                      PLAN_PREFIX, SETTING_KEYS, legacyKeyFor, planKeyFor, planKeysIn, prunePlans };

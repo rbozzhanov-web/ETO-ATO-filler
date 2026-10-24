@@ -626,11 +626,14 @@ async function loadBuffer(name, size, buf, resumed, known = {}){
     showFigs(r.figs);
     showWx(r.wx);
     showCharts(r.charts);
-    showMan(r.mandatoryReads);
+    showPackage(r);
     const s1 = PLAN.filter(p => p.sec === 1).length;
+    const attached = (r.mandatoryReads || []).length + (r.attachments || []).length;
     msg('#m1', `Found: ${s1} main route waypoints`
              + (PLAN.length - s1 ? `, ${PLAN.length - s1} alternate` : '')
-             + (FIELDS.length ? `, ${FIELDS.length} document fields` : ''), 'ok');
+             + (FIELDS.length ? `, ${FIELDS.length} document fields` : '')
+             + (attached ? ` \u2014 and ${attached} attached document${attached > 1 ? 's' : ''} to read, listed below` : ''),
+        attached ? 'warn' : 'ok');
     showFpl();
     const st = restore();
     if (st){
@@ -744,7 +747,8 @@ const stamp = s => {
 // The back-of-package bulletin runs the keyword into the code: "SPECIZWYN".
 const spaced = s => s.replace(/^(METAR|SPECI|TAF)([A-Z]{4}\s)/, '$1 $2');
 
-const GROUPS = [['flight', 'This flight'], ['fir', 'Areas along the route'], ['other', 'Other aerodromes']];
+const GROUPS = [['flight', 'This flight'], ['company', 'Company notices'],
+                ['fir', 'Areas along the route'], ['other', 'Other aerodromes']];
 
 /* ---- when the flight is at each aerodrome ----
    FPL's own ETD/STD and ETA/STA, against the plan's DOF, are the only clock this app
@@ -1020,30 +1024,73 @@ function renderWx(){
 }
 $('#wxApt').onchange = renderWx;
 
-/* ================= mandatory reads =================
-   Company documents the crew is meant to have read before dispatch, carried at
-   the back of the package. Each is listed by its subject and opened as it was
-   printed: its own pages of the original PDF, in the chart viewer, with Prev
-   and Next through the rest of the document. Nothing of the document is
-   re-set as text — the PDF is the document. */
-function showMan(list){
+/* ================= in this package =================
+   Everything the package carries beyond what the app sets out itself, so none
+   of it goes unnoticed: the documents attached behind the OFP — mandatory reads
+   by subject, anything else by the title on its first page — and the company
+   notices that belong to no aerodrome (ADMIN, WAYPOINT, …), listed openly; the
+   brief's own sections folded into a contents list beneath. A document or a
+   section opens as printed, its own pages of the original PDF in the chart
+   viewer; a company notice opens in the weather and NOTAMs card. All of it is
+   found by the package's shape, so what the airline adds later is listed too. */
+function showPackage(r){
   const card = $('#c9'), out = $('#manOut');
-  const docs = list || [];
   clear(out);
-  card.classList.toggle('hide', !docs.length);
-  $('#manSum').textContent = docs.length ? String(docs.length) : '';
-  for (const m of docs){
-    const first = m.pages[0] + 1, last = m.pages[m.pages.length - 1] + 1;
-    const pg = m.pages.length > 1 ? `pp. ${first}\u2013${last}` : `p. ${first}`;
-    const b = mk('button', 'man');
+  const reads = (r && r.mandatoryReads) || [], atts = (r && r.attachments) || [];
+  const sections = (r && r.sections) || [], total = (r && r.pageCount) || 0;
+  const company = WX ? WX.airports.filter(a => a.group === 'company' && a.co.length) : [];
+  const docs = reads.length + atts.length;
+  card.classList.toggle('hide', !docs && !company.length && !sections.length);
+  $('#manSum').textContent = docs ? `${docs} attached` : '';
+  const pp = pages => { const a = pages[0] + 1, b = pages[pages.length - 1] + 1;
+                        return pages.length > 1 ? `pp. ${a}\u2013${b}` : `p. ${a}`; };
+  const row = (title, meta, go, onclick, cls) => {
+    const b = mk('button', 'man' + (cls ? ' ' + cls : ''));
     b.type = 'button';
-    b.appendChild(mk('b', null, m.subject || 'MAN ' + m.man));
-    b.appendChild(mk('small', null,
-      ['MAN ' + m.man, m.issue && 'issue ' + m.issue, m.rev && 'rev ' + m.rev, pg].filter(Boolean).join(' · ')
-      + (m.applic ? ' · for ' + m.applic : '')));
-    b.appendChild(mk('span', 'go', 'Open \u2197'));
-    b.onclick = () => openPages(m.pages, m.pages[0]);
-    out.appendChild(b);
+    b.appendChild(mk('b', null, title));
+    b.appendChild(mk('small', null, meta));
+    b.appendChild(mk('span', 'go', go));
+    b.onclick = onclick;
+    return b;
+  };
+  if (docs){
+    out.appendChild(mk('div', 'pkghd', 'Attached to this OFP \u2014 read before departure'));
+    for (const m of reads)
+      out.appendChild(row(m.subject || 'MAN ' + m.man,
+        ['Mandatory read', 'MAN ' + m.man, m.issue && 'issue ' + m.issue, m.rev && 'rev ' + m.rev, pp(m.pages)]
+          .filter(Boolean).join(' · ') + (m.applic ? ' · for ' + m.applic : ''),
+        'Open \u2197', () => openPages(m.pages, m.pages[0])));
+    for (const d of atts)
+      out.appendChild(row(d.title || 'Attached document', 'Attached document · ' + pp(d.pages),
+        'Open \u2197', () => openPages(d.pages, d.pages[0])));
+  }
+  if (company.length){
+    out.appendChild(mk('div', 'pkghd', 'Company notices for every flight'));
+    for (const a of company)
+      out.appendChild(row(a.icao, `${a.co.length} company NOTAM${a.co.length > 1 ? 's' : ''} · `
+          + a.co.map(c => c.id).join(', '), 'View \u2193', () => {
+        $('#wxApt').value = String(WX.airports.indexOf(a));
+        renderWx();
+        $('#c7').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 'co'));
+  }
+  if (sections.length){
+    const det = mk('details', 'pkgtoc');
+    det.appendChild(mk('summary', null, `Briefing contents \u00b7 ${sections.length} sections`));
+    sections.forEach((sec, k) => {
+      // The section's own pages: from where it starts to where the next begins.
+      const end = k + 1 < sections.length ? Math.max(sec.page, sections[k + 1].page - 1)
+                                          : Math.max(sec.page, total - 1);
+      const pages = [];
+      for (let n = sec.page; n <= end && pages.length < 40; n++) pages.push(n);
+      const b = mk('button', 'toc');
+      b.type = 'button';
+      b.appendChild(mk('span', 'pg', 'p. ' + (sec.page + 1)));
+      b.appendChild(document.createTextNode(sec.title));
+      b.onclick = () => openPages(pages, sec.page);
+      det.appendChild(b);
+    });
+    out.appendChild(det);
   }
 }
 
@@ -1530,8 +1577,19 @@ function validity(s){
   const a = cut(s.slice(0, i)), b = cut(s.slice(i + 1));
   return { from: a.t, to: b.t, est: a.est || b.est };
 }
-// "UAAA-00001 Oper: Y 28MAY25/0432" and the route form "UAAA-RKSI-00002 Oper: ..."
-const RE_CONTM  = /^([A-Z]{4})(?:-([A-Z]{4}))?-(\d{4,6})\s+Oper:/;
+// "UAAA-00001 Oper: Y 28MAY25/0432", the route form "UAAA-RKSI-00002 Oper: ...",
+// and every other category's own: "ADMIN-00001", "RUDEK-00001" (a waypoint),
+// "EI-KEB-00001" (the aircraft).
+const RE_CONTM  = /^([A-Z0-9]+(?:-[A-Z0-9]+)*?)-(\d{4,6})\s+Oper:/;
+// The company NOTAMs come in categories, each under its own heading: STATION
+// (and under it each aerodrome's own "OMDB COMPANY NOTAMS"), ROUTE, FIR, ADMIN,
+// RELEASE, the registration, EQUIP, FLTNUM, AIRWAY, WAYPOINT, GEOGRAPHIC AREA —
+// a ": NIL" one empty. Only the station ones belong to an aerodrome; the rest
+// were dropped for want of one, and they are where the airline puts what
+// applies to every flight: the EFB versions, the dispatch numbers, an uplift
+// limit, an oxygen-route procedure. Each category is listed on its own now, and
+// one the airline adds later is picked up by its heading like the others.
+const RE_COCAT  = /^(.+?) COMPANY NOTAMS(?::\s*NIL)?$/;
 const RE_VALID  = /^VALID FROM:\s*(\S+)\s+TO:\s*(\S+)/;
 const RE_APT    = /^([A-Z]{4})\s+([A-Z]{3})\s+RWY/;          // "UAAA ALA RWY05L 4500M ..."
 const RE_ROLE   = /^(DEPARTURE|ARRIVAL|OTHER):\s*(.+)$/;
@@ -1548,7 +1606,7 @@ function weatherNotams(lines, icao){
   };
   const src = lines.filter(l => l.text.trim() && !CHROME(l.text.trim())).map(l => l.text.trim());
 
-  let open = null, pending = null, subject = null;
+  let open = null, pending = null, subject = null, coCat = null;
   const close = () => {
     if (!open) return;
     const body = open.buf.join(' ').replace(/\s+/g, ' ').trim();
@@ -1583,6 +1641,12 @@ function weatherNotams(lines, icao){
       if (pending){ a.name = pending.name; if (!a.role) a.role = pending.role; pending = null; }
       continue;
     }
+    if ((m = t.match(RE_COCAT))){
+      close(); subject = null;
+      // An aerodrome's own heading inside STATION keeps the category.
+      if (!(coCat === 'STATION' && /^[A-Z]{4}$/.test(m[1]))) coCat = m[1].trim();
+      continue;
+    }
     if (RE_CONHD.test(t)){ close(); subject = null; continue; }
 
     if ((m = t.match(RE_METAR))){ close(); open = { kind: 'metar', code: m[1], buf: [t] }; continue; }
@@ -1598,8 +1662,12 @@ function weatherNotams(lines, icao){
     }
     if ((m = t.match(RE_CONTM))){
       close();
-      // A route company NOTAM (UAAA-RKSI-00002) belongs to both ends of the leg.
-      const codes = m[2] ? [m[1], m[2]] : [m[1]];
+      // A station item goes to its aerodrome, and a route one (UAAA-RKSI-00002)
+      // to both ends of the leg; every other category's to that category.
+      const parts = m[1].split('-');
+      const aerodromes = (!coCat || coCat === 'STATION' || coCat === 'ROUTE' || coCat === 'FIR')
+        && parts.length <= 2 && parts.every(x => /^[A-Z]{4}$/.test(x));
+      const codes = aerodromes ? parts : ['CO:' + (coCat || 'COMPANY')];
       open = { kind: 'co', codes, id: m[0].split(/\s+/)[0], from: null, to: null, buf: [] };
       continue;
     }
@@ -1618,12 +1686,15 @@ function weatherNotams(lines, icao){
 
   const rank = { departure: 0, arrival: 1, destination: 1, alternate: 2, 'en-route alternate': 3 };
   // "Areas" are the FIRs the plan crosses that are not aerodromes in their own right.
-  const group = a => a.role ? 'flight'
+  const group = a => a.icao.startsWith('CO:') ? 'company'
+                   : a.role ? 'flight'
                    : (fir.has(a.icao) && !named.has(a.icao)) ? 'fir'
                    : 'other';
   const airports = [...by.values()]
     .filter(a => a.metar.length || a.taf.length || a.notams.length || a.co.length)
-    .map(a => ({ ...a, group: group(a) }))
+    .map(a => a.icao.startsWith('CO:')
+      ? { ...a, icao: a.icao.slice(3), name: 'company notices', group: 'company' }
+      : { ...a, group: group(a) })
     .sort((a, b) => (rank[a.role] ?? 9) - (rank[b.role] ?? 9) || a.icao.localeCompare(b.icao));
   return { airports };
 }
@@ -1632,7 +1703,7 @@ async function parse(buf){
   const doc = new PDFMini.Doc(new Uint8Array(buf));
   const pages = doc.pages();
   const dotRows = [], headers = [], rawFields = [], page0 = [], allLines = [], charts = [], openQ = [];
-  const manPages = [];
+  const manPages = [], pinfo = [];
   // The OFP's own WIND column, found by its heading and carried from page to
   // page: the columns stand at the same x throughout the waypoint table.
   let windSpan = null;
@@ -1648,6 +1719,13 @@ async function parse(buf){
     // path of its own (manPage, in ofp-core.js).
     const man = manPage(items, p);
     if (man) manPages.push(man);
+    // What kind of page this is in the package: the brief's own, or attached.
+    {
+      const mb = pages[p].MediaBox || [0, 0, 612, 792];
+      const W = Math.round(Math.abs(mb[2] - mb[0])), H = Math.round(Math.abs(mb[3] - mb[1]));
+      const brief = briefPage(items);
+      pinfo.push({ brief, size: W + 'x' + H, title: brief ? null : attachmentTitle(items, H) });
+    }
     const byLine = new Map();
     for (const it of items){
       if (it.size < 9 || it.size > 13) continue;
@@ -1789,9 +1867,19 @@ async function parse(buf){
   if (pairs.some(p => !p.font)) throw new Error('no Courier font on the page');
   allLines.sort((a, b) => a.page - b.page || b.base - a.base);
   const icao = icaoPlan(allLines);
+  const reads = mandatoryReads(manPages);
+  // Only a package that marks its own pages can say which pages are attached.
+  const marked = pinfo.some(pg => pg.brief);
+  const attachments = marked ? groupAttachments(pinfo, new Set(reads.flatMap(r => r.pages))) : [];
+  const sections = briefSections(allLines.filter(l => !marked || (pinfo[l.page] && pinfo[l.page].brief)));
+  // Two the app knows by what it read there rather than by a heading.
+  if (headers.length) sections.push({ title: 'Navigation log', page: headers[0].page });
+  if (charts.length) sections.push({ title: 'Charts', page: charts[0].page });
+  sections.sort((a, b) => a.page - b.page);
   return { doc, pairs, headers, anchor, fields, fpl, icao, charts, openQ,
            ofp: ofpIdent(allLines), figs: keyFigures(allLines),
-           wx: weatherNotams(allLines, icao), mandatoryReads: mandatoryReads(manPages) };
+           wx: weatherNotams(allLines, icao), mandatoryReads: reads, attachments, sections,
+           pageCount: pages.length };
 }
 
 /* ---- the PDF itself, only when it is needed ----
@@ -3076,7 +3164,7 @@ $('#reset').onclick = () => {
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
   for (const k in ALT) delete ALT[k];
-  showIcao(null); showOfp(null); showFigs(null); showWx(null); showCharts(null); showMan(null); openCharts(false);
+  showIcao(null); showOfp(null); showFigs(null); showWx(null); showCharts(null); showPackage(null); openCharts(false);
   $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
   $('#fob').value = ''; paintFob();
   $('#fname').textContent = ''; $('#saved').textContent = '';
