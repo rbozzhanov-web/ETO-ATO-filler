@@ -868,15 +868,65 @@ try {
     }, bytes);
     check(r.hiddenAtFirst && r.shownWhenOn && r.hiddenAgain, 'the wind/temp boxes come and go with their checkbox');
     check(r.remembered, 'and the choice is kept for the device');
-    check(r.wind === '280/45', 'a wind typed as 28045 reads 280/45');
+    check(r.wind === '28045', 'a wind typed as 28045 stays as the OFP prints one');
     check(r.minus === '-52' && r.plus === '+52', 'a temperature is minus unless the \u00b1 key makes it plus');
     check(r.signShown && r.signHidden, 'the \u00b1 key is there only for a temperature');
-    check(r.saved === JSON.stringify({ wind: '280/45', temp: '+52' }), 'both are saved with the waypoint');
+    check(r.saved === JSON.stringify({ wind: '28045', temp: '+52' }), 'both are saved with the waypoint');
     check(r.exp.join(' ') === '30500 29500 27500 24500', 'under each REM: what it should show from the FOB'
           + (r.exp.join(' ') === '30500 29500 27500 24500' ? '' : ` (${r.exp.join(' ')})`));
     check(/\+500/.test(r.note) && r.hdr === 'from FOB', 'with the FOB against the planned block fuel stated, and the column labelled');
     check(r.diff === '+500', 'and the DIFF still against the OFP');
     check(r.fobSaved === '30500', 'the FOB is saved with the flight');
+    check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
+    await page.close();
+  }
+
+  /* ---- the actual wind printed over the OFP's own ----
+     The planned wind stands under the table's WIND heading on each waypoint's
+     upper line ("33016"), with a blank line above every waypoint. The box shows
+     it greyed; the actual — and a temperature after it — is printed on that
+     blank line, directly above the planned figure, and only where it is blank. */
+  {
+    const { page, problems } = await open('index.html');
+    // WIND heading at x=74 (over the wind, after "W0X ") just above the ATO heading line; each waypoint's
+    // upper line carries its wind at the same x, with a blank line between
+    // waypoints, as the OFP sets it.
+    let t = 'BT /F1 10 Tf 74 732 Td (WIND) Tj ET\n'
+          + 'BT /F1 10 Tf 50 720 Td (WPT  FL   ET  ETO) Tj ET\nBT /F1 10 Tf 480 720 Td (ATO) Tj ET\n';
+    let y = 696, cum = 0;
+    [[0, '33016'], [20, '32025'], [40, '31030']].forEach(([et, w], k) => {
+      cum += et;
+      const tt = Math.floor(cum / 60) + '.' + String(cum % 60).padStart(2, '0');
+      t += `BT /F1 10 Tf 50 ${y} Td (W${k}X ${w} ${et} 1234) Tj ET\nBT /F1 10 Tf 470 ${y} Td (....) Tj ET\n`;
+      t += `BT /F1 10 Tf 50 ${y - 12} Td (AA BB ${tt} ${30000 - cum * 50}) Tj ET\n`
+         + `BT /F1 10 Tf 470 ${y - 12} Td (....) Tj ET\n`;
+      y -= 36;
+    });
+    // ...and one waypoint printed with something on the line above its wind.
+    t += 'BT /F1 10 Tf 74 ' + (696 - 36 + 12) + ' Td (NOTE) Tj ET\n';
+    const bytes = [...buildPdf({ text: t, compress: false })];
+    const r = await page.evaluate(async a => {
+      await loadBuffer('WIND.pdf', a.length, new Uint8Array(a).buffer, false);
+      document.querySelector('#etd').value = '1000';
+      document.querySelector('#calc').click();
+      const grey = [...document.querySelectorAll('#tbl input.wind')].map(i => i.placeholder);
+      const set = (i, k, v) => { const e = document.querySelector(`#tbl tr[data-i="${i}"] input.${k}`);
+        e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
+      set(0, 'wind', '33520'); set(0, 'temp', '48');
+      set(1, 'wind', '32030');                           // the one with print above it
+      set(2, 'temp', '51');
+      await ensureRaw();
+      return { grey, unplaced: RESULT.filter(p => windTempText(ACT[p.i]) && !windPrintable(p)).map(p => p.wp),
+               saved: [...new Uint8Array(await build().arrayBuffer())] };
+    }, bytes);
+    const out = new PDFMini.Doc(new Uint8Array(r.saved));
+    const items = PDFMini.textItems(await out.content(out.pages()[0]));
+    const at = (x, yy) => items.filter(i => Math.abs(i.x - x) < 0.5 && Math.abs(i.y - yy) < 0.5).map(i => i.str);
+    check(r.grey.join(' ') === '33016 32025 31030', 'each wind box shows the OFP\u2019s own wind greyed');
+    check(at(74, 708).includes('33520 -48'), 'the actual wind and temperature are printed just above the planned wind');
+    check(at(74, 636).includes('-51'), 'a temperature on its own takes the same place');
+    check(!at(74, 672).some(s => /32030/.test(s)) && r.unplaced.join() === 'W1X',
+          'and nothing is printed where the line above is not blank — Save names that waypoint instead');
     check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
     await page.close();
   }

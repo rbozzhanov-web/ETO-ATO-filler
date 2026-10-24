@@ -228,11 +228,16 @@ contexts, so everything works on either.
    actually means restarts at that moment, the same as it would on paper.
    **Wind / temp** in the table's toolbar adds two boxes to every waypoint, for the wind and
    temperature actually met — kept for the device, so a crew that logs them has them every
-   flight and one that does not never sees them. The wind is typed as five or six figures and
-   reads as the OFP prints it, `280/45`; a temperature is below zero unless the **±** key on
-   the keypad (shown only for a temperature box) makes it plus. Both are saved with the flight
-   and shown in the app; they are not yet written into the saved PDF — that waits on the
-   placement next to the OFP's own WIND/TEMP columns being confirmed on a real package.
+   flight and one that does not never sees them. The wind box shows the OFP's own wind for that
+   waypoint greyed — read from under the table's **WIND** heading, `33016`, direction and speed
+   run together — and the actual is typed over it in the same form. A temperature is below zero
+   unless the **±** key on the keypad (shown only for a temperature box) makes it plus; the OFP
+   prints no temperature, so its box has nothing greyed in it.
+
+   In the saved PDF the actual wind, and the temperature after it, are printed in the actuals'
+   green on the blank line directly above the OFP's own wind — `33520 -48` over `33016`. They
+   are printed only where that line is blank; a waypoint whose wind column has print above it,
+   or whose wind could not be found, is named by Save instead, and nothing is written over it.
 
    **FOB before start** (optional) is the fuel on board read off the fuel panel before engine
    start. The Δ column stays against the OFP. What it adds is, under each REM plan, the figure

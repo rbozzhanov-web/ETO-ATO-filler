@@ -1633,6 +1633,9 @@ async function parse(buf){
   const pages = doc.pages();
   const dotRows = [], headers = [], rawFields = [], page0 = [], allLines = [], charts = [], openQ = [];
   const manPages = [];
+  // The OFP's own WIND column, found by its heading and carried from page to
+  // page: the columns stand at the same x throughout the waypoint table.
+  let windSpan = null;
   let anchor = 0, fpl = null;
 
   for (let p = 0; p < pages.length; p++){
@@ -1657,11 +1660,14 @@ async function parse(buf){
         arr.push({ ch, x: it.x + i * it.cw, base: it.y, size: it.size, cw: it.cw });
       }
     }
+    const windHeads = [], pageRows = [];
     for (const [, chars] of byLine){
       chars.sort((a, b) => a.x - b.x);
       const last = chars[chars.length - 1];
       if (!last) continue;
       const cw = last.cw;
+      const wh = tokensX(chars, cw).find(t => t.t === 'WIND');
+      if (wh) windHeads.push({ base: last.base, x: wh.x, x1: wh.x1 });
 
       if (p === 0){
         page0.push({ base: last.base, chars, cw, maxX: last.x + cw,
@@ -1687,8 +1693,38 @@ async function parse(buf){
       for (let i = 1; i < 4; i++) if (Math.abs(dots[i].x - dots[0].x - cw * i) > 0.8) ok = false;
       if (!ok) continue;
       anchor = Math.max(anchor, dots[0].x + 4 * cw);
+      pageRows.push(dotRows.length);
       dotRows.push({ page: p, base: dots[0].base, size: dots[0].size, cw, x: dots[0].x, font,
+                     tx: tokensX(chars.filter(c => c.x < dots[0].x - 3), cw),
                      tok: tokenize(chars.filter(c => c.x < dots[0].x - 3), cw) });
+    }
+
+    /* The planned wind: what the waypoint's upper line prints under the WIND
+       heading — "33016", direction and speed run together. The heading is the
+       one standing on the table's own header, at or just above its ATO line;
+       the word anywhere else on the page (a NOTAM, a weather page) is not it.
+       The actual is printed on the blank line above the planned figure, so the
+       row also records whether that line really is blank there, for the wind
+       and a temperature after it. */
+    const head = windHeads.find(w => headers.some(h => h.page === p
+      && w.base - h.base >= 0 && w.base - h.base < 16));
+    if (head) windSpan = head;
+    if (windSpan){
+      const pageChars = [...byLine.values()].flat();
+      for (const k of pageRows){
+        const row = dotRows[k], cw = row.cw;
+        let best = null, bd = 1e9;
+        for (const t of row.tx){
+          const ov = Math.min(t.x1, windSpan.x1) - Math.max(t.x, windSpan.x);
+          if (ov <= Math.min(t.x1 - t.x, windSpan.x1 - windSpan.x) * 0.25) continue;
+          const d = Math.abs((t.x + t.x1) / 2 - (windSpan.x + windSpan.x1) / 2);
+          if (d < bd){ bd = d; best = t; }
+        }
+        if (!best || !/^\d{5,6}$/.test(best.t)) continue;
+        row.wind = best.t; row.wx = best.x;
+        const above = row.base + 12, from = best.x - cw, to = best.x + 11 * cw;
+        row.wfree = !pageChars.some(c => Math.abs(c.base - above) < 4 && c.x >= from && c.x <= to);
+      }
     }
   }
 
@@ -1744,6 +1780,7 @@ async function parse(buf){
     if (ttm < prev){ sec++; cum = 0; }
     prev = ttm; cum += +et;
     pairs.push({ i: pairs.length, wp: a.tok[0], et: +et, cum, sec, page: a.page,
+                 wind: a.wind || null, wx: a.wind ? a.wx : null, wfree: !!a.wfree,
                  ex: a.x, ey: a.base, ax: b.x, ay: b.base, size: a.size, cw: a.cw, font: a.font,
                  rem: /^\d+$/.test(rem) ? +rem : null, drift: cum !== ttm });
     i++;
@@ -2489,7 +2526,9 @@ function render(t0, arr){
     const diff = mk('td', 'diff');
     diff.dataset.d = p.i;
     r.appendChild(diff);
-    const wt = cellInput('wind numkey', p.i, 7, 'ddd/ss', a.wind || '', 'wt');
+    // The OFP's own wind for the waypoint stands greyed in the box; the actual
+    // is typed over it, in the same form.
+    const wt = cellInput('wind numkey', p.i, 6, p.wind || 'wind', a.wind || '', 'wt');
     const temp = wt.appendChild(document.createElement('input'));
     Object.assign(temp, { className: 'temp numkey', type: 'text', maxLength: 3, inputMode: 'none',
                           autocomplete: 'off', spellcheck: false, enterKeyHint: 'next',
@@ -2529,7 +2568,7 @@ function paint(i){
 // A wind needs its whole direction and a speed; a temperature, its figures.
 function validWindTemp(kind, v){
   if (kind === 'temp') return /^(0|[+-]\d{1,2})$/.test(v);
-  const m = /^(\d{3})\/(\d{2,3})$/.exec(v);
+  const m = /^(\d{3})(\d{2,3})$/.exec(v);
   return !!m && +m[1] <= 360 && +m[2] <= 299;
 }
 function countFilled(){
@@ -2544,7 +2583,7 @@ function refreshInputValidity(){
       const bad = value.length > 0 && !validWindTemp(kind, value);
       inp.classList.toggle('bad', bad);
       inp.setAttribute('aria-invalid', bad ? 'true' : 'false');
-      inp.title = bad ? (kind === 'wind' ? 'Wind as ddd/ss: direction 000–360, speed up to 299 kt.'
+      inp.title = bad ? (kind === 'wind' ? 'Wind as the OFP prints it, 33016: direction 000–360, then the speed.'
                                          : 'Temperature in whole degrees.') : '';
       continue;
     }
@@ -2573,13 +2612,13 @@ function refreshInputValidity(){
 const tableInputs = () => [...document.querySelectorAll('#tbl input')]
   .filter(inp => !inp.closest('.wt') || $('#tbl').classList.contains('wt-on'));
 const kindOf = inp => ['ato', 'fuel', 'wind', 'temp'].find(k => inp.classList.contains(k));
-// Wind as the OFP prints it, ddd/ss — the slash goes in by itself after the
-// direction. A temperature is below zero unless the sign key made it plus.
+// Wind as the OFP prints it, direction and speed run together: 33016. A
+// temperature is below zero unless the sign key made it plus.
 function formatEntry(inp){
   const k = kindOf(inp), d = inp.value.replace(/\D/g, '');
   if (k === 'ato') return d.slice(0, 4);
   if (k === 'fuel') return d.slice(0, 5);
-  if (k === 'wind'){ const w = d.slice(0, 6); return w.length > 3 ? w.slice(0, 3) + '/' + w.slice(3) : w; }
+  if (k === 'wind') return d.slice(0, 6);
   const t = d.slice(0, 2);
   return !t ? '' : +t === 0 ? '0' : (inp.dataset.plus ? '+' : '-') + t;
 }
@@ -2916,6 +2955,16 @@ function build(){
   }
 
   const PGS = doc.pages();
+  // The actual wind — and a temperature after it — on the blank line above the
+  // OFP's own wind, in the actuals' colour. Only where that line is blank: a
+  // row whose wind could not be found, or with print over it, is left alone
+  // (and Save says so).
+  for (const p of RESULT){
+    const t = windTempText(ACT[p.i]);
+    if (!t || !windPrintable(p)) continue;
+    ops(p.page).text(BOLD, p.size, p.wx, p.ey + (p.ey - p.ay), t, C_ATO);
+  }
+
   for (const c of CHECKS){
     const v = ALT[c.mark];
     if (!v || (!v.a1 && !v.sb && !v.a2)) continue;
@@ -2944,6 +2993,13 @@ function build(){
     dict: '<</Type/Font/BaseFont/Courier-Bold/Encoding/StandardEncoding/Subtype/Type1>>' }];
   return new Blob([PDFMini.append(doc, map, { fonts })], { type: 'application/pdf' });
 }
+// What is printed for a waypoint's actual wind and temperature, if anything.
+function windTempText(a){
+  if (!a) return '';
+  return [a.wind && validWindTemp('wind', a.wind) ? a.wind : null,
+          a.temp && validWindTemp('temp', a.temp) ? a.temp : null].filter(Boolean).join(' ');
+}
+const windPrintable = p => p.wx != null && p.wfree;
 const outName = () => NAME.replace(/\.pdf$/i, '') + '_ETO.pdf';
 
 $('#dl').onclick = async () => {
@@ -2953,6 +3009,10 @@ $('#dl').onclick = async () => {
   if (missing.length) warn.push(
     `${missing.length} altimeter cross-check${missing.length > 1 ? 's are' : ' is'} not recorded `
     + `(${missing.map(c => '+' + c.mark / 60 + 'h').join(', ')}).`);
+  const unplaced = RESULT.filter(p => windTempText(ACT[p.i]) && !windPrintable(p));
+  if (unplaced.length) warn.push(
+    `The actual wind/temp for ${unplaced.length} waypoint${unplaced.length > 1 ? 's' : ''} `
+    + `(${unplaced.map(p => p.wp).join(', ')}) has no clear place on this OFP and is not printed.`);
   if (noFuel.length) warn.push(
     `${noFuel.length} fuel check${noFuel.length > 1 ? 's are' : ' is'} overdue with no fuel recorded.`);
   if (warn.length && !confirm(warn.join('\n') + '\n\nSave anyway?')) return;
