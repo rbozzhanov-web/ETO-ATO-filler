@@ -976,15 +976,18 @@ try {
         + ' | ' + b.querySelector('small').textContent);
       const toc = [...c9.querySelectorAll('button.toc')].map(b => b.textContent);
       const m1 = document.querySelector('#m1');
+      const folds = [...c9.querySelectorAll('details.pkggrp')].map(d => d.querySelector('.pkgn').textContent + (d.open ? 'o' : ''));
       const omdb = WX.airports.find(x => x.icao === 'OMDB');
       [...c9.querySelectorAll('button.man.co')].find(b => b.textContent.startsWith('ADMIN')).click();
       const wx = WX.airports[+document.querySelector('#wxApt').value];
       const ids = [...document.querySelectorAll('#wxOut .ntm .id')].map(e => e.textContent);
       return { shown: !c9.classList.contains('hide'), badge: document.querySelector('#manSum').textContent,
-               rows, toc, m1: m1.textContent, warn: m1.classList.contains('warn'),
+               rows, toc, folds, m1: m1.textContent, warn: m1.classList.contains('warn'),
                omdbCo: omdb && omdb.co.map(c => c.id), picked: wx.icao, ids };
     }, bytes);
-    check(r.shown && r.badge === '2 attached', 'a package with documents behind the OFP says how many are attached');
+    check(r.shown && r.badge === '2 attached \u00b7 3 company NOTAMs', 'a package with documents behind the OFP says how many are attached');
+    check(r.folds.length === 3 && r.folds.slice(0, 2).join() === '2,3' && r.folds.every(f => !f.endsWith('o')),
+          'each group folds to one line with its count, closed until opened' + ` (${r.folds.join(' / ')})`);
     check(r.warn && /2 attached documents to read/.test(r.m1), 'and the load message says so too');
     check(r.rows[0].startsWith('ACARS LOGON PROCEDURE | Mandatory read') &&
           r.rows[1] === 'DXB OPERATIONAL BRIEFING | Attached document · p. 3',

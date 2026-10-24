@@ -1033,7 +1033,9 @@ $('#wxApt').onchange = renderWx;
    section opens as printed, its own pages of the original PDF in the chart
    viewer; a company notice opens in the weather and NOTAMs card. All of it is
    found by the package's shape, so what the airline adds later is listed too. */
+let PKG_OPEN = new Set(), PKG_OF = null;
 function showPackage(r){
+  if (r !== PKG_OF){ PKG_OF = r; PKG_OPEN = new Set(); }   // a new package starts folded
   const card = $('#c9'), out = $('#manOut');
   clear(out);
   const reads = (r && r.mandatoryReads) || [], atts = (r && r.attachments) || [];
@@ -1041,7 +1043,9 @@ function showPackage(r){
   const company = WX ? WX.airports.filter(a => a.group === 'company' && a.co.length) : [];
   const docs = reads.length + atts.length;
   card.classList.toggle('hide', !docs && !company.length && !sections.length);
-  $('#manSum').textContent = docs ? `${docs} attached` : '';
+  const notices = company.reduce((n, a) => n + a.co.length, 0);
+  $('#manSum').textContent = [docs && `${docs} attached`, notices && `${notices} company NOTAM${notices > 1 ? 's' : ''}`]
+    .filter(Boolean).join(' \u00b7 ');
   const pp = pages => { const a = pages[0] + 1, b = pages[pages.length - 1] + 1;
                         return pages.length > 1 ? `pp. ${a}\u2013${b}` : `p. ${a}`; };
   const row = (title, meta, go, onclick, cls) => {
@@ -1053,21 +1057,34 @@ function showPackage(r){
     b.onclick = onclick;
     return b;
   };
+  // Each group folds to one line with its count, so the card stays short; a
+  // group opened stays open while the same package is shown.
+  const group = (key, title, count, cls) => {
+    const det = mk('details', 'pkggrp' + (cls ? ' ' + cls : ''));
+    det.open = PKG_OPEN.has(key);
+    det.ontoggle = () => { det.open ? PKG_OPEN.add(key) : PKG_OPEN.delete(key); };
+    const sum = mk('summary');
+    sum.appendChild(mk('span', 'pkghd', title));
+    sum.appendChild(mk('span', 'pkgn', String(count)));
+    det.appendChild(sum);
+    out.appendChild(det);
+    return det;
+  };
   if (docs){
-    out.appendChild(mk('div', 'pkghd', 'Attached to this OFP \u2014 read before departure'));
+    const g = group('docs', 'Attached \u2014 read before departure', docs, 'warn');
     for (const m of reads)
-      out.appendChild(row(m.subject || 'MAN ' + m.man,
+      g.appendChild(row(m.subject || 'MAN ' + m.man,
         ['Mandatory read', 'MAN ' + m.man, m.issue && 'issue ' + m.issue, m.rev && 'rev ' + m.rev, pp(m.pages)]
           .filter(Boolean).join(' · ') + (m.applic ? ' · for ' + m.applic : ''),
         'Open \u2197', () => openPages(m.pages, m.pages[0])));
     for (const d of atts)
-      out.appendChild(row(d.title || 'Attached document', 'Attached document · ' + pp(d.pages),
+      g.appendChild(row(d.title || 'Attached document', 'Attached document · ' + pp(d.pages),
         'Open \u2197', () => openPages(d.pages, d.pages[0])));
   }
   if (company.length){
-    out.appendChild(mk('div', 'pkghd', 'Company notices for every flight'));
+    const g = group('co', 'Company NOTAMs for every flight', notices);
     for (const a of company)
-      out.appendChild(row(a.icao, `${a.co.length} company NOTAM${a.co.length > 1 ? 's' : ''} · `
+      g.appendChild(row(a.icao, `${a.co.length} company NOTAM${a.co.length > 1 ? 's' : ''} · `
           + a.co.map(c => c.id).join(', '), 'View \u2193', () => {
         $('#wxApt').value = String(WX.airports.indexOf(a));
         renderWx();
@@ -1075,8 +1092,7 @@ function showPackage(r){
       }, 'co'));
   }
   if (sections.length){
-    const det = mk('details', 'pkgtoc');
-    det.appendChild(mk('summary', null, `Briefing contents \u00b7 ${sections.length} sections`));
+    const det = group('toc', 'Briefing contents', sections.length);
     sections.forEach((sec, k) => {
       // The section's own pages: from where it starts to where the next begins.
       const end = k + 1 < sections.length ? Math.max(sec.page, sections[k + 1].page - 1)
@@ -1090,7 +1106,6 @@ function showPackage(r){
       b.onclick = () => openPages(pages, sec.page);
       det.appendChild(b);
     });
-    out.appendChild(det);
   }
 }
 
