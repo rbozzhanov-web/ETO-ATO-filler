@@ -945,6 +945,55 @@ try {
     await page.close();
   }
 
+  /* ---- every NOTAM on its own ----
+     The FIR pages flag a NOTAM issued since the last briefing with NEW where
+     the others carry their dash, or at the start of its text; name more than
+     one place for one NOTAM; and divide groups with "..D.." and "Fir:" lines.
+     Each of those once ran a NOTAM into the end of the one before it. */
+  {
+    const { page, problems } = await open('index.html');
+    const r = await page.evaluate(() => {
+      const L = [
+        'NDB',
+        'NOTAMOAHR G0425/26 12OCT1350-08JAN2359 2027 EST',
+        'NEW NDB HRT FREQ 412KHZ U/S, DUE TO ELECTRICAL FAILURE.',
+        'SFC / UNL',
+        'VOR/DME',
+        'NEW OAKN G0348/26 28AUG0520-29OCT0800',
+        'DVOR/DME KDR FREQ 116.0MHZ/107X U/S,',
+        'DUE TO TECHNICAL PROBLEMS.',
+        'SFC / UNL',
+        '..D..',
+        'ACFT ENTRY RQMNTS',
+        'NOTAMOPKR OPLR A0590/26 17OCT1445-23NOV2359 EST',
+        'PAKISTAN AIRSPACE NOT AVBL FOR INDIAN REGISTERED ACFT.',
+        'SFC / UNL',
+        'Fir: UCFO Region: OSH',
+        '- UCFM UCFO A0110/26 29JUN0926-PERM',
+        'NEW WPT FOR DOMESTIC ATC ROUTES ESTABLISHED.',
+        'SFC / UNL'].map(text => ({ text, page: 0,
+          // out in the margin: the headers, their flags and the subject lines; the rest indented
+          x: /^(?:NOTAM|NEW |- |NDB$|VOR\/DME$|ACFT|Fir:|\.\.)/.test(text) && text !== 'NEW WPT FOR DOMESTIC ATC ROUTES ESTABLISHED.' ? 40 : 80 }));
+      const w = weatherNotams(L, null);
+      const get = c => (w.airports.find(a => a.icao === c) || { notams: [] }).notams;
+      const one = n => n && `${n.id}|${n.subject}|${n.fresh ? 'NEW' : ''}|${n.text}`;
+      return { oahr: get('OAHR').map(one), oakn: get('OAKN').map(one),
+               opkr: get('OPKR').map(n => n.id), oplr: get('OPLR').map(n => n.id),
+               ucfm: get('UCFM').map(one), ucfo: get('UCFO').map(n => n.id) };
+    });
+    check(r.oahr.length === 1 && r.oahr[0] === 'G0425/26|NDB|NEW|NDB HRT FREQ 412KHZ U/S, DUE TO ELECTRICAL FAILURE. SFC / UNL',
+          'a NOTAM flagged NEW in its text is tagged and kept to its own words' + ` (${r.oahr.join(' / ')})`);
+    check(r.oakn.length === 1 && r.oakn[0] === 'G0348/26|VOR/DME|NEW|DVOR/DME KDR FREQ 116.0MHZ/107X U/S, DUE TO TECHNICAL PROBLEMS. SFC / UNL',
+          'a NOTAM headed NEW is a NOTAM of its own, with the subject above it' + ` (${r.oakn.join(' / ')})`);
+    check(r.opkr.join() === 'A0590/26' && r.oplr.join() === 'A0590/26',
+          'a NOTAM naming two places is listed under each, and the divider above it is in neither');
+    check(r.ucfm.length === 1 && r.ucfm[0] === 'A0110/26|null||NEW WPT FOR DOMESTIC ATC ROUTES ESTABLISHED. SFC / UNL'
+          && r.ucfo.join() === 'A0110/26' && !JSON.stringify(r).includes('Fir:'),
+          'a FIR heading closes the NOTAM above it, and a NOTAM\u2019s own word NEW stays in its text' + ` (${r.ucfm.join(' / ')})`);
+    check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
+    await page.close();
+  }
+
   /* ---- a new version waiting behind an open document is offered, not hidden ----
      The bar is the same on both pages; Update now applies it, Later puts it away. */
   for (const file of ['index.html', 'journey-log.html']){
@@ -1044,11 +1093,16 @@ try {
           n('C3', 'OBST CRANE ERECTED', ...later),
           n('D4', 'RWY 05R CLSD', ...later),
           n('E5', 'AD CLSD DUE WX', ...now),
-          n('F6', 'BIRD ACTIVITY', ...later)] }] });
+          n('F6', 'BIRD ACTIVITY', ...later),
+          n('G7', 'RWY 28 LLZ U/S', ...later)] }] });
+      const g7 = [...document.querySelectorAll('#wxOut .ntm')].find(e => e.querySelector('.id').textContent === 'G7');
+      const d4 = [...document.querySelectorAll('#wxOut .ntm')].find(e => e.querySelector('.id').textContent === 'D4');
+      const navOut = { cls: g7.className, tag: (g7.querySelector('.navtag') || {}).textContent,
+                       red: getComputedStyle(g7.querySelector('.id')).color, rwyRed: getComputedStyle(d4.querySelector('.id')).color };
       const ids = () => [...document.querySelectorAll('#wxOut .ntms > *')]
         .map(e => e.classList.contains('ntmsep') ? '|' : e.querySelector('.id').textContent).join(' ');
       const sel = document.querySelector('#wxOrder');
-      const out = { printed: ids(), defaultOrder: sel.value };
+      const out = { printed: ids(), defaultOrder: sel.value, navOut };
       sel.value = 'relevant'; sel.dispatchEvent(new Event('change'));
       out.relevant = ids();
       out.kept = localStorage.getItem('etofill:ntmorder');
@@ -1060,12 +1114,15 @@ try {
       out.back = ids();
       return out;
     });
-    check(r.defaultOrder === 'printed' && r.printed === 'A1 B2 C3 D4 E5 F6', 'NOTAMs are listed as printed by default');
-    check(r.relevant === 'E5 A1 D4 B2 | C3 F6', 'relevant first: in effect, then marked, then the rest as printed'
-          + (r.relevant === 'E5 A1 D4 B2 | C3 F6' ? '' : ` (${r.relevant})`));
+    check(r.defaultOrder === 'printed' && r.printed === 'A1 B2 C3 D4 E5 F6 G7', 'NOTAMs are listed as printed by default');
+    check(r.relevant === 'E5 A1 D4 G7 B2 | C3 F6', 'relevant first: in effect, then marked, then the rest as printed'
+          + (r.relevant === 'E5 A1 D4 G7 B2 | C3 F6' ? '' : ` (${r.relevant})`));
     check(r.kept === 'relevant', 'the order chosen is kept for the device');
-    check(r.offOrder === 'A1 B2 C3 D4 E5 F6' && r.disabled, 'with the highlights off the list is as printed and the order waits');
-    check(r.back === 'A1 B2 C3 D4 E5 F6', 'and as printed again when chosen');
+    check(/\bnav\b/.test(r.navOut.cls) && r.navOut.tag === 'NAVAID U/S' && r.navOut.red !== r.navOut.rwyRed,
+          'a navaid out of use is tagged and marked in a red of its own, not the runway\u2019s'
+          + ` (${r.navOut.cls} / ${r.navOut.red} vs ${r.navOut.rwyRed})`);
+    check(r.offOrder === 'A1 B2 C3 D4 E5 F6 G7' && r.disabled, 'with the highlights off the list is as printed and the order waits');
+    check(r.back === 'A1 B2 C3 D4 E5 F6 G7', 'and as printed again when chosen');
     check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
     await page.close();
   }

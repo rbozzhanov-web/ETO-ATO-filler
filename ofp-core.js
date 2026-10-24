@@ -384,10 +384,42 @@ function prunePlans(store, now, retainDays, maxPlans){
   return dropped;
 }
 
+/* ---- a navigation aid out of use ----
+   What the Q-line would say as subject I (ILS and its parts) or N (VOR, DME,
+   NDB, TACAN, locators, DF), with condition AS unserviceable, AU not available,
+   AC/AW withdrawn or CT on test — read off the free text, the way the packages
+   print it: Doc 8400's own abbreviations for both halves ("DVOR/DME KDR FREQ
+   116.0MHZ/107X U/S", "RWY 28 LLZ U/S", "GP 28L NOT AVBL"). Both have to be
+   there: a taxiway NOT AVBL is not a navaid, and a VOR named in a procedure
+   still in use is not out. LOC alone also means "location" in Doc 8400, so it
+   counts only beside a runway, a slash or a DME; an RNAV (GNSS) approach is a
+   procedure, not the satellites, so its name is set aside before GNSS is read.
+   So is any approach or departure merely not available — "IAC DVOR/DME X RWY 12
+   APCH ... NOT AVBL" withdraws the procedure, and the beacon it is named after
+   may be working; only a word that puts the equipment itself out (U/S, on test,
+   withdrawn ...) still marks one. */
+const RE_NAVAID = new RegExp('\\b(?:' + [
+  'D?VOR', 'CVOR', 'VORTAC', 'TACAN', 'DME', 'NDB', 'ILS', 'LLZ', 'LOCALI[SZ]ER',
+  'LOC(?=\\s*(?:\\/|RWY|DME|U\\/S|\\d))', 'GP', 'GLIDE\\s*(?:PATH|SLOPE)', 'MLS', 'GBAS', 'GLS',
+  'LOCATOR', '(?:OUTER|MIDDLE|INNER)\\s+MARKER', 'DIRECTION\\s+FINDING', 'VDF', 'GNSS', 'GPS', 'NAVAIDS?'
+].join('|') + ')\\b');
+const RE_OUT_OF_USE = new RegExp([
+  '\\bU\\/S\\b', '\\bUNSERVICEABLE\\b', '\\bNOT\\s+(?:AVBL|AVAILABLE)\\b', '\\bUNAVBL\\b',
+  '\\bUNAVAILABLE\\b', '\\bOUT\\s+OF\\s+SERVICE\\b', '\\bOTS\\b', '\\bON\\s+TEST\\b', '\\bDO\\s+NOT\\s+USE\\b',
+  '\\bWITHDRAWN\\b', '\\bDECOMMISSIONED\\b', '\\bINOP(?:ERATIVE)?\\b'
+].join('|'));
+const RE_PROCEDURE = /\b(?:IAC|APCH|APPROACH|IAF|SID|STAR|PROC(?:EDURE)?S?)\b/;
+const RE_EQUIP_OUT = /\bU\/S\b|\bUNSERVICEABLE\b|\bOUT\s+OF\s+SERVICE\b|\bOTS\b|\bON\s+TEST\b|\bDO\s+NOT\s+USE\b|\bWITHDRAWN\b|\bDECOMMISSIONED\b|\bINOP(?:ERATIVE)?\b/;
+function navaidOut(text){
+  const t = String(text || '').toUpperCase().replace(/\bRNAV\s*\(\s*GNSS\s*\)/g, 'RNAV');
+  if (!RE_NAVAID.test(t) || !RE_OUT_OF_USE.test(t)) return false;
+  return !RE_PROCEDURE.test(t) || RE_EQUIP_OUT.test(t);
+}
+
 // In the browser this file is a classic script and these are simply globals.
 // Under Node — the test runner — it is a CommonJS module, and this is its export.
 if (typeof module !== 'undefined' && module.exports)
   module.exports = { norm, fmt, hhmm, parseTime, validFuelEntry, wrapMin, sinceDueAt, sinceDueFrom, computeResult,
                      hourlyChecks, fuelBox, fuelChecks, directSkips, abeamAt,
-                     manPage, mandatoryReads, briefPage, attachmentTitle, groupAttachments, briefSections,
+                     manPage, mandatoryReads, briefPage, attachmentTitle, groupAttachments, briefSections, navaidOut,
                      PLAN_PREFIX, SETTING_KEYS, legacyKeyFor, planKeyFor, planKeysIn, prunePlans };
