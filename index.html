@@ -169,20 +169,27 @@ html[data-resuming] .wrap::after{content:"Reopening the open flight\2026";positi
 /* ---- mandatory reads: one row per document, opened as printed ---- */
 .mansum{margin-left:auto;font-size:12px;font-weight:600;color:var(--dim)}
 button.man{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:12px;
-  width:100%;min-height:0;margin:0;padding:11px 2px;text-align:left;background:none;border:0;
+  width:100%;min-height:0;margin:0;padding:7px 2px;text-align:left;background:none;border:0;
   border-top:1px solid var(--line);border-radius:0;color:var(--txt);font:inherit;cursor:pointer}
-button.man:first-child{border-top:0;padding-top:4px}
-button.man b{grid-column:1;font-size:14px;font-weight:600}
-button.man small{grid-column:1;margin-top:2px;font-size:11.5px;color:var(--dim)}
+button.man b{grid-column:1;font-size:13.5px;font-weight:600}
+button.man small{grid-column:1;margin-top:1px;font-size:11.5px;color:var(--dim)}
 button.man .go{grid-column:2;grid-row:1 / span 2;font-size:13px;font-weight:600;color:var(--acc)}
 button.man:active{opacity:.55}
-.pkghd{margin:14px 0 2px;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;
-  color:var(--warn)}
-.pkghd:first-child{margin-top:2px}
-.pkghd + button.man{border-top:0}
-.pkgtoc{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
-.pkgtoc summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--dim)}
-button.toc{display:flex;gap:12px;align-items:baseline;width:100%;min-height:0;margin:0;padding:7px 2px;
+/* Each group of the package card folds to one line: its name and how many. */
+.pkggrp{border-top:1px solid var(--line)}
+.pkggrp:first-child{border-top:0}
+.pkggrp summary{display:flex;align-items:center;gap:10px;min-height:40px;cursor:pointer;list-style:none}
+.pkggrp summary::-webkit-details-marker{display:none}
+.pkggrp summary::after{content:"";flex:0 0 auto;width:7px;height:7px;margin:0 4px 3px 0;
+  border-right:2px solid var(--dim);border-bottom:2px solid var(--dim);transform:rotate(45deg);transition:transform .15s}
+.pkggrp[open] summary::after{transform:rotate(-135deg);margin-bottom:-3px}
+.pkghd{flex:1;font-size:11.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--dim)}
+.pkggrp.warn .pkghd{color:var(--warn)}
+.pkgn{min-width:22px;padding:1px 7px;border-radius:10px;background:var(--panel2);text-align:center;
+  font-size:12px;font-weight:700;color:var(--txt)}
+.pkggrp.warn .pkgn{background:var(--warn);color:#fff}
+.pkggrp[open]{padding-bottom:6px}
+button.toc{display:flex;gap:12px;align-items:baseline;width:100%;min-height:0;margin:0;padding:6px 2px;
   background:none;border:0;border-radius:0;text-align:left;color:var(--txt);font:inherit;font-size:13px;cursor:pointer}
 button.toc .pg{flex:0 0 46px;font-weight:600;color:var(--acc)}
 button.toc:active{opacity:.55}
@@ -557,6 +564,10 @@ td.diff{text-align:right;font-weight:700}
 .chartbox img{display:block;margin:0 auto;width:auto;height:auto;
   max-width:100%;max-height:calc(100vh - 170px)}
 .chartbox.zoom img{max-width:none;max-height:none}
+/* An original page is read, not glanced at: it fills the width and scrolls,
+   and is never squeezed to the screen height — a portrait page on a landscape
+   screen would otherwise be drawn stretched sideways. */
+.chartbox img.orig{max-height:none;object-fit:contain}
 .chartbox .disc{justify-content:center;padding:40px 0;color:var(--dim)}
 .guide{padding:6px 22px 26px}
 /* The current release summary is marked with an accent rule. Replace it, rather
@@ -790,8 +801,8 @@ td.diff{text-align:right;font-weight:700}
       <div class="new">
         <h3>What's new in RC1.8</h3>
         <ul>
-          <li>New <b>In this package</b> card lists everything the package carries besides the flight plan, so nothing attached is missed: mandatory reads and every other document stapled behind the brief (de-icing notices, Operations Manual extracts, station briefings), company NOTAMs that belong to no aerodrome (ADMIN, WAYPOINT and the like), and the brief's own contents with page numbers. Each opens as printed in the original PDF. The load message also says how many documents are attached.</li>
-          <li>Mandatory reads (MAN nnn-yy) are listed with their MAN number, issue, revision and pages, and <b>Open</b> shows the original pages of the PDF.</li>
+          <li>New <b>In this package</b> card lists everything the package carries besides the flight plan, so nothing attached is missed: mandatory reads and every other document stapled behind the brief (de-icing notices, Operations Manual extracts, station briefings), company NOTAMs that belong to no aerodrome (ADMIN, WAYPOINT and the like), and the brief's own contents with page numbers. Each group folds to one line with its count — tap it to expand — and each item opens as printed in the original PDF. The load message also says how many documents are attached.</li>
+          <li>Mandatory reads (MAN nnn-yy) are listed with their MAN number, issue, revision and pages, and <b>Open</b> shows the original pages of the PDF — filling the screen width in its true proportions; scroll down to read on. (Fixed: on an iPad held landscape the page was drawn stretched sideways.)</li>
           <li><b>Actual wind / temp</b>: tick <b>Wind / temp</b> above the waypoint table to enter the actual wind and temperature at each waypoint. The OFP's own wind shows greyed in the box; type the actual over it as five or six digits (e.g. 33016). Temperature is minus by default; tap <b>±</b> on the keypad for plus. The actuals print above the OFP's wind on the saved PDF.</li>
           <li><b>FOB before start</b>: enter the fuel on board read from the panel before engine start. The planned block fuel from the OFP is shown alongside it, and DIFF still counts from the OFP's own figures.</li>
           <li>NOTAMs can be listed <b>As printed</b> or <b>Relevant first</b> with the <b>Order</b> selector in the NOTAM card.</li>
@@ -864,7 +875,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.26 &nbsp;·&nbsp; Build 20261024.4 &nbsp;·&nbsp; 24 Oct 2026</span></p>
+      <span class="build">RC1.8.27 &nbsp;·&nbsp; Build 20261024.5 &nbsp;·&nbsp; 24 Oct 2026</span></p>
 
     </div>
   </div>

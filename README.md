@@ -370,6 +370,8 @@ nothing to overfly after a direct is dropped rather than sitting red for the res
 
 Whatever the package carries besides the flight plan is listed on one card under the load box,
 so nothing attached is missed — the load message says how many documents are attached too.
+Each group folds to one line with its count, closed until tapped, and the card's header gives
+the totals, so the card stays short.
 
 - **Attached to this OFP — read before departure**: the mandatory reads (below), then every
   other document stapled behind the briefing — a de-icing notice, an Operations Manual extract,

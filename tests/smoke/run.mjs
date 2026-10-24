@@ -777,6 +777,7 @@ try {
           'by its subject, MAN number, issue and pages' + (card.meta && card.meta.startsWith('MAN') ? '' : ` (${card.title} / ${card.meta})`));
     check(!card.text, 'and nothing of it is re-set as text');
 
+    await page.setViewportSize({ width: 1180, height: 820 });   // an iPad held landscape
     const viewer = await page.evaluate(async () => {
       document.querySelector('#c9 button.man').click();
       const box = document.querySelector('#chartBox');
@@ -792,6 +793,16 @@ try {
         next: !document.querySelector('#chartNext').disabled,
         shown: !!(img && img.naturalWidth) || !!(a && a.href.startsWith('blob:'))
       };
+      // A headless browser may not draw a PDF as a picture, so the page's
+      // sizing is checked with a portrait picture standing in for it.
+      const cv = Object.assign(document.createElement('canvas'), { width: 612, height: 792 });
+      SHEETS[0].url = URL.createObjectURL(await new Promise(r => cv.toBlob(r)));
+      await paintChart();
+      const pic = box.querySelector('img');
+      for (let i = 0; i < 100 && !(pic.complete && pic.naturalWidth && pic.style.width); i++)
+        await new Promise(r => setTimeout(r, 50));
+      const r = pic.getBoundingClientRect();
+      out.ratio = (r.width / r.height) / (pic.naturalWidth / pic.naturalHeight);
       openCharts(false);
       out.released = box.childElementCount === 0 && SHEETS.every(x => x.url === null);
       return out;
@@ -800,6 +811,9 @@ try {
           'opening it shows its first page, with Next to the rest of it');
     check(viewer.shown, 'drawn from a one-page PDF cut out of the package, or offered to the PDF viewer');
     check(viewer.released, 'and let go when the viewer closes');
+    check(Math.abs(viewer.ratio - 1) < 0.02,
+          'a portrait page on a landscape screen keeps its proportions, filling the width and scrolling'
+          + ` (ratio ${viewer.ratio && viewer.ratio.toFixed(3)})`);
 
     const fir = await page.evaluate(() => {
       const n = (icao, group, co) => ({ icao, group, role: group === 'flight' ? 'departure' : null,
@@ -962,15 +976,18 @@ try {
         + ' | ' + b.querySelector('small').textContent);
       const toc = [...c9.querySelectorAll('button.toc')].map(b => b.textContent);
       const m1 = document.querySelector('#m1');
+      const folds = [...c9.querySelectorAll('details.pkggrp')].map(d => d.querySelector('.pkgn').textContent + (d.open ? 'o' : ''));
       const omdb = WX.airports.find(x => x.icao === 'OMDB');
       [...c9.querySelectorAll('button.man.co')].find(b => b.textContent.startsWith('ADMIN')).click();
       const wx = WX.airports[+document.querySelector('#wxApt').value];
       const ids = [...document.querySelectorAll('#wxOut .ntm .id')].map(e => e.textContent);
       return { shown: !c9.classList.contains('hide'), badge: document.querySelector('#manSum').textContent,
-               rows, toc, m1: m1.textContent, warn: m1.classList.contains('warn'),
+               rows, toc, folds, m1: m1.textContent, warn: m1.classList.contains('warn'),
                omdbCo: omdb && omdb.co.map(c => c.id), picked: wx.icao, ids };
     }, bytes);
-    check(r.shown && r.badge === '2 attached', 'a package with documents behind the OFP says how many are attached');
+    check(r.shown && r.badge === '2 attached \u00b7 3 company NOTAMs', 'a package with documents behind the OFP says how many are attached');
+    check(r.folds.length === 3 && r.folds.slice(0, 2).join() === '2,3' && r.folds.every(f => !f.endsWith('o')),
+          'each group folds to one line with its count, closed until opened' + ` (${r.folds.join(' / ')})`);
     check(r.warn && /2 attached documents to read/.test(r.m1), 'and the load message says so too');
     check(r.rows[0].startsWith('ACARS LOGON PROCEDURE | Mandatory read') &&
           r.rows[1] === 'DXB OPERATIONAL BRIEFING | Attached document · p. 3',
