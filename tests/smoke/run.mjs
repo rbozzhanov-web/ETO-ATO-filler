@@ -815,6 +815,72 @@ try {
     await page.close();
   }
 
+  /* ---- actual wind and temperature, and the fuel on board before start ----
+     One captain also logs the wind and temperature met at each waypoint; the
+     boxes are there when switched on and out of the way when not. The FOB read
+     off the fuel panel before start adds, under each REM, what the waypoint
+     should show from it — the DIFF column stays against the OFP. */
+  {
+    const { page, problems } = await open('index.html');
+    const block = 'BT /F1 10 Tf 50 760 Td (TOW 70000 LW 60000 ZFW 55000 PLD 10000 BLKF 30000) Tj ET\n';
+    const bytes = [...buildPdf({ text: ofpText([0, 20, 40, 60]) + block, compress: false })];
+    const r = await page.evaluate(async a => {
+      try { localStorage.removeItem('etofill:wt'); } catch(e){}
+      await loadBuffer('WT.pdf', a.length, new Uint8Array(a).buffer, false);
+      document.querySelector('#etd').value = '1000';
+      document.querySelector('#calc').click();
+      const tbl = document.querySelector('#tbl');
+      const out = { hiddenAtFirst: !tbl.classList.contains('wt-on') && !tableInputs().some(i => i.closest('.wt')) };
+      const wt = document.querySelector('#wtOn');
+      wt.checked = true; wt.dispatchEvent(new Event('change'));
+      out.shownWhenOn = tbl.classList.contains('wt-on') && tableInputs().some(i => i.classList.contains('temp'));
+      out.remembered = localStorage.getItem('etofill:wt') === '1';
+      // typed on the app's own keypad
+      const key = k => document.querySelector(`#numpad [data-k="${k}"]`)
+        .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+      const wind = document.querySelector('#tbl tr[data-i="1"] input.wind');
+      wind.focus(); for (const k of '28045') key(k);
+      const temp = document.querySelector('#tbl tr[data-i="1"] input.temp');
+      temp.focus();
+      out.signShown = document.querySelector('#numpadSign').classList.contains('on');
+      for (const k of '52') key(k);
+      out.minus = temp.value;
+      key('sign');
+      out.plus = temp.value;
+      wind.focus();
+      out.signHidden = !document.querySelector('#numpadSign').classList.contains('on');
+      out.wind = wind.value;
+      out.saved = JSON.stringify(ACT[1]);
+      // FOB before start
+      const fob = document.querySelector('#fob');
+      fob.value = '30500'; fob.dispatchEvent(new Event('input', { bubbles: true }));
+      out.exp = [...document.querySelectorAll('#tbl tbody .fobexp')].map(e => e.textContent);
+      out.note = document.querySelector('#fobNote').textContent;
+      out.hdr = document.querySelector('#remFobHdr').textContent;
+      const fuel = document.querySelector('#tbl tr[data-i="1"] input.fuel');
+      fuel.value = '29500'; fuel.dispatchEvent(new Event('input', { bubbles: true }));
+      out.diff = document.querySelector('#tbl td.diff[data-d="1"]').textContent;
+      flushSave();
+      out.fobSaved = JSON.parse(localStorage.getItem(KEY)).fob;
+      wt.checked = false; wt.dispatchEvent(new Event('change'));
+      out.hiddenAgain = !tableInputs().some(i => i.closest('.wt'));
+      return out;
+    }, bytes);
+    check(r.hiddenAtFirst && r.shownWhenOn && r.hiddenAgain, 'the wind/temp boxes come and go with their checkbox');
+    check(r.remembered, 'and the choice is kept for the device');
+    check(r.wind === '280/45', 'a wind typed as 28045 reads 280/45');
+    check(r.minus === '-52' && r.plus === '+52', 'a temperature is minus unless the \u00b1 key makes it plus');
+    check(r.signShown && r.signHidden, 'the \u00b1 key is there only for a temperature');
+    check(r.saved === JSON.stringify({ wind: '280/45', temp: '+52' }), 'both are saved with the waypoint');
+    check(r.exp.join(' ') === '30500 29500 27500 24500', 'under each REM: what it should show from the FOB'
+          + (r.exp.join(' ') === '30500 29500 27500 24500' ? '' : ` (${r.exp.join(' ')})`));
+    check(/\+500/.test(r.note) && r.hdr === 'from FOB', 'with the FOB against the planned block fuel stated, and the column labelled');
+    check(r.diff === '+500', 'and the DIFF still against the OFP');
+    check(r.fobSaved === '30500', 'the FOB is saved with the flight');
+    check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
+    await page.close();
+  }
+
   /* ---- the Journey Log ---- */
   {
     const { page, problems } = await open('journey-log.html');

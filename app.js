@@ -93,7 +93,7 @@ const NP_LABEL = { next: 'Next', go: 'Go', done: 'Done', previous: 'Previous', s
 // its own at all, forward or back) ever has a field before it worth returning to.
 function npHasPrev(el){
   if (el.matches('#tbl input')){
-    const all = [...document.querySelectorAll('#tbl input')];
+    const all = tableInputs();
     return all.indexOf(el) > 0;
   }
   if (el.matches('#altrows input')){
@@ -108,6 +108,7 @@ function npShow(el){
   NP_TARGET = el;
   $('#numpadDoneLabel').textContent = NP_LABEL[el.enterKeyHint] || 'Done';
   $('#numpadPrev').disabled = !npHasPrev(el);
+  $('#numpadSign').classList.toggle('on', el.classList.contains('temp'));
   numpad.classList.add('show');
   document.body.style.setProperty('--numpad-h', numpad.offsetHeight + 'px');
   document.body.classList.add('numpad-open');
@@ -171,9 +172,19 @@ function npClick(){
 // from the tap landing outside it, by which point NP_TARGET is already gone.
 numpad.querySelectorAll('[data-k]').forEach(b => b.addEventListener('pointerdown', e => {
   e.preventDefault();
+  if (b.dataset.k === 'sign' && !b.classList.contains('on')) return;
   npClick();
-  b.dataset.k === 'del' ? npDelete() : npInsert(b.dataset.k);
+  b.dataset.k === 'del' ? npDelete() : b.dataset.k === 'sign' ? npSign() : npInsert(b.dataset.k);
 }));
+// A temperature is below zero unless the crew says otherwise: the sign key turns
+// it to plus and back. The box's own input handler writes the sign it shows.
+function npSign(){
+  const el = NP_TARGET;
+  if (!el || !el.classList.contains('temp')) return;
+  el.dataset.plus = el.dataset.plus ? '' : '1';
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  NP_DIRTY = true;
+}
 // The action key plays the field's own Enter handler — the table's "next field",
 // the document fields', the takeoff time's calculate-and-blur — exactly as the
 // system keyboard's own Next/Go/Done key would have. A field with no handler of
@@ -597,7 +608,7 @@ async function loadBuffer(name, size, buf, resumed, known = {}){
   // checks would go on falling due and beeping.
   RESULT = []; CHECKS = []; FUEL = []; T0 = null;
   alerted.clear();
-  $('#etd').value = '';
+  $('#etd').value = ''; $('#fob').value = '';
   try {
     const kept = known.parsed && known.parsed.build === BUILD ? known.parsed : null;
     // A stored reading from another build is read again, which needs the bytes.
@@ -624,6 +635,7 @@ async function loadBuffer(name, size, buf, resumed, known = {}){
     const st = restore();
     if (st){
       $('#etd').value = st.etd || ''; $('#alt').checked = !!st.alt;
+      $('#fob').value = st.fob || '';
       Object.assign(ACT, st.act || {}); Object.assign(TXT, st.txt || {});
       Object.assign(ALT, st.alt2 || {});
       // Checks already announced before the app was evicted must not beep again.
@@ -632,6 +644,7 @@ async function loadBuffer(name, size, buf, resumed, known = {}){
       DCT.marks = Array.isArray(st.dct) ? st.dct : []; syncDct();
     }
     renderFields();
+    paintFob();
     if (FIELDS.length) $('#c4').classList.remove('hide');
     $('#c5').classList.remove('hide');
     if (st && st.etd){
@@ -681,7 +694,9 @@ function showIcao(p){
 $('#fplHead').onclick = () => $('#fplBox').classList.toggle('collapsed');
 
 /* ================= OFP identity ================= */
+let FIGS = null;
 function showFigs(f){
+  FIGS = f;
   const el = $('#ofpFigs');
   if (!f){ el.classList.add('hide'); el.textContent = ''; return; }
   el.textContent = ['TOW','LW','ZFW','PLD','CI'].filter(k => f[k])
@@ -1453,7 +1468,7 @@ function keyFigures(lines){
   const page1 = lines.filter(l => l.page === 0 && !CHROME(l.text)).map(l => l.text.trim());
   const out = {};
   for (const t of page1){
-    for (const k of ['TOW', 'LW', 'ZFW', 'PLD']){
+    for (const k of ['TOW', 'LW', 'ZFW', 'PLD', 'BLKF']){
       if (out[k]) continue;
       const m = t.match(new RegExp('(?:^|\\s)' + k + '\\s+(\\d{3,7})(?:\\s|$)'));
       if (m) out[k] = m[1];
@@ -2436,16 +2451,27 @@ function render(t0, arr){
     r.appendChild(mk('td', 'num', hhmm(p.cum)));
     r.appendChild(mk('td', 'eto', fmt(p.t)));
     r.appendChild(cellInput('ato numkey', p.i, 4, fmt(p.t), a.ato || ''));
-    r.appendChild(mk('td', 'num', p.rem ?? '—'));
+    const remTd = mk('td', 'num', p.rem ?? '—');
+    remTd.appendChild(mk('span', 'fobexp'));
+    r.appendChild(remTd);
     r.appendChild(cellInput('fuel numkey', p.i, 5, p.rem ?? '', a.fuel || '', 'fu'));
     const diff = mk('td', 'diff');
     diff.dataset.d = p.i;
     r.appendChild(diff);
+    const wt = cellInput('wind numkey', p.i, 7, 'ddd/ss', a.wind || '', 'wt');
+    const temp = wt.appendChild(document.createElement('input'));
+    Object.assign(temp, { className: 'temp numkey', type: 'text', maxLength: 3, inputMode: 'none',
+                          autocomplete: 'off', spellcheck: false, enterKeyHint: 'next',
+                          placeholder: '\u00b1°', value: a.temp || '' });
+    temp.dataset.i = p.i;
+    temp.dataset.plus = /^\+/.test(a.temp || '') ? '1' : '';
+    temp.setAttribute('autocorrect', 'off');
+    r.appendChild(wt);
     r.appendChild(mk('td', 'num', p.page + 1));
     paint(p.i);
     paintDct(p.i);
   }
-  bindInputs(); countFilled(); lastNext = null;
+  bindInputs(); countFilled(); paintFob(); lastNext = null;
   tb.onclick = e => {
     if (!dctPick) return;
     const tr = e.target.closest('tr[data-i]');
@@ -2469,6 +2495,12 @@ function paint(i){
     td.style.color = onScreen(d === 0 ? C.fuel : d > 0 ? C.pos : C.neg);
   }
 }
+// A wind needs its whole direction and a speed; a temperature, its figures.
+function validWindTemp(kind, v){
+  if (kind === 'temp') return /^(0|[+-]\d{1,2})$/.test(v);
+  const m = /^(\d{3})\/(\d{2,3})$/.exec(v);
+  return !!m && +m[1] <= 360 && +m[2] <= 299;
+}
 function countFilled(){
   const n = RESULT.filter(p => { const a = ACT[p.i]; return a && (a.ato || a.fuel); }).length;
   const el = $('#stFilled'); if (el) el.querySelector('b').textContent = n;
@@ -2476,7 +2508,15 @@ function countFilled(){
 function refreshInputValidity(){
   let previousFuel = null;
   for (const inp of document.querySelectorAll('#tbl input')){
-    const isAto = inp.classList.contains('ato'), value = inp.value;
+    const kind = kindOf(inp), isAto = kind === 'ato', value = inp.value;
+    if (kind === 'wind' || kind === 'temp'){
+      const bad = value.length > 0 && !validWindTemp(kind, value);
+      inp.classList.toggle('bad', bad);
+      inp.setAttribute('aria-invalid', bad ? 'true' : 'false');
+      inp.title = bad ? (kind === 'wind' ? 'Wind as ddd/ss: direction 000–360, speed up to 299 kt.'
+                                         : 'Temperature in whole degrees.') : '';
+      continue;
+    }
     const bad = value.length > 0 && (isAto ? parseTime(value) === null : !validFuelEntry(value));
     inp.classList.toggle('bad', bad);
     inp.setAttribute('aria-invalid', bad ? 'true' : 'false');
@@ -2497,25 +2537,89 @@ function refreshInputValidity(){
   }
 }
 
+// The table's entry boxes in Enter order — the wind and temperature ones only
+// while they are switched on and therefore on screen.
+const tableInputs = () => [...document.querySelectorAll('#tbl input')]
+  .filter(inp => !inp.closest('.wt') || $('#tbl').classList.contains('wt-on'));
+const kindOf = inp => ['ato', 'fuel', 'wind', 'temp'].find(k => inp.classList.contains(k));
+// Wind as the OFP prints it, ddd/ss — the slash goes in by itself after the
+// direction. A temperature is below zero unless the sign key made it plus.
+function formatEntry(inp){
+  const k = kindOf(inp), d = inp.value.replace(/\D/g, '');
+  if (k === 'ato') return d.slice(0, 4);
+  if (k === 'fuel') return d.slice(0, 5);
+  if (k === 'wind'){ const w = d.slice(0, 6); return w.length > 3 ? w.slice(0, 3) + '/' + w.slice(3) : w; }
+  const t = d.slice(0, 2);
+  return !t ? '' : +t === 0 ? '0' : (inp.dataset.plus ? '+' : '-') + t;
+}
 function bindInputs(){
-  const inputs = [...document.querySelectorAll('#tbl input')];
-  inputs.forEach((inp, idx) => {
+  for (const inp of document.querySelectorAll('#tbl input')){
     inp.oninput = () => {
-      const i = inp.dataset.i, isAto = inp.classList.contains('ato');
-      inp.value = inp.value.replace(/\D/g, '').slice(0, isAto ? 4 : 5);
+      const i = inp.dataset.i, k = kindOf(inp);
+      inp.value = formatEntry(inp);
       ACT[i] = ACT[i] || {};
-      ACT[i][isAto ? 'ato' : 'fuel'] = inp.value;
-      if (!ACT[i].ato && !ACT[i].fuel) delete ACT[i];
+      ACT[i][k] = inp.value;
+      if (!ACT[i].ato && !ACT[i].fuel && !ACT[i].wind && !ACT[i].temp) delete ACT[i];
       refreshInputValidity();
       paint(i); countFilled(); refreshFuel(); refreshProgress(); save();
     };
     inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault();
-      const nx = inputs[idx + (e.shiftKey ? -1 : 1)];
+      const all = tableInputs(), nx = all[all.indexOf(inp) + (e.shiftKey ? -1 : 1)];
       if (nx){ nx.focus(); nx.select(); } else if (!e.shiftKey) inp.blur(); } };
     inp.onfocus = () => inp.select();
-  });
+  }
   refreshInputValidity();
 }
+
+/* ---- fuel on board before start ----
+   Optional, read off the fuel panel before engine start. The DIFF column stays
+   against the OFP. What this adds is what each waypoint should then show: the
+   OFP's own burn to that point, taken from the fuel actually on board rather
+   than from the planned block fuel — its REM moved by the difference. */
+const plannedBlock = () => {
+  const f = FIELDS.find(x => /^PIC BLOCK$/i.test(x.label) && x.ref);
+  const v = (FIGS && FIGS.BLKF) || (f && f.ref);
+  return v && /^\d+$/.test(v) ? +v : null;
+};
+function fobOffset(){
+  const v = $('#fob').value, blk = plannedBlock();
+  return validFuelEntry(v) && blk !== null ? +v - blk : null;
+}
+function paintFob(){
+  const v = $('#fob').value, blk = plannedBlock(), off = fobOffset(), note = $('#fobNote');
+  $('#fob').classList.toggle('bad', v.length > 0 && !validFuelEntry(v));
+  if (!v){ note.className = 'hint hide'; }
+  else {
+    note.className = 'hint';
+    note.textContent = blk === null
+      ? 'The planned block fuel was not found in this OFP, so nothing is worked out from the FOB.'
+      : off === null ? 'Enter the fuel on board as read on the panel.'
+      : `FOB ${v} against planned block ${blk}: ${off > 0 ? '+' : ''}${off}. `
+        + 'Under each REM: what the waypoint should show from this FOB.';
+  }
+  $('#remFobHdr').textContent = off !== null ? 'from FOB' : '';
+  for (const p of RESULT){
+    const span = rowOf(p.i) && rowOf(p.i).querySelector('.fobexp');
+    if (span) span.textContent = off !== null && p.rem !== null ? String(p.rem + off) : '';
+  }
+}
+$('#fob').oninput = () => {
+  $('#fob').value = $('#fob').value.replace(/\D/g, '').slice(0, 5);
+  paintFob(); save();
+};
+$('#fob').onkeydown = e => { if (e.key === 'Enter') e.target.blur(); };
+
+// Whether the wind and temperature boxes are on the table: the crew's own way of
+// working, so it is kept for the device rather than for one plan.
+function applyWt(on){
+  $('#wtOn').checked = on;
+  $('#tbl').classList.toggle('wt-on', on);
+}
+try { applyWt(localStorage.getItem('etofill:wt') === '1'); } catch(e){ applyWt(false); }
+$('#wtOn').onchange = () => {
+  applyWt($('#wtOn').checked);
+  try { localStorage.setItem('etofill:wt', $('#wtOn').checked ? '1' : '0'); } catch(e){}
+};
 
 /* ================= document fields ================= */
 function renderFields(){
@@ -2613,7 +2717,7 @@ $('#clearAct').onclick = () => {
   if (!confirm('Clear all entered ATO and fuel values?')) return;
   for (const k in ACT) delete ACT[k];
   document.querySelectorAll('#tbl input').forEach(i => {
-    i.value = ''; i.classList.remove('bad', 'suspect'); i.setAttribute('aria-invalid', 'false'); i.removeAttribute('title');
+    i.value = ''; if (i.dataset.plus) i.dataset.plus = ''; i.classList.remove('bad', 'suspect'); i.setAttribute('aria-invalid', 'false'); i.removeAttribute('title');
   });
   RESULT.forEach(p => paint(p.i)); countFilled(); refreshFuel(); save();
 };
@@ -2660,7 +2764,7 @@ function writeState(){
   if (!KEY) return;
   try {
     localStorage.setItem(KEY, JSON.stringify({
-      etd: $('#etd').value, alt: $('#alt').checked, act: ACT, txt: TXT, alt2: ALT,
+      etd: $('#etd').value, alt: $('#alt').checked, fob: $('#fob').value, act: ACT, txt: TXT, alt2: ALT,
       alerted: [...alerted], alarm: $('#altAlert').checked, dct: DCT.marks,
       at: nowUtc(), savedAt: Date.now() }));
     OFPStorage.touchSession();
@@ -2883,6 +2987,7 @@ $('#reset').onclick = () => {
   for (const k in ALT) delete ALT[k];
   showIcao(null); showOfp(null); showFigs(null); showWx(null); showCharts(null); showMan(null); openCharts(false);
   $('#file').value = ''; $('#etd').value = ''; $('#etd').placeholder = '----';
+  $('#fob').value = ''; paintFob();
   $('#fname').textContent = ''; $('#saved').textContent = '';
   drop.classList.remove('loaded');
   $('#c4').classList.remove('collapsed'); $('#fplBox').classList.remove('collapsed');
