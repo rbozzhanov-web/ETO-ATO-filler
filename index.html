@@ -306,6 +306,9 @@ html.app-resuming .scrollwrap::after,html.app-resuming .chev{transition:none!imp
 .numpad-grid .np-del svg{width:24px;height:24px;display:block;margin:0 auto;fill:none;
   stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .numpad-grid .np-empty{background:none;box-shadow:none;pointer-events:none}
+.numpad-grid .np-sign{color:transparent}
+.numpad-grid .np-sign.on{background:var(--npkey);box-shadow:0 1px 0 var(--npshadow);
+  color:var(--nptxt);pointer-events:auto}
 /* Pinned to the keyboard's own corner — not the grid's, which is centred and
    often narrower than the bar — the way the iPad's own dismiss key sits at the
    actual bottom-right edge regardless of how wide the number pad itself is. */
@@ -458,6 +461,14 @@ td input.suspect{border-color:var(--warn);background:color-mix(in srgb,var(--war
 td input:focus,.fld input:focus,.altrow input:focus{border-color:var(--acc);background:var(--bg)}
 td input.ato{color:var(--c-ato)}
 td input.fuel{color:var(--c-fuel)}
+/* Actual wind and temperature: shown only while the crew has them switched on. */
+#tbl:not(.wt-on) .wt{display:none}
+td.wt{white-space:nowrap}
+td input.wind{width:76px}
+td input.temp{width:52px;margin-left:4px}
+/* What each waypoint should show given the fuel actually on board before start,
+   under the plan's own REM; the DIFF column stays against the plan. */
+td .fobexp{display:block;margin-top:2px;font-size:11px;font-weight:600;color:var(--dim)}
 td.diff{text-align:right;font-weight:700}
 
 .fld{display:grid;grid-template-columns:200px 1fr;gap:4px 14px;align-items:center}
@@ -627,6 +638,12 @@ td.diff{text-align:right;font-weight:700}
       <div><label>HHMM</label><input type="text" id="etd" class="big numkey" placeholder="----" maxlength="5"
         inputmode="none" pattern="[0-9]*" autocomplete="off" autocorrect="off" spellcheck="false"
         enterkeyhint="go"></div>
+      <!-- Optional: the fuel on board as read on the fuel panel before engine
+           start. The DIFF column stays against the OFP; this only adds what each
+           waypoint should then show, under the plan's own REM. -->
+      <div><label for="fob">FOB before start</label><input type="text" id="fob" class="big numkey"
+        placeholder="opt." maxlength="5" inputmode="none" pattern="[0-9]*" autocomplete="off"
+        autocorrect="off" spellcheck="false" enterkeyhint="done"></div>
       <label class="chk"><input type="checkbox" id="alt"> Alternate route (ALTN)</label>
       <div style="padding-bottom:5px"><button id="calc">Calculate</button></div>
       <!-- The wall clock belongs beside the box it is read into. It used to live in
@@ -636,6 +653,7 @@ td.diff{text-align:right;font-weight:700}
       <div id="stClock"><label>UTC now</label><b id="stUtc">--:--:--</b></div>
     </div>
     <div class="hint hide" id="fpl"></div>
+    <div class="hint hide" id="fobNote"></div>
     <div class="msg" id="m2"></div>
 
   <!-- Entering the takeoff time and reading what it produces is one job, so the
@@ -646,6 +664,7 @@ td.diff{text-align:right;font-weight:700}
     <div class="toolbar">
       <button class="ghost sm" id="dctBtn">Direct to…</button>
       <button class="ghost sm" id="clearAct">Clear actuals</button>
+      <label class="chk"><input type="checkbox" id="wtOn"> Wind / temp</label>
       <span id="dctChips"></span>
       <span class="sep"></span>
       <span class="saved" id="saved"></span>
@@ -654,8 +673,9 @@ td.diff{text-align:right;font-weight:700}
     <div class="msg" id="m7"></div>
     <div class="scrollwrap"><div class="tblbox"><table id="tbl"><thead><tr>
       <th>Waypoint</th><th style="text-align:right">ET</th><th style="text-align:right">Cumul.</th>
-      <th>ETO</th><th>ATO actual</th><th style="text-align:right">REM plan</th>
-      <th>Fuel actual</th><th style="text-align:right">Δ</th><th style="text-align:right">Page</th>
+      <th>ETO</th><th>ATO actual</th><th style="text-align:right">REM plan<span class="fobexp" id="remFobHdr"></span></th>
+      <th>Fuel actual</th><th style="text-align:right">Δ</th>
+      <th class="wt">Wind / temp actual</th><th style="text-align:right">Page</th>
     </tr></thead><tbody></tbody></table></div></div>
   </div>
   </div>
@@ -812,7 +832,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.22 &nbsp;·&nbsp; Build 20261004.1 &nbsp;·&nbsp; 4 Oct 2026</span></p>
+      <span class="build">RC1.8.23 &nbsp;·&nbsp; Build 20261024.1 &nbsp;·&nbsp; 24 Oct 2026</span></p>
 
     </div>
   </div>
@@ -834,7 +854,10 @@ td.diff{text-align:right;font-weight:700}
       <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
       <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
       <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
-      <button type="button" class="np-empty" tabindex="-1" aria-hidden="true"></button>
+      <!-- The sign key: only a temperature takes one, so it is shown only while a
+           temperature box is being typed into, and is an empty slot otherwise. -->
+      <button type="button" class="np-empty np-sign" id="numpadSign" data-k="sign" tabindex="-1"
+        aria-label="Plus or minus">&plusmn;</button>
       <button type="button" data-k="0">0</button>
       <button type="button" class="np-del" data-k="del" aria-label="Delete">
         <svg viewBox="0 0 24 24"><path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7 6-7z"/>

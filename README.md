@@ -226,6 +226,20 @@ contexts, so everything works on either.
    thirty from there rather than leaving the next window due on the old half-hour
    mark: overfly a waypoint and record fuel on it, and the clock the company rule
    actually means restarts at that moment, the same as it would on paper.
+   **Wind / temp** in the table's toolbar adds two boxes to every waypoint, for the wind and
+   temperature actually met — kept for the device, so a crew that logs them has them every
+   flight and one that does not never sees them. The wind is typed as five or six figures and
+   reads as the OFP prints it, `280/45`; a temperature is below zero unless the **±** key on
+   the keypad (shown only for a temperature box) makes it plus. Both are saved with the flight
+   and shown in the app; they are not yet written into the saved PDF — that waits on the
+   placement next to the OFP's own WIND/TEMP columns being confirmed on a real package.
+
+   **FOB before start** (optional) is the fuel on board read off the fuel panel before engine
+   start. The Δ column stays against the OFP. What it adds is, under each REM plan, the figure
+   that waypoint should show from the fuel actually on board — the OFP's own burn to that
+   point taken from the FOB instead of the planned block fuel (`BLKF` on the first page, or
+   the PLANNED BLKF beside PIC BLOCK) — with the difference stated under the takeoff box. It
+   is shown in the app only and saved with the flight.
 4. Record the altimeter cross-checks. Every flight's first one is raised at
    TOC — the OFP's own waypoint table always carries that line, and that is the
    actual moment the aeroplane levels into cruise, rather than wherever the hourly
