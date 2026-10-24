@@ -57,7 +57,12 @@ try {
 
   for (const [name, width, height] of cases){
     await page.setViewportSize({ width, height });
-    await page.waitForTimeout(30);
+    // Wait for the new size to have actually taken, rather than a guessed delay:
+    // the first case follows a resize from the iPad-sized start, and a check made
+    // while WebKit was still settling that measured the panel against one height
+    // and then another.
+    await page.waitForFunction(([w, h]) => innerWidth === w && innerHeight === h, [width, height],
+                               { timeout:1500 });
     const layout = await page.evaluate(() => ({
       bodyOverflow: document.documentElement.scrollWidth - innerWidth,
       cardRight: Math.max(...[...document.querySelectorAll('.card')].map(e => e.getBoundingClientRect().right), 0),
@@ -71,11 +76,15 @@ try {
     // Wait for the actual docked geometry, not a guessed animation duration.
     // This makes slow WebKit CI scheduling visible as a timeout while still
     // failing if the panel genuinely never reaches the viewport edge.
+    // Docked means docked and staying there: three frames running at the edge,
+    // not one frame passed on the way through.
     await page.waitForFunction(() => {
       const e = document.querySelector('#numpad');
-      if (!e || !e.classList.contains('show')) return false;
-      return Math.abs(e.getBoundingClientRect().bottom - innerHeight) <= 2;
-    }, null, { timeout:1500 });
+      const at = !!e && e.classList.contains('show')
+        && Math.abs(e.getBoundingClientRect().bottom - innerHeight) <= 2;
+      window.__docked = at ? (window.__docked || 0) + 1 : 0;
+      return window.__docked >= 3;
+    }, null, { timeout:1500, polling:'raf' });
     const pad = await page.locator('#numpad').evaluate(e => {
       const r = e.getBoundingClientRect();
       return { shown:e.classList.contains('show'), left:r.left, right:r.right, bottom:r.bottom,
