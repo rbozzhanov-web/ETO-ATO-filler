@@ -1141,6 +1141,7 @@ async function paintChart(){
   // the page is offered to its own PDF viewer instead.
   if (c.orig){
     img.dataset.k = '2';
+    img.className = 'orig';
     img.onerror = () => {
       const msgP = mk('p', 'disc', 'This browser cannot show a PDF page here. ');
       const a = mk('a', null, `Open page ${c.page + 1} in its PDF viewer`);

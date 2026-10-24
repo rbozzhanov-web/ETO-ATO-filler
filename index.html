@@ -557,6 +557,10 @@ td.diff{text-align:right;font-weight:700}
 .chartbox img{display:block;margin:0 auto;width:auto;height:auto;
   max-width:100%;max-height:calc(100vh - 170px)}
 .chartbox.zoom img{max-width:none;max-height:none}
+/* An original page is read, not glanced at: it fills the width and scrolls,
+   and is never squeezed to the screen height — a portrait page on a landscape
+   screen would otherwise be drawn stretched sideways. */
+.chartbox img.orig{max-height:none;object-fit:contain}
 .chartbox .disc{justify-content:center;padding:40px 0;color:var(--dim)}
 .guide{padding:6px 22px 26px}
 /* The current release summary is marked with an accent rule. Replace it, rather
@@ -791,7 +795,7 @@ td.diff{text-align:right;font-weight:700}
         <h3>What's new in RC1.8</h3>
         <ul>
           <li>New <b>In this package</b> card lists everything the package carries besides the flight plan, so nothing attached is missed: mandatory reads and every other document stapled behind the brief (de-icing notices, Operations Manual extracts, station briefings), company NOTAMs that belong to no aerodrome (ADMIN, WAYPOINT and the like), and the brief's own contents with page numbers. Each opens as printed in the original PDF. The load message also says how many documents are attached.</li>
-          <li>Mandatory reads (MAN nnn-yy) are listed with their MAN number, issue, revision and pages, and <b>Open</b> shows the original pages of the PDF.</li>
+          <li>Mandatory reads (MAN nnn-yy) are listed with their MAN number, issue, revision and pages, and <b>Open</b> shows the original pages of the PDF — filling the screen width in its true proportions; scroll down to read on. (Fixed: on an iPad held landscape the page was drawn stretched sideways.)</li>
           <li><b>Actual wind / temp</b>: tick <b>Wind / temp</b> above the waypoint table to enter the actual wind and temperature at each waypoint. The OFP's own wind shows greyed in the box; type the actual over it as five or six digits (e.g. 33016). Temperature is minus by default; tap <b>±</b> on the keypad for plus. The actuals print above the OFP's wind on the saved PDF.</li>
           <li><b>FOB before start</b>: enter the fuel on board read from the panel before engine start. The planned block fuel from the OFP is shown alongside it, and DIFF still counts from the OFP's own figures.</li>
           <li>NOTAMs can be listed <b>As printed</b> or <b>Relevant first</b> with the <b>Order</b> selector in the NOTAM card.</li>
@@ -864,7 +868,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.26 &nbsp;·&nbsp; Build 20261024.4 &nbsp;·&nbsp; 24 Oct 2026</span></p>
+      <span class="build">RC1.8.27 &nbsp;·&nbsp; Build 20261024.5 &nbsp;·&nbsp; 24 Oct 2026</span></p>
 
     </div>
   </div>

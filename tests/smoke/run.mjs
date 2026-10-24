@@ -777,6 +777,7 @@ try {
           'by its subject, MAN number, issue and pages' + (card.meta && card.meta.startsWith('MAN') ? '' : ` (${card.title} / ${card.meta})`));
     check(!card.text, 'and nothing of it is re-set as text');
 
+    await page.setViewportSize({ width: 1180, height: 820 });   // an iPad held landscape
     const viewer = await page.evaluate(async () => {
       document.querySelector('#c9 button.man').click();
       const box = document.querySelector('#chartBox');
@@ -792,6 +793,16 @@ try {
         next: !document.querySelector('#chartNext').disabled,
         shown: !!(img && img.naturalWidth) || !!(a && a.href.startsWith('blob:'))
       };
+      // A headless browser may not draw a PDF as a picture, so the page's
+      // sizing is checked with a portrait picture standing in for it.
+      const cv = Object.assign(document.createElement('canvas'), { width: 612, height: 792 });
+      SHEETS[0].url = URL.createObjectURL(await new Promise(r => cv.toBlob(r)));
+      await paintChart();
+      const pic = box.querySelector('img');
+      for (let i = 0; i < 100 && !(pic.complete && pic.naturalWidth && pic.style.width); i++)
+        await new Promise(r => setTimeout(r, 50));
+      const r = pic.getBoundingClientRect();
+      out.ratio = (r.width / r.height) / (pic.naturalWidth / pic.naturalHeight);
       openCharts(false);
       out.released = box.childElementCount === 0 && SHEETS.every(x => x.url === null);
       return out;
@@ -800,6 +811,9 @@ try {
           'opening it shows its first page, with Next to the rest of it');
     check(viewer.shown, 'drawn from a one-page PDF cut out of the package, or offered to the PDF viewer');
     check(viewer.released, 'and let go when the viewer closes');
+    check(Math.abs(viewer.ratio - 1) < 0.02,
+          'a portrait page on a landscape screen keeps its proportions, filling the width and scrolling'
+          + ` (ratio ${viewer.ratio && viewer.ratio.toFixed(3)})`);
 
     const fir = await page.evaluate(() => {
       const n = (icao, group, co) => ({ icao, group, role: group === 'flight' ? 'departure' : null,
