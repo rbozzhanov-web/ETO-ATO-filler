@@ -366,6 +366,24 @@ shown as such: the most recent one sets how far the flight is running from the p
 later waypoint is judged against that, shown as, for example, `-12 on plan`. A fuel window left with
 nothing to overfly after a direct is dropped rather than sitting red for the rest of the flight.
 
+## In this package
+
+Whatever the package carries besides the flight plan is listed on one card under the load box,
+so nothing attached is missed — the load message says how many documents are attached too.
+
+- **Attached to this OFP — read before departure**: the mandatory reads (below), then every
+  other document stapled behind the briefing — a de-icing notice, an Operations Manual extract,
+  a station briefing — found as the pages the airline's own "BRIEF PAGE n OF N" mark is missing
+  from, grouped by page size and run, titled from the largest text at the top of their first
+  page. **Open** shows them as printed.
+- **Company notices for every flight**: company NOTAMs under a category of their own (ADMIN,
+  WAYPOINT, …) that belong to no aerodrome. **View** opens them in the NOTAM card. Station
+  company NOTAMs stay with their aerodrome.
+- **Briefing contents**: each section the brief prints — weather, SIGMETs, NOTAMs, company
+  NOTAMs, and any heading added later, such as a new advisory — with its page, each opening as
+  printed. Headings are recognised by shape (`--- X ---`, `START OF X`, an underlined line), not
+  by a fixed list, so a section that is new to the package is still listed.
+
 ## Mandatory reads
 
 A package can carry company documents the crew is meant to have read before dispatch —

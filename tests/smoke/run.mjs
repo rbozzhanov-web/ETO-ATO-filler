@@ -770,11 +770,11 @@ try {
       return { shown: !c9.classList.contains('hide'), docs: rows.length,
                title: rows[0] && rows[0].querySelector('b').textContent,
                meta: rows[0] && rows[0].querySelector('small').textContent,
-               text: !!c9.querySelector('p, h4, details') };
+               text: !!c9.querySelector('p, h4') };
     }, bytes);
     check(card.shown && card.docs === 1, 'a mandatory read in the package is listed on its own card');
-    check(card.title === 'ACARS LOGON PROCEDURE' && card.meta.startsWith('MAN 123-24 · issue 2 · rev 1 · pp. 2\u20133'),
-          'by its subject, MAN number, issue and pages');
+    check(card.title === 'ACARS LOGON PROCEDURE' && card.meta.startsWith('Mandatory read · MAN 123-24 · issue 2 · rev 1 · pp. 2\u20133'),
+          'by its subject, MAN number, issue and pages' + (card.meta && card.meta.startsWith('MAN') ? '' : ` (${card.title} / ${card.meta})`));
     check(!card.text, 'and nothing of it is re-set as text');
 
     const viewer = await page.evaluate(async () => {
@@ -927,6 +927,61 @@ try {
     check(at(74, 636).includes('-51'), 'a temperature on its own takes the same place');
     check(!at(74, 672).some(s => /32030/.test(s)) && r.unplaced.join() === 'W1X',
           'and nothing is printed where the line above is not blank — Save names that waypoint instead');
+    check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
+    await page.close();
+  }
+
+  /* ---- everything else in the package, listed so it is noticed ----
+     Documents attached behind the OFP's own marked pages, the company notices
+     that belong to no aerodrome, and the brief's contents — each opening as
+     printed. Built the way a real package is laid out; none of one is used. */
+  {
+    const { page, problems } = await open('index.html');
+    const mark = n => `BT /F1 8 Tf 400 775 Td (AIR ASTANA BRIEF PAGE ${n} OF 2) Tj ET\n`;
+    const lines = (y0, ls) => ls.map((l, k) => `BT /F1 10 Tf 50 ${y0 - k * 12} Td (${l}) Tj ET\n`).join('');
+    const company = mark(2) + lines(740, [
+      'STATION COMPANY NOTAMS', 'OMDB COMPANY NOTAMS',
+      'OMDB-00001 Oper: Y 02OCT26/1155', 'VALID FROM: 02JUL26/0400 TO: UFN', 'CO.FREQS DXB - 131.6',
+      'ROUTE COMPANY NOTAMS: NIL',
+      'ADMIN COMPANY NOTAMS',
+      'ADMIN-00001 Oper: Y 16OCT26/0811', 'VALID FROM: 10SEP26/2359 TO: 10DEC26/2359',
+      'EFB TABLET EFFECTIVE VERSION',
+      'ADMIN-00002 Oper: Y 02OCT26/1121', 'VALID FROM: 02JUL26/0400 TO: UFN',
+      '*** CROSSCHECK FMS DATA WITH CURRENT OFP ***',
+      'WAYPOINT COMPANY NOTAMS',
+      'RUDEK-00001 Oper: Y 21OCT26/0348', 'VALID FROM: 02JUL26/0400 TO: 13JAN27/2359',
+      '### MTCP PROCEDURES REQUIRED ###']);
+    const attached = 'BT /F2 14 Tf 60 780 Td (DXB OPERATIONAL BRIEFING) Tj ET\n'
+      + lines(740, ['1. Purpose', 'This briefing provides operational guidance for flights to Dubai.']);
+    const bytes = [...buildPages([mark(1) + ofpText([0, 20, 40, 60]), company, attached,
+                                  manPageContent(PAGE1), manPageContent(PAGE2)])];
+    const r = await page.evaluate(async a => {
+      await loadBuffer('PKG.pdf', a.length, new Uint8Array(a).buffer, false);
+      const c9 = document.querySelector('#c9');
+      const rows = [...c9.querySelectorAll('button.man')].map(b => b.querySelector('b').textContent
+        + ' | ' + b.querySelector('small').textContent);
+      const toc = [...c9.querySelectorAll('button.toc')].map(b => b.textContent);
+      const m1 = document.querySelector('#m1');
+      const omdb = WX.airports.find(x => x.icao === 'OMDB');
+      [...c9.querySelectorAll('button.man.co')].find(b => b.textContent.startsWith('ADMIN')).click();
+      const wx = WX.airports[+document.querySelector('#wxApt').value];
+      const ids = [...document.querySelectorAll('#wxOut .ntm .id')].map(e => e.textContent);
+      return { shown: !c9.classList.contains('hide'), badge: document.querySelector('#manSum').textContent,
+               rows, toc, m1: m1.textContent, warn: m1.classList.contains('warn'),
+               omdbCo: omdb && omdb.co.map(c => c.id), picked: wx.icao, ids };
+    }, bytes);
+    check(r.shown && r.badge === '2 attached', 'a package with documents behind the OFP says how many are attached');
+    check(r.warn && /2 attached documents to read/.test(r.m1), 'and the load message says so too');
+    check(r.rows[0].startsWith('ACARS LOGON PROCEDURE | Mandatory read') &&
+          r.rows[1] === 'DXB OPERATIONAL BRIEFING | Attached document · p. 3',
+          'each attached document is listed by its title' + (r.rows[1] ? '' : ` (${r.rows.join(' / ')})`));
+    check(r.rows.some(x => x.startsWith('ADMIN | 2 company NOTAMs · ADMIN-00001, ADMIN-00002'))
+          && r.rows.some(x => x.startsWith('WAYPOINT | 1 company NOTAM · RUDEK-00001')),
+          'company notices that belong to no aerodrome are listed, not dropped');
+    check(JSON.stringify(r.omdbCo) === JSON.stringify(['OMDB-00001']), 'a station company NOTAM stays with its aerodrome');
+    check(r.picked === 'ADMIN' && r.ids.join() === 'ADMIN-00001,ADMIN-00002', 'View opens them in the NOTAM card');
+    check(r.toc.some(t => /Navigation log/.test(t)) && r.toc.some(t => /p\. 2Company NOTAMs/.test(t)),
+          'the brief\u2019s contents are listed with their pages');
     check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
     await page.close();
   }

@@ -176,6 +176,16 @@ button.man b{grid-column:1;font-size:14px;font-weight:600}
 button.man small{grid-column:1;margin-top:2px;font-size:11.5px;color:var(--dim)}
 button.man .go{grid-column:2;grid-row:1 / span 2;font-size:13px;font-weight:600;color:var(--acc)}
 button.man:active{opacity:.55}
+.pkghd{margin:14px 0 2px;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;
+  color:var(--warn)}
+.pkghd:first-child{margin-top:2px}
+.pkghd + button.man{border-top:0}
+.pkgtoc{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.pkgtoc summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--dim)}
+button.toc{display:flex;gap:12px;align-items:baseline;width:100%;min-height:0;margin:0;padding:7px 2px;
+  background:none;border:0;border-radius:0;text-align:left;color:var(--txt);font:inherit;font-size:13px;cursor:pointer}
+button.toc .pg{flex:0 0 46px;font-weight:600;color:var(--acc)}
+button.toc:active{opacity:.55}
 .disc{display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:12.5px;color:var(--dim)}
 .fplbox{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);overflow:hidden}
 .fplhead{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);
@@ -623,10 +633,11 @@ td.diff{text-align:right;font-weight:700}
     <div class="msg" id="m1"></div>
   </div>
 
-  <!-- Company documents the crew is meant to have read before dispatch, carried
-       at the back of the package, each opened as printed (app.js, showMan). -->
+  <!-- Everything the package carries beyond what the app sets out itself: the
+       documents attached behind the OFP, the company notices for every flight,
+       and the brief's own contents — each opened as printed (app.js, showPackage). -->
   <div class="card hide" id="c9">
-    <div class="step"><i>MAN</i> Mandatory reads <span class="mansum" id="manSum"></span></div>
+    <div class="step"><i>PKG</i> In this package <span class="mansum" id="manSum"></span></div>
     <div id="manOut"></div>
   </div>
 
@@ -779,6 +790,12 @@ td.diff{text-align:right;font-weight:700}
       <div class="new">
         <h3>What's new in RC1.8</h3>
         <ul>
+          <li>New <b>In this package</b> card lists everything the package carries besides the flight plan, so nothing attached is missed: mandatory reads and every other document stapled behind the brief (de-icing notices, Operations Manual extracts, station briefings), company NOTAMs that belong to no aerodrome (ADMIN, WAYPOINT and the like), and the brief's own contents with page numbers. Each opens as printed in the original PDF. The load message also says how many documents are attached.</li>
+          <li>Mandatory reads (MAN nnn-yy) are listed with their MAN number, issue, revision and pages, and <b>Open</b> shows the original pages of the PDF.</li>
+          <li><b>Actual wind / temp</b>: tick <b>Wind / temp</b> above the waypoint table to enter the actual wind and temperature at each waypoint. The OFP's own wind shows greyed in the box; type the actual over it as five or six digits (e.g. 33016). Temperature is minus by default; tap <b>±</b> on the keypad for plus. The actuals print above the OFP's wind on the saved PDF.</li>
+          <li><b>FOB before start</b>: enter the fuel on board read from the panel before engine start. The planned block fuel from the OFP is shown alongside it, and DIFF still counts from the OFP's own figures.</li>
+          <li>NOTAMs can be listed <b>As printed</b> or <b>Relevant first</b> with the <b>Order</b> selector in the NOTAM card.</li>
+          <li>When iOS offloads the app in the background, the flight comes back quickly at the same place, without a long, flashing reload, for 24 hours after it was last used.</li>
           <li>The waypoint table now highlights only the one waypoint you're running to next and keeps it at the top of the list, so everything still ahead reads down from it in order — an ATO or fuel figure already entered no longer gets a highlight of its own, just the number in the box.</li>
           <li>Direct to… no longer fades or strikes out the waypoints it cuts out; they stay on the table looking like any other row, with an <b>ABEAM</b> tag on whichever one you're currently passing abeam.</li>
           <li>A new direct now replaces the one before it outright, measured from where the flight actually is, instead of combining with it.</li>
@@ -814,6 +831,8 @@ td.diff{text-align:right;font-weight:700}
       <ol>
         <li><b>Load</b> the Air Astana OFP PDF and check the route ID, request number and release time in the header.</li>
         <li>Complete document fields such as ATIS, ATC clearance, altimeter settings and PIC BLOCK.</li>
+        <li>Check the <b>In this package</b> card and open every attached document and mandatory read listed there.</li>
+        <li>Before engine start, enter <b>FOB before start</b> from the fuel panel.</li>
         <li>Enter the <b>takeoff (airborne) time</b> in UTC as four digits, then <b>Calculate</b> — the ETD shown from the plan is off-block time, not takeoff, so type the actual time yourself.</li>
         <li>Read the ICAO flight plan, weather, NOTAMs and charts from the package as required.</li>
       </ol>
@@ -821,6 +840,7 @@ td.diff{text-align:right;font-weight:700}
       <h3>In flight</h3>
       <ul>
         <li>Enter actual <b>ATO</b> and remaining fuel at each waypoint. <b>Next</b> and <b>Previous</b> move through the entry fields. The table highlights only the one waypoint you're running to next and keeps it at the top of the list, everything still ahead reading down from it — an ATO or fuel figure already entered carries no highlight of its own, just the number in the box.</li>
+        <li>To log actual wind and temperature, tick <b>Wind / temp</b>; enter them over the greyed OFP wind. Temperature is minus unless you tap <b>±</b> on the keypad.</li>
         <li>Record fuel checks at an overflown waypoint or at least every 30 minutes. Amber means due soon; red means overdue.</li>
         <li>Complete the altimeter cross-checks when due — the first is always at TOC, then hourly. The app highlights overdue items and asks before saving with missing checks.</li>
         <li>For a clearance direct, use <b>Direct to…</b>; it updates the live highlight only and never rewrites the planned ETOs. The waypoints it cuts out stay on the table as normal rows — only the one you're currently abeam carries an <b>ABEAM</b> tag. A new direct replaces the one before it rather than stacking on top of it.</li>
@@ -844,7 +864,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.25 &nbsp;·&nbsp; Build 20261024.3 &nbsp;·&nbsp; 24 Oct 2026</span></p>
+      <span class="build">RC1.8.26 &nbsp;·&nbsp; Build 20261024.4 &nbsp;·&nbsp; 24 Oct 2026</span></p>
 
     </div>
   </div>
