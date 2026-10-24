@@ -300,3 +300,39 @@ test('with a network the page is still refreshed in the background as before', a
   await new Promise(res => setTimeout(res, 0));
   assert.equal(await (await w.caches.match('./index.html')).text(), 'fresh page');
 });
+
+test('over an open plan or log a waiting update is offered instead, and applies on Update now', async () => {
+  const env = fakeEnv({ onLine: true, controller: {} });
+  const offers = [];
+  await watchForUpdates(() => true, env, go => offers.push(go));
+  env.reg.waiting = waiting();
+  env.resume();
+  assert.equal(offers.length, 1, 'no update was offered over the open document');
+  assert.deepEqual(env.reg.waiting.calls, [], 'applied before the crew asked');
+  offers[0]();                     // Update now
+  assert.deepEqual(env.reg.waiting.calls, [{ type: 'skip-waiting' }]);
+  env.fireControllerChange();
+  assert.equal(env.reloadCalls, 1, 'the page did not reload into the new version');
+});
+
+test('a version installed behind an open document is offered as soon as it is ready', async () => {
+  const env = fakeEnv({ onLine: true, controller: {} });
+  const offers = [];
+  await watchForUpdates(() => true, env, go => offers.push(go));
+  env.startInstall();
+  env.reg.waiting = waiting();
+  env.finishInstall();
+  assert.equal(offers.length, 1);
+});
+
+test('nothing is offered offline, or when there is no new version', async () => {
+  const off = fakeEnv({ onLine: false, controller: {} });
+  const offers = [];
+  await watchForUpdates(() => true, off, go => offers.push(go));
+  off.reg.waiting = waiting();
+  off.resume();
+  const none = fakeEnv({ onLine: true, controller: {} });
+  await watchForUpdates(() => true, none, go => offers.push(go));
+  none.resume();
+  assert.equal(offers.length, 0);
+});

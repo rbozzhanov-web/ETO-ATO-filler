@@ -945,6 +945,28 @@ try {
     await page.close();
   }
 
+  /* ---- a new version waiting behind an open document is offered, not hidden ----
+     The bar is the same on both pages; Update now applies it, Later puts it away. */
+  for (const file of ['index.html', 'journey-log.html']){
+    const { page, problems } = await open(file);
+    const r = await page.evaluate(() => {
+      let applied = 0;
+      updateBar(document, () => applied++);
+      const bar = document.querySelector('#updBar'), now = bar.querySelector('.updnow');
+      const shown = !bar.hidden && getComputedStyle(bar).position === 'fixed' && bar.getBoundingClientRect().height > 0;
+      now.click();
+      const busy = now.disabled && applied === 1;
+      updateBar(document, () => applied++);                 // offered again on the next resume
+      bar.querySelector('.updlater').click();
+      return { shown, busy, again: !now.disabled, later: bar.hidden && getComputedStyle(bar).display === 'none',
+               one: document.querySelectorAll('#updBar').length === 1 };
+    });
+    check(r.shown && r.busy && r.again && r.later && r.one,
+          `${file}: a waiting version is offered with Update now, and Later puts it away`);
+    check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
+    await page.close();
+  }
+
   /* ---- everything else in the package, listed so it is noticed ----
      Documents attached behind the OFP's own marked pages, the company notices
      that belong to no aerodrome, and the brief's contents — each opening as

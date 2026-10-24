@@ -345,6 +345,17 @@ button.dup:active:not(:disabled){transform:none; background:#3498db; color:#fff}
 body.loaded #empty{display:none}
 body:not(.loaded) #stage,
 body:not(.loaded) #export,body:not(.loaded) #reset,body:not(.loaded) #remove{display:none}
+/* The bar offering a new version over an open document (offline-update.js). */
+.updbar{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top));transform:translateX(-50%);
+  z-index:60;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);padding:8px 8px 8px 14px;
+  border:1px solid var(--acc);border-radius:10px;background:var(--panel);color:var(--txt);
+  box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:13.5px}
+.updbar[hidden]{display:none}
+.updbar span{white-space:nowrap}
+@media (max-width:560px){.updbar span{white-space:normal}}
+.updbar button{min-height:0;margin:0;white-space:nowrap;padding:8px 14px;border-radius:7px;font-size:13px;font-weight:600}
+.updbar .updnow{background:var(--acc2);color:#fff;border:0}
+.updbar .updlater{background:none;color:var(--dim);border:0}
 </style>
 </head>
 <body>

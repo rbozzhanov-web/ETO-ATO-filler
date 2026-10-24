@@ -588,6 +588,17 @@ td.diff{text-align:right;font-weight:700}
 
 /* keep last: a later rule setting display would defeat it */
 .hide{display:none}
+/* The bar offering a new version over an open document (offline-update.js). */
+.updbar{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top));transform:translateX(-50%);
+  z-index:60;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);padding:8px 8px 8px 14px;
+  border:1px solid var(--acc);border-radius:10px;background:var(--panel);color:var(--txt);
+  box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:13.5px}
+.updbar[hidden]{display:none}
+.updbar span{white-space:nowrap}
+@media (max-width:560px){.updbar span{white-space:normal}}
+.updbar button{min-height:0;margin:0;white-space:nowrap;padding:8px 14px;border-radius:7px;font-size:13px;font-weight:600}
+.updbar .updnow{background:var(--acc2);color:#fff;border:0}
+.updbar .updlater{background:none;color:var(--dim);border:0}
 </style>
 </head>
 <body>
@@ -802,6 +813,7 @@ td.diff{text-align:right;font-weight:700}
         <h3>What's new in RC1.8</h3>
         <ul>
           <li>New <b>In this package</b> card lists everything the package carries besides the flight plan, so nothing attached is missed: mandatory reads and every other document stapled behind the brief (de-icing notices, Operations Manual extracts, station briefings), company NOTAMs that belong to no aerodrome (ADMIN, WAYPOINT and the like), and the brief's own contents with page numbers. Each group folds to one line with its count — tap it to expand — and each item opens as printed in the original PDF. The load message also says how many documents are attached.</li>
+          <li>The <b>Update now</b> bar is back: a new version that arrives while a flight is open is offered at the top of the screen instead of waiting unseen until the app next starts from cold. Everything entered stays.</li>
           <li>Mandatory reads (MAN nnn-yy) are listed with their MAN number, issue, revision and pages, and <b>Open</b> shows the original pages of the PDF — filling the screen width in its true proportions; scroll down to read on. (Fixed: on an iPad held landscape the page was drawn stretched sideways.)</li>
           <li><b>Actual wind / temp</b>: tick <b>Wind / temp</b> above the waypoint table to enter the actual wind and temperature at each waypoint. The OFP's own wind shows greyed in the box; type the actual over it as five or six digits (e.g. 33016). Temperature is minus by default; tap <b>±</b> on the keypad for plus. The actuals print above the OFP's wind on the saved PDF.</li>
           <li><b>FOB before start</b>: enter the fuel on board read from the panel before engine start. The planned block fuel from the OFP is shown alongside it, and DIFF still counts from the OFP's own figures.</li>
@@ -835,7 +847,7 @@ td.diff{text-align:right;font-weight:700}
       <ol>
         <li>Use the home-screen app, not a Files preview: saving and sharing work reliably there.</li>
         <li>Keep the version you have checked before departure; an offline app does not update.</li>
-        <li>When connected, a new version offers <b>Update now</b>. It updates only when you choose it.</li>
+        <li>When connected, a new version installs itself if no flight is open. With a flight open, a bar at the top offers <b>Update now</b>: tap it and the app reloads into the new version with the flight as it was, or tap <b>Later</b> and it asks again next time you return to the app.</li>
       </ol>
 
       <h3>Before flight</h3>
@@ -875,7 +887,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.27 &nbsp;·&nbsp; Build 20261024.5 &nbsp;·&nbsp; 24 Oct 2026</span></p>
+      <span class="build">RC1.8.28 &nbsp;·&nbsp; Build 20261024.6 &nbsp;·&nbsp; 24 Oct 2026</span></p>
 
     </div>
   </div>

@@ -7,31 +7,33 @@
    moment it is being used, and airborne there is nothing to check against
    anyway.
 
-   Nor does an update ever land while something is open on screen — a loaded
-   OFP plan on one page, a loaded Journey Log on the other — since the reload
-   costs nothing on an empty load screen but takes the screen away from
+   Nor does an update ever land by itself while something is open on screen —
+   a loaded OFP plan on one page, a loaded Journey Log on the other — since the
+   reload costs nothing on an empty load screen but takes the screen away from
    whoever is working it. `hasOpen` reports which sense of "open" applies to
-   the page calling this.
+   the page calling this. Then the update is offered instead: a bar saying a
+   new version is ready, with Update now, so it is never left waiting unseen.
+   `offer` shows it (the bar below, unless a test passes its own).
 
    Takes its globals as an argument rather than reaching for `navigator`,
    `document` and `location` directly, so the whole thing can be driven by a
    test without a browser. */
-function watchForUpdates(hasOpen, env){
+function watchForUpdates(hasOpen, env, offer){
   const nav = env.navigator, doc = env.document, loc = env.location;
+  offer = offer || (go => updateBar(doc, go));
   if (!('serviceWorker' in nav) || !loc.protocol.startsWith('http')) return null;
   let reloading = false, requested = false;
   const offline = () => nav.onLine === false;
 
   function applyUpdate(reg){
     const worker = reg.waiting;
-    if (worker && !offline() && !hasOpen()){
-      requested = true;
-      worker.postMessage({ type: 'skip-waiting' });
-    }
+    if (!worker || offline()) return;
+    const go = () => { requested = true; worker.postMessage({ type: 'skip-waiting' }); };
+    if (hasOpen()) offer(go); else go();
   }
 
   // Only the switch this page asked for, above — on the ground, with nothing
-  // open — is followed by a reload. A worker can also take over on its own: a
+  // open, or on the crew's own Update now — is followed by a reload. A worker can also take over on its own: a
   // release downloaded on the ground and left waiting becomes active the next
   // time the app starts from cold, which in the air is every time iPadOS has
   // unloaded it, and it then claims the page that has just loaded. That page is
@@ -68,6 +70,34 @@ function watchForUpdates(hasOpen, env){
   }).catch(() => null);
 }
 
+// The bar offering a waiting version over an open document. Everything typed
+// is already saved as it is entered, and the reload brings the same document
+// back, so the update costs a moment's reload and nothing else. Later puts the
+// bar away until the app is next brought back to the front.
+function updateBar(doc, go){
+  if (!doc || !doc.createElement || !doc.body) return;
+  let bar = doc.getElementById('updBar');
+  if (!bar){
+    bar = doc.createElement('div');
+    bar.id = 'updBar';
+    bar.className = 'updbar';
+    bar.setAttribute('role', 'status');
+    const txt = doc.createElement('span');
+    txt.textContent = 'A new version is ready \u2014 nothing entered is lost.';
+    const now = doc.createElement('button');
+    now.type = 'button'; now.className = 'updnow'; now.textContent = 'Update now';
+    const later = doc.createElement('button');
+    later.type = 'button'; later.className = 'updlater'; later.textContent = 'Later';
+    later.onclick = () => { bar.hidden = true; };
+    bar.append(txt, now, later);
+    doc.body.appendChild(bar);
+  }
+  const now = bar.querySelector('.updnow');
+  now.disabled = false; now.textContent = 'Update now';
+  now.onclick = () => { now.disabled = true; now.textContent = 'Updating\u2026'; go(); };
+  bar.hidden = false;
+}
+
 // In the browser this is a classic script and watchForUpdates is simply a
 // global. Under Node — the test runner — it is a CommonJS module instead.
-if (typeof module !== 'undefined' && module.exports) module.exports = { watchForUpdates };
+if (typeof module !== 'undefined' && module.exports) module.exports = { watchForUpdates, updateBar };
