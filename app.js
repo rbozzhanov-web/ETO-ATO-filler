@@ -898,13 +898,16 @@ function notamActive(n, atMs){
    prints RWYS or TWYS. The whole aerodrome shut outranks the runway — it is the
    more limiting of the two, and gets its own, louder mark rather than sharing the
    runway's; a NOTAM naming both the runway and the taxiway is coloured for the
-   runway. */
+   runway. A navigation aid out of use (navaidOut, ofp-core.js) has a red of its
+   own and a tag saying so, and outranks the runway: "RWY 28 LLZ U/S" is about
+   the localizer, not the runway. */
 const RE_NTM_RWY  = /\bRUNWAYS?\b|\bRWYS?\b/;
 const RE_NTM_TWY  = /\bTAXIWAYS?\b|\bTWYS?\b/;
 const RE_NTM_CLSD = /\b(?:AD|AERODROME|ARPT|AIRPORT)\s+CLOSED\b|\b(?:AD|AERODROME|ARPT)\s+CLSD\b/;
 function notamHazard(n){
   const t = `${n.subject || ''} ${n.text || ''}`.toUpperCase();
   if (RE_NTM_CLSD.test(t)) return 'closed';
+  if (navaidOut(t)) return 'nav';
   if (RE_NTM_RWY.test(t)) return 'rwy';
   if (RE_NTM_TWY.test(t)) return 'twy';
   return null;
@@ -987,6 +990,7 @@ function renderWx(){
     if (n.from)
       d.appendChild(mk('span', 'val',
         `${stamp(n.from)} → ${stamp(n.to || '?')}${n.est ? ' EST' : ''}`));
+    if (hz === 'nav') d.appendChild(mk('span', 'navtag', 'NAVAID U/S'));
     if (n.subject) d.appendChild(mk('span', 'subj', n.subject));
     d.appendChild(mk('p', null, n.text));
     return d;
@@ -998,7 +1002,7 @@ function renderWx(){
   $('#wxOrder').disabled = !WXHI;
   const rank = n => {
     const now = !!(tgt && notamActive(n, tgt.ms)), hz = notamHazard(n);
-    const tier = hz === 'closed' || hz === 'rwy' ? 0 : hz === 'twy' ? 1 : 2;
+    const tier = hz === 'closed' || hz === 'nav' || hz === 'rwy' ? 0 : hz === 'twy' ? 1 : 2;
     return now ? tier : tier < 2 ? 3 + tier : 5;
   };
   const items = list => {

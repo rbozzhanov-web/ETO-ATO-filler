@@ -448,14 +448,23 @@ the aerodrome FA, the runway MR, the taxiway MT), so the app matches Doc 8400's 
 for the same three things instead — RWY, TWY, AD, plural included. A NOTAM naming both the runway
 and the taxiway is coloured for the runway.
 
-**The whole aerodrome closed outranks both.** It gets the one saturated fill on the card — the
+**A navigation aid out of use is marked in a rose red of its own**, with a **NAVAID U/S** tag
+so it never rests on the colour alone. It is what the Q-line would give as subject I (ILS:
+localizer, glide path, markers, locators, ILS DME) or N (VOR, DVOR, DME, NDB, TACAN, VORTAC, DF)
+with condition AS unserviceable, AU not available, AC/AW withdrawn or CT on test — read off the
+text as Doc 8400 abbreviates it: a navaid (VOR, DME, NDB, ILS, LLZ, GP, …, GNSS) and an outage
+(U/S, NOT AVBL, UNAVBL, OTS, OUT OF SERVICE, WITHDRAWN, ON TEST, DO NOT USE) in the same NOTAM.
+"RWY 28 LLZ U/S" is about the localizer, so the navaid mark outranks the runway's; an RNAV (GNSS)
+approach not available is a procedure, not the satellites, and is not marked.
+
+**The whole aerodrome closed outranks them all.** It gets the one saturated fill on the card — the
 same red as the Reset button — since it is the more limiting of the two and is worth catching
 before the rest of the list is even read. Neither mark reorders the list by itself — a coloured
 NOTAM sits exactly where it was, so the order still matches the numbers next to it.
 
 **Order**, beside the highlight switch, chooses how the list reads: **As printed**, or
 **Relevant first** — what is in effect for the flight ahead of everything else, the aerodrome
-closed or the runway before a taxiway before the rest, then what is marked but not in effect,
+closed, a navaid out of use or the runway before a taxiway before the rest, then what is marked but not in effect,
 then the remainder after a line reading "The rest, as printed". Each group keeps the printed
 order, the company NOTAMs are ordered the same way, and the choice is kept for the device. It
 sorts by the highlights, so with them switched off the list is as printed and the choice waits.

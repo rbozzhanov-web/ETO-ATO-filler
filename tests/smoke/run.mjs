@@ -1044,11 +1044,16 @@ try {
           n('C3', 'OBST CRANE ERECTED', ...later),
           n('D4', 'RWY 05R CLSD', ...later),
           n('E5', 'AD CLSD DUE WX', ...now),
-          n('F6', 'BIRD ACTIVITY', ...later)] }] });
+          n('F6', 'BIRD ACTIVITY', ...later),
+          n('G7', 'RWY 28 LLZ U/S', ...later)] }] });
+      const g7 = [...document.querySelectorAll('#wxOut .ntm')].find(e => e.querySelector('.id').textContent === 'G7');
+      const d4 = [...document.querySelectorAll('#wxOut .ntm')].find(e => e.querySelector('.id').textContent === 'D4');
+      const navOut = { cls: g7.className, tag: (g7.querySelector('.navtag') || {}).textContent,
+                       red: getComputedStyle(g7.querySelector('.id')).color, rwyRed: getComputedStyle(d4.querySelector('.id')).color };
       const ids = () => [...document.querySelectorAll('#wxOut .ntms > *')]
         .map(e => e.classList.contains('ntmsep') ? '|' : e.querySelector('.id').textContent).join(' ');
       const sel = document.querySelector('#wxOrder');
-      const out = { printed: ids(), defaultOrder: sel.value };
+      const out = { printed: ids(), defaultOrder: sel.value, navOut };
       sel.value = 'relevant'; sel.dispatchEvent(new Event('change'));
       out.relevant = ids();
       out.kept = localStorage.getItem('etofill:ntmorder');
@@ -1060,12 +1065,15 @@ try {
       out.back = ids();
       return out;
     });
-    check(r.defaultOrder === 'printed' && r.printed === 'A1 B2 C3 D4 E5 F6', 'NOTAMs are listed as printed by default');
-    check(r.relevant === 'E5 A1 D4 B2 | C3 F6', 'relevant first: in effect, then marked, then the rest as printed'
-          + (r.relevant === 'E5 A1 D4 B2 | C3 F6' ? '' : ` (${r.relevant})`));
+    check(r.defaultOrder === 'printed' && r.printed === 'A1 B2 C3 D4 E5 F6 G7', 'NOTAMs are listed as printed by default');
+    check(r.relevant === 'E5 A1 D4 G7 B2 | C3 F6', 'relevant first: in effect, then marked, then the rest as printed'
+          + (r.relevant === 'E5 A1 D4 G7 B2 | C3 F6' ? '' : ` (${r.relevant})`));
     check(r.kept === 'relevant', 'the order chosen is kept for the device');
-    check(r.offOrder === 'A1 B2 C3 D4 E5 F6' && r.disabled, 'with the highlights off the list is as printed and the order waits');
-    check(r.back === 'A1 B2 C3 D4 E5 F6', 'and as printed again when chosen');
+    check(/\bnav\b/.test(r.navOut.cls) && r.navOut.tag === 'NAVAID U/S' && r.navOut.red !== r.navOut.rwyRed,
+          'a navaid out of use is tagged and marked in a red of its own, not the runway\u2019s'
+          + ` (${r.navOut.cls} / ${r.navOut.red} vs ${r.navOut.rwyRed})`);
+    check(r.offOrder === 'A1 B2 C3 D4 E5 F6 G7' && r.disabled, 'with the highlights off the list is as printed and the order waits');
+    check(r.back === 'A1 B2 C3 D4 E5 F6 G7', 'and as printed again when chosen');
     check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
     await page.close();
   }
