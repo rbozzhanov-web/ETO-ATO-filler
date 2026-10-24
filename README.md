@@ -421,8 +421,15 @@ and the taxiway is coloured for the runway.
 
 **The whole aerodrome closed outranks both.** It gets the one saturated fill on the card — the
 same red as the Reset button — since it is the more limiting of the two and is worth catching
-before the rest of the list is even read. Neither mark reorders the list — a coloured NOTAM sits
-exactly where it was, so the order still matches the numbers next to it.
+before the rest of the list is even read. Neither mark reorders the list by itself — a coloured
+NOTAM sits exactly where it was, so the order still matches the numbers next to it.
+
+**Order**, beside the highlight switch, chooses how the list reads: **As printed**, or
+**Relevant first** — what is in effect for the flight ahead of everything else, the aerodrome
+closed or the runway before a taxiway before the rest, then what is marked but not in effect,
+then the remainder after a line reading "The rest, as printed". Each group keeps the printed
+order, the company NOTAMs are ordered the same way, and the choice is kept for the device. It
+sorts by the highlights, so with them switched off the list is as printed and the choice waits.
 
 **Highlight what applies now**, beside the aerodrome dropdown, turns all of the above off at
 once — the TAF tint, the "flight is in it" NOTAM ring, and the red/amber hazard colours — for

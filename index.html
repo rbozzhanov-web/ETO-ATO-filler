@@ -252,6 +252,12 @@ input:focus{outline:none;border-color:var(--acc)}
 .chkrow .chk{padding-bottom:0}
 .aptrow{display:flex;align-items:center;flex-wrap:wrap;gap:14px}
 .aptrow .chk{padding-bottom:0}
+.ntmord{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim)}
+.ntmord select{width:auto;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+  border-radius:5px;padding:8px 10px;font:600 14px/1 -apple-system,system-ui,sans-serif}
+/* Where the reordered NOTAMs end and the rest carry on in printed order. */
+.ntmsep{margin:0;padding:10px 12px 6px;border-top:1px dashed var(--line);
+  font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--dim)}
 /* iOS's own numeric keypad, not this app's controls: a digits-only field carries
    inputmode="none" so Safari never raises the system keyboard for it, and this bar
    stands in for it — same 3x4 layout, same weight, docked and sliding the same way,
@@ -727,6 +733,12 @@ td.diff{text-align:right;font-weight:700}
         <div class="aptrow"><select id="wxApt"></select>
           <label class="chk"><input type="checkbox" id="wxHi" checked>
             Highlight what applies now</label>
+          <!-- The order the NOTAMs are listed in: as the package prints them, or the
+               highlighted ones first. It sorts by the highlights, so it goes with them. -->
+          <label class="ntmord">Order <select id="wxOrder">
+            <option value="printed">As printed</option>
+            <option value="relevant">Relevant first</option>
+          </select></label>
         </div>
       </div>
       <span class="saved" id="wxMeta"></span>
@@ -832,7 +844,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.23 &nbsp;·&nbsp; Build 20261024.1 &nbsp;·&nbsp; 24 Oct 2026</span></p>
+      <span class="build">RC1.8.24 &nbsp;·&nbsp; Build 20261024.2 &nbsp;·&nbsp; 24 Oct 2026</span></p>
 
     </div>
   </div>

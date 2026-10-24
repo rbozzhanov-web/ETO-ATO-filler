@@ -24,13 +24,17 @@ const OFPStorage = (() => {
       rq.onerror = () => rej(rq.error);
     });
   }
-  async function idbSet(key, val){
+  // Several records in one transaction: all of them land, or none does. The
+  // PDF and what reading it produced are only any use as a pair — written one
+  // after the other, an app unloaded between the two left one flight's reading
+  // beside another flight's PDF.
+  async function idbSetAll(entries){
     const db = await idb();
     try {
       await new Promise((res, rej) => {
-        const tx = db.transaction('pdf', 'readwrite');
-        tx.objectStore('pdf').put(val, key);
-        tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+        const tx = db.transaction('pdf', 'readwrite'), store = tx.objectStore('pdf');
+        for (const [key, val] of Object.entries(entries)) store.put(val, key);
+        tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
       });
     } finally { db.close(); }
   }
@@ -52,8 +56,8 @@ const OFPStorage = (() => {
   async function keepSession(name, size, hash, buf, parsed){
     if (typeof indexedDB === 'undefined') return false;
     try {
-      await idbSet('last', { name, size, hash, buf });
-      await idbSet('lastParsed', parsed ? { name, size, hash, parsed } : null);
+      await idbSetAll({ last: { name, size, hash, buf },
+                        lastParsed: parsed ? { name, size, hash, parsed } : null });
       localStorage.setItem(LAST, JSON.stringify({ name, size, hash, at: Date.now() }));
       return true;
     } catch(e){ return false; /* quota/private mode: the live flight continues without cold resume */ }
@@ -61,7 +65,7 @@ const OFPStorage = (() => {
   async function dropSession(){
     try { localStorage.removeItem(LAST); } catch(e){}
     if (typeof indexedDB === 'undefined') return;
-    try { await idbSet('last', null); await idbSet('lastParsed', null); } catch(e){}
+    try { await idbSetAll({ last: null, lastParsed: null }); } catch(e){}
   }
   // Called on every save: the age that matters is the time since the flight
   // was last worked, not since its PDF was first loaded.
