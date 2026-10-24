@@ -3,10 +3,17 @@
 // two pages otherwise start on the hardcoded dark markup and only correct it
 // once app.js/journey-log.js finish loading, which is what showed as a flash
 // of the wrong theme on every crossing between them.
+// The browser's own colour for the page — what iPadOS paints around and behind
+// it before the page draws anything — follows the same choice: the light page's
+// background when it is light, rather than the dark one the markup starts on.
 try{
   var t = localStorage.getItem('etofill:theme');
   if(!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  if(t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  if(t === 'light'){
+    document.documentElement.setAttribute('data-theme', 'light');
+    var tc = document.querySelector('meta[name=theme-color]');
+    if(tc) tc.setAttribute('content', '#f2f5f8');
+  }
 }catch(e){}
 
 // A flight left open on the OFP page is reopened as soon as app.js loads. Until

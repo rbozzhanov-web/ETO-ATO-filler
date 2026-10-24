@@ -65,12 +65,15 @@ test('device-wide settings survive retention and capacity pruning', () => {
     'etofill:theme': 'light',
     'etofill:wxhi': '1',
     'etofill:last': '{"resume":true}',
+    'etofill:reading': '{"name":"f.pdf","size":4,"parsed":{}}',
     'etofill:plan:stale': state(now - 31 * day),
   });
   prunePlans(store, now, 30, 20);
   assert.equal(store.getItem('etofill:theme'), 'light');
   assert.equal(store.getItem('etofill:wxhi'), '1');
   assert.equal(store.getItem('etofill:last'), '{"resume":true}');
+  assert.equal(store.getItem('etofill:reading'), '{"name":"f.pdf","size":4,"parsed":{}}',
+               'the reopened flight\u2019s reading is not a stored flight, and is neither aged out nor counted');
 });
 
 test('quota failure while stamping a legacy entry does not crash pruning', () => {

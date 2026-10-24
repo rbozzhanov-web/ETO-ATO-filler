@@ -3,6 +3,11 @@
    IndexedDB/localStorage resume copy that lets iPadOS restore an evicted tab. */
 const OFPStorage = (() => {
   const LAST = 'etofill:last';
+  // The stored reading once more, in localStorage, which answers at once where
+  // IndexedDB answers only after the page has been drawn: read from here, a
+  // flight reopened after iPadOS unloaded the app is back on screen before the
+  // first frame, instead of behind a blank page that then fills in.
+  const READING = 'etofill:reading';
   // The resume copy is there to carry a flight across iPadOS evicting the app,
   // not to open a tablet's next crew onto an old flight. Once nothing has been
   // done with it for this long it is dropped rather than reopened.
@@ -58,12 +63,23 @@ const OFPStorage = (() => {
     try {
       await idbSetAll({ last: { name, size, hash, buf },
                         lastParsed: parsed ? { name, size, hash, parsed } : null });
+      keepReading(name, size, hash, parsed);
       localStorage.setItem(LAST, JSON.stringify({ name, size, hash, at: Date.now() }));
       return true;
     } catch(e){ return false; /* quota/private mode: the live flight continues without cold resume */ }
   }
+  // The previous flight's copy goes first, so it never sits beside this one's
+  // PDF and its room is free for the new one. A reading too big for what is
+  // left of the device's localStorage is simply not kept here: the IndexedDB
+  // copy still brings the flight back, a moment later.
+  function keepReading(name, size, hash, parsed){
+    try { localStorage.removeItem(READING); } catch(e){}
+    if (!parsed) return;
+    try { localStorage.setItem(READING, JSON.stringify({ name, size, hash, parsed })); }
+    catch(e){ try { localStorage.removeItem(READING); } catch(e2){} }
+  }
   async function dropSession(){
-    try { localStorage.removeItem(LAST); } catch(e){}
+    try { localStorage.removeItem(LAST); localStorage.removeItem(READING); } catch(e){}
     if (typeof indexedDB === 'undefined') return;
     try { await idbSetAll({ last: null, lastParsed: null }); } catch(e){}
   }
@@ -85,10 +101,15 @@ const OFPStorage = (() => {
     if (typeof meta.at !== 'number' || now - meta.at > RESUME_MAX_AGE){ await dropSession(); return null; }
     // The quick way back: the stored reading, when it is this very PDF's.
     // Its bytes are not touched here — readPdf fetches and checks them later.
+    // The localStorage copy is tried first and needs no wait at all, so when it
+    // is there nothing below is awaited and the flight is rebuilt before the
+    // page is first drawn; the IndexedDB copy is there for when it is not.
+    const ours = q => !!q && !!q.parsed && q.name === meta.name && q.size === meta.size
+                    && (q.hash || null) === (meta.hash || null);
     let quick = null;
-    try { quick = await idbGet('lastParsed'); } catch(e){}
-    if (quick && quick.parsed && quick.name === meta.name && quick.size === meta.size
-        && (quick.hash || null) === (meta.hash || null))
+    try { quick = JSON.parse(localStorage.getItem(READING) || 'null'); } catch(e){}
+    if (!ours(quick)){ try { quick = await idbGet('lastParsed'); } catch(e){ quick = null; } }
+    if (ours(quick))
       return { name: quick.name, size: quick.size, hash: quick.hash, parsed: quick.parsed, buf: null };
 
     let rec;
@@ -113,7 +134,7 @@ const OFPStorage = (() => {
     }
     return rec.buf;
   }
-  return { LAST, RESUME_MAX_AGE, digestOf, keepSession, touchSession, dropSession, resumeRecord, readPdf };
+  return { LAST, READING, RESUME_MAX_AGE, digestOf, keepSession, touchSession, dropSession, resumeRecord, readPdf };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = OFPStorage;

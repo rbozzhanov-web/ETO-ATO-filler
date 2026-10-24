@@ -5,15 +5,19 @@
    EFB apps open, is often — is relaunched behind a launch screen. Without an
    apple-touch-startup-image of exactly the device's size that screen is plain
    white, a flash on a dark cockpit display before the app's own dark page is
-   drawn. These are solid images in the app's dark background colour, one per
-   iPad screen in each orientation; index.html links them.
+   drawn. These are solid images in the app's own background colours — light
+   and dark, picked by the iPad's appearance setting — one per iPad screen in
+   each orientation; index.html links them. A dark launch screen in front of a
+   light page was itself the flash: black, then the page in white.
 
    Run:  node scripts/make-splash.js     (writes splash/*.png, prints the links) */
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 
-const BG = [0x0f, 0x14, 0x19];                   // #0f1419, the page's dark --bg
+// The page's --bg in each theme (index.html :root and html[data-theme=light]).
+const THEMES = { light: [0xf2, 0xf5, 0xf8],      // #f2f5f8
+                 dark:  [0x0f, 0x14, 0x19] };    // #0f1419
 
 // iPad screens in CSS pixels, portrait, all at a device pixel ratio of 2.
 const SCREENS = [
@@ -44,9 +48,9 @@ function chunk(type, data){
   const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(body));
   return Buffer.concat([len, body, crc]);
 }
-function solidPng(w, h){
+function solidPng(w, h, bg){
   const row = Buffer.alloc(1 + w * 3);           // filter byte 0, then RGB
-  for (let x = 0; x < w; x++) row.set(BG, 1 + x * 3);
+  for (let x = 0; x < w; x++) row.set(bg, 1 + x * 3);
   const raw = Buffer.alloc(row.length * h);
   for (let y = 0; y < h; y++) row.copy(raw, y * row.length);
   const ihdr = Buffer.alloc(13);
@@ -62,15 +66,18 @@ function solidPng(w, h){
 
 const out = path.join(__dirname, '..', 'splash');
 fs.mkdirSync(out, { recursive: true });
+for (const f of fs.readdirSync(out)) if (f.endsWith('.png')) fs.unlinkSync(path.join(out, f));
 const links = [];
 for (const [cw, ch] of SCREENS){
   for (const orientation of ['portrait', 'landscape']){
     const [w, h] = orientation === 'portrait' ? [cw * 2, ch * 2] : [ch * 2, cw * 2];
-    const name = `${w}x${h}.png`;
-    fs.writeFileSync(path.join(out, name), solidPng(w, h));
-    links.push(`<link rel="apple-touch-startup-image" href="splash/${name}" media="screen and `
-      + `(device-width: ${cw}px) and (device-height: ${ch}px) and `
-      + `(-webkit-device-pixel-ratio: 2) and (orientation: ${orientation})">`);
+    for (const [theme, bg] of Object.entries(THEMES)){
+      const name = `${theme}-${w}x${h}.png`;
+      fs.writeFileSync(path.join(out, name), solidPng(w, h, bg));
+      links.push(`<link rel="apple-touch-startup-image" href="splash/${name}" media="screen and `
+        + `(prefers-color-scheme: ${theme}) and (device-width: ${cw}px) and (device-height: ${ch}px) and `
+        + `(-webkit-device-pixel-ratio: 2) and (orientation: ${orientation})">`);
+    }
   }
 }
 console.log(links.join('\n'));
