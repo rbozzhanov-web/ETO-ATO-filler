@@ -400,6 +400,8 @@ function applyTheme(t, persist = true){
     b.setAttribute('aria-pressed', String(b.dataset.themeSet === t)));
   const m = document.querySelector('meta[name=theme-color]');
   if (m) m.content = t === 'dark' ? '#0f1419' : '#f2f5f8';
+  const cs = document.querySelector('meta[name=color-scheme]');
+  if (cs) cs.content = t === 'dark' ? 'dark' : 'light';
   const s = document.documentElement.style;
   s.setProperty('--c-eto', onScreen(C.eto));
   s.setProperty('--c-ato', onScreen(C.ato));
@@ -3044,7 +3046,16 @@ async function resumeSession(){
     reopened = !!rec && await loadBuffer(rec.name, rec.size, rec.buf, true, { hash: rec.hash, parsed: rec.parsed });
     if (reopened){ restoreView(); performance.mark('ofp:resumed'); }
   } finally {
-    delete document.documentElement.dataset.resuming;
+    const root = document.documentElement;
+    delete root.dataset.resuming;
+    // A cold start's launch cover (index.html, html[data-launch]) is lifted now
+    // that the flight is in place: it fades from the frame after the first one
+    // drawn (theme-init.js, liftLaunch). Once it has faded it is taken off
+    // altogether, so nothing can ever start it again.
+    if (root.dataset.launch === '' && window.liftLaunch){
+      window.liftLaunch();
+      setTimeout(() => delete root.dataset.launch, 2000);
+    }
   }
   if (reopened && !RAW) setTimeout(() => ensureRaw().catch(err => {
     console.error('Stored PDF unreadable:', err);

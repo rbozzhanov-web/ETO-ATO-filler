@@ -1166,6 +1166,8 @@ function applyTheme(){
   document.documentElement.dataset.theme = t;
   const m = document.querySelector('meta[name=theme-color]');
   if(m) m.content = t === 'light' ? '#f2f5f8' : '#0f1419';
+  const cs = document.querySelector('meta[name=color-scheme]');
+  if(cs) cs.content = t === 'light' ? 'light' : 'dark';
 }
 applyTheme();
 addEventListener('storage', e=>{ if(e.key === 'etofill:theme') applyTheme(); });

@@ -38,7 +38,7 @@ sw.js                 the offline cache
 manifest.webmanifest
 icon-192.png
 icon-512.png
-splash/               light and dark launch screens for each iPad size and orientation
+splash/               dark launch screens for each iPad size and orientation
 ```
 
 There are two pages: `index.html` is the OFP companion described below, and
@@ -127,16 +127,31 @@ go straight afterwards and rebuilt only for Save or a chart, and a decoded chart
 
 iPadOS relaunches an unloaded app behind its launch screen, which is plain white
 unless the app supplies one. `index.html` links a launch image for each iPad
-screen size and orientation, in the page's own background colour — light or dark
-by the iPad's appearance setting (`splash/`, written by `scripts/make-splash.js`).
-Only a dark one used to be offered, so a light page was relaunched behind black:
-a flash of its own on every return. The browser's colour for the page
-(`theme-color`) follows the theme from the first frame too. iPadOS reads the
-launch images, and picks light or dark, when the app is added to the Home
-Screen — so an icon added before these existed, or before the iPad's appearance
-was changed, has to be removed and added again once to pick them up. A Home
-Screen icon keeps its own storage: stored flights do not carry over to the new
-icon, so this is done between flights.
+screen size and orientation (`splash/`, written by `scripts/make-splash.js`), in
+the page's dark background colour whatever the iPad's appearance. iPadOS picks a
+launch image once, when the app is added to the Home Screen, and keeps it: a
+light one, offered for a light appearance for a while, was chosen in daylight
+and then put up in front of every relaunch at night, in a dark cockpit. An icon
+added while that was offered keeps it until it is removed and added again; a Home
+Screen icon keeps its own storage, so stored flights do not carry over to the new
+icon, and this is done between flights.
+
+From the launch screen the page does not switch on at once. A cold start of the
+installed app (`theme-init.js` tells one from a reload or a crossing from the
+Journey Log) begins under a cover in the launch screen's own dark, which takes
+no taps, and the page fades up out of it in under half a second once it is
+ready — in the dark theme only the page fading in is seen, in the light one a
+gentle brightening instead of a bright page snapping on. While a flight is still
+being reopened the cover holds, so nothing half built is shown. The fade starts
+from the frame after the first one drawn: until a frame has been drawn WebKit's
+animation clock stands where it was when loading began, and a fade started
+sooner is counted as over before anything is seen.
+
+The browser's colour for the page (`theme-color`) and the colour scheme WebKit
+is told the page uses (`color-scheme`) follow the theme from the first frame, so
+in the dark theme WebKit's own pickers and menus — the aerodrome list, the NOTAM
+order, the check boxes — are dark too, not white over a dark page. The Journey
+Log's paper stays white whatever the theme around it.
 
 ---
 
