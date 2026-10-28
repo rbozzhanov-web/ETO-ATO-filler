@@ -62,8 +62,7 @@ test('due-state boundaries remain stable across midnight', () => {
 
 test('app rebuilds altimeter checks from flown route after Direct-To', () => {
   const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-  assert.match(app, /function afterDct\(\)[\s\S]*?renderAlt\(true\);[\s\S]*?renderFuel\(\);/);
-  assert.match(app, /function renderAlt\(preserveAlerts = false\)[\s\S]*?CHECKS = hourlyChecks\(flown\(\), T0\);/);
+  assert.match(app, /function afterDct\(\)[\s\S]*?renderAlt\(\);[\s\S]*?renderFuel\(\);/);
+  assert.match(app, /function renderAlt\(\)[\s\S]*?CHECKS = hourlyChecks\(flown\(\), T0\);/);
   assert.match(app, /classList\.toggle\('hide', !CHECKS\.length\)/);
-  assert.match(app, /if \(announced\)[\s\S]*?CHECKS\.some\(c => c\.mark === mark\)/);
 });

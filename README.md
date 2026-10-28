@@ -294,9 +294,10 @@ contexts, so everything works on either.
    is printed on the blank line directly under that waypoint, so the time is read
    off the ETO/ATO right above it.
    Each row tracks its own due time against the device clock in UTC and turns
-   red once the check is overdue, with a short tone when it first falls due
-   (switch it off with the checkbox — the choice is remembered, and tapping the
-   clock beside it no longer knocks it off). No check is raised inside the last
+   red once the check is overdue. While a check has fallen due and is not
+   recorded, the "4" badge of its card flashes blue and red until the figures are
+   in; a fuel check fallen due flashes the "3" badge of the card the fuel goes
+   into the same way. There is no sound. No check is raised inside the last
    hour before arrival. Saving the PDF with checks still missing asks for
    confirmation first.
 5. **Save PDF** → in the iOS share sheet pick "Save to Files", AirDrop, Print,
