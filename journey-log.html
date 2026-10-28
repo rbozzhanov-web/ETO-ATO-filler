@@ -7,6 +7,7 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="theme-color" content="#0f1419">
+<meta name="color-scheme" content="dark">
 <script src="theme-init.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,6 +23,7 @@
    of buttons across the two pages. The sheet keeps its own, because it is paper
    and does not answer to a theme. */
 :root{
+  color-scheme:dark;
   --bg:#0f1419; --panel:#171d24; --panel2:#1e262f; --line:#2c3742; --line2:#232c35;
   --txt:#e6edf3; --dim:#8b98a5; --acc:#4d9fff; --acc2:#1f6feb;
   --ok:#3fb950; --warn:#d29922; --err:#f85149;
@@ -35,6 +37,7 @@
   --fill-focus:rgba(52,152,219,.26);
 }
 html[data-theme=light]{
+  color-scheme:light;
   --bg:#f2f5f8; --panel:#ffffff; --panel2:#f1f4f7; --line:#d6dde4; --line2:#e6ebf0;
   --txt:#16202b; --dim:#5d6b7a; --acc:#0b62d6; --acc2:#0b62d6;
   --ok:#1a7f37; --warn:#9a6700; --err:#cf222e;
@@ -157,6 +160,7 @@ button.on{border-color:var(--acc); color:var(--acc);
    so nothing is ever pushed off the left where no scrolling can reach it. */
 .wrap{position:relative; flex:0 0 auto; margin-inline:auto}
 .sheet{
+  color-scheme:light;              /* paper, whatever the theme around it */
   position:absolute; left:0; top:0; transform-origin:0 0;
   width:841.89pt; height:595.28pt;
   background:var(--paper); color:var(--ink);
@@ -356,6 +360,12 @@ body:not(.loaded) #export,body:not(.loaded) #reset,body:not(.loaded) #remove{dis
 .updbar button{min-height:0;margin:0;white-space:nowrap;padding:8px 14px;border-radius:7px;font-size:13px;font-weight:600}
 .updbar .updnow{background:var(--acc2);color:#fff;border:0}
 .updbar .updlater{background:none;color:var(--dim);border:0}
+/* A cold start into this page comes up out of the launch screen's dark the
+   same way the OFP page does (index.html, html[data-launch]). */
+html[data-launch]::after{content:"";position:fixed;top:0;right:0;bottom:0;left:0;z-index:2147483647;
+  pointer-events:none;background:#0f1419}
+html[data-launch=out]::after{animation:launchOut .45s ease-in-out both}
+@keyframes launchOut{to{opacity:0;visibility:hidden}}
 </style>
 </head>
 <body>

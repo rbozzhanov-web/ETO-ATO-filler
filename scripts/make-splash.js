@@ -5,19 +5,21 @@
    EFB apps open, is often — is relaunched behind a launch screen. Without an
    apple-touch-startup-image of exactly the device's size that screen is plain
    white, a flash on a dark cockpit display before the app's own dark page is
-   drawn. These are solid images in the app's own background colours — light
-   and dark, picked by the iPad's appearance setting — one per iPad screen in
-   each orientation; index.html links them. A dark launch screen in front of a
-   light page was itself the flash: black, then the page in white.
+   drawn. These are solid images in the app's dark background colour, one per
+   iPad screen in each orientation; index.html links them.
+
+   Dark whatever the iPad's appearance. iPadOS picks a launch image once, when
+   the app is added to the Home Screen, and keeps it — so a light one, offered
+   for a light appearance, was chosen in daylight and then put up in front of
+   every relaunch at night, in a dark cockpit. In daylight the light page instead
+   comes up out of the dark one gently (index.html, html[data-launch]).
 
    Run:  node scripts/make-splash.js     (writes splash/*.png, prints the links) */
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 
-// The page's --bg in each theme (index.html :root and html[data-theme=light]).
-const THEMES = { light: [0xf2, 0xf5, 0xf8],      // #f2f5f8
-                 dark:  [0x0f, 0x14, 0x19] };    // #0f1419
+const BG = [0x0f, 0x14, 0x19];                   // #0f1419, the page's dark --bg
 
 // iPad screens in CSS pixels, portrait, all at a device pixel ratio of 2.
 const SCREENS = [
@@ -71,13 +73,11 @@ const links = [];
 for (const [cw, ch] of SCREENS){
   for (const orientation of ['portrait', 'landscape']){
     const [w, h] = orientation === 'portrait' ? [cw * 2, ch * 2] : [ch * 2, cw * 2];
-    for (const [theme, bg] of Object.entries(THEMES)){
-      const name = `${theme}-${w}x${h}.png`;
-      fs.writeFileSync(path.join(out, name), solidPng(w, h, bg));
-      links.push(`<link rel="apple-touch-startup-image" href="splash/${name}" media="screen and `
-        + `(prefers-color-scheme: ${theme}) and (device-width: ${cw}px) and (device-height: ${ch}px) and `
-        + `(-webkit-device-pixel-ratio: 2) and (orientation: ${orientation})">`);
-    }
+    const name = `dark-${w}x${h}.png`;
+    fs.writeFileSync(path.join(out, name), solidPng(w, h, BG));
+    links.push(`<link rel="apple-touch-startup-image" href="splash/${name}" media="screen and `
+      + `(device-width: ${cw}px) and (device-height: ${ch}px) and `
+      + `(-webkit-device-pixel-ratio: 2) and (orientation: ${orientation})">`);
   }
 }
 console.log(links.join('\n'));

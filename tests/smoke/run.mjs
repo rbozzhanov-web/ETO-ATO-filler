@@ -813,6 +813,40 @@ try {
     await page.close();
   }
 
+  /* ---- coming up out of the launch screen ----
+     A cold start of the installed app went from iPadOS's dark launch screen
+     straight to the page: in the light theme, at night, a bright page switched
+     on at once in a dark cockpit. The page starts under a cover in the launch
+     screen's own colour, which never takes a tap, and fades out of it once the
+     page is ready. The colour scheme WebKit draws its own pickers in follows
+     the theme too — no white aerodrome list opening over a dark page. */
+  for (const file of ['index.html', 'journey-log.html']){
+    const { page, problems } = await open(file);
+    const r = await page.evaluate(async withThemes => {
+      const html = document.documentElement;
+      const cover = () => { const c = getComputedStyle(html, '::after');
+        return { bg: c.backgroundColor, op: +c.opacity, vis: c.visibility, taps: c.pointerEvents }; };
+      html.setAttribute('data-launch', '');
+      const up = cover();
+      html.setAttribute('data-launch', 'out');
+      await new Promise(res => setTimeout(res, 900));
+      const gone = cover();
+      html.removeAttribute('data-launch');
+      const scheme = t => { document.querySelector(`[data-theme-set="${t}"]`)?.click();
+        return getComputedStyle(html).colorScheme + '/' + document.querySelector('meta[name=color-scheme]').content; };
+      const out = { up, gone, dark: withThemes ? scheme('dark') : null, light: withThemes ? scheme('light') : null };
+      try { localStorage.removeItem('etofill:theme'); } catch(e){}        // back to following the device
+      return out;
+    }, file === 'index.html');
+    check(r.up.op === 1 && r.up.bg === 'rgb(15, 20, 25)' && r.up.taps === 'none',
+          `${file}: a cold start comes up under the launch screen’s own dark, which takes no tap` + ` (${JSON.stringify(r.up)})`);
+    check(r.gone.op === 0 && r.gone.vis === 'hidden', `${file}: and fades out of it once lifted`);
+    if (r.dark) check(r.dark === 'dark/dark' && r.light === 'light/light',
+                      'the colour scheme WebKit draws pickers in follows the theme' + ` (${r.dark}, ${r.light})`);
+    check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
+    await page.close();
+  }
+
   /* ---- a reopened flight's table is already in place ----
      The waypoint table follows the flight: with no touch for a while it scrolls
      itself to the tracked row, smoothly. On a reopened flight there has been no
