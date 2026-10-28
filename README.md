@@ -309,7 +309,9 @@ from ever appearing to dismiss on its own: the iPad's own dismiss key, pinned to
 own bottom-right corner rather than up in the bar with Next and Previous, closes it outright,
 whatever the field's own Return key would otherwise have done; a tap anywhere outside both the field and the
 keypad closes it as well, and so does a real scroll — one actually dragged or wheeled, never the
-keypad's own scroll bringing the field up above it.
+keypad's own scroll bringing the field up above it. Only a drag made with the keypad already up
+counts: a tap seldom lands perfectly still, and the small movement of the very tap that opened
+the keypad, followed by that scroll, used to read as a drag and close it as the crew went to type.
 
 The page scrolls plainly. Three attempts to help it along have been made and all three
 withdrawn — CSS scroll snapping, then a pull onto the nearest card once your scroll came to
