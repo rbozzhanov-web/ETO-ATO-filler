@@ -153,6 +153,14 @@ in the dark theme WebKit's own pickers and menus — the aerodrome list, the NOT
 order, the check boxes — are dark too, not white over a dark page. The Journey
 Log's paper stays white whatever the theme around it.
 
+Until a theme button is tapped the page follows the iPad's appearance — but not
+the instant it is told. As the app goes to the background iPadOS photographs it
+for the app switcher in both appearances, telling the page the opposite one for
+a moment to take the second; followed at once, that repainted a dark page light,
+and the light picture was what met the crew switching back at night (seen in a
+screen recording). A change is followed once it has held for a second with the
+page on screen, and one made while the app was away is caught up as it returns.
+
 ---
 
 ## Option 2. Running it from a folder

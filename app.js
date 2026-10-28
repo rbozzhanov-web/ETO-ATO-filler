@@ -453,11 +453,25 @@ document.querySelectorAll('[data-theme-set]').forEach(b =>
   // Until the sun/moon button is actually tapped, the theme keeps following
   // the device's own — flipping the system switch flips this page with it,
   // the same launch or not, rather than freezing on whatever it read once.
-  mq.addEventListener('change', e => {
+  //
+  // But not the moment it is told. As the app goes to the background iPadOS
+  // takes its picture for the app switcher in both appearances, telling the
+  // page the opposite one for a moment to take the second. Followed at once,
+  // that repainted a dark page light just then — and a light picture of it
+  // was what met the crew coming back from ForeFlight at night, ahead of the
+  // page itself. So a change is taken only once it has held for a second with
+  // the page on screen, and a real one made while the app was away (the iPad
+  // going dark at sunset) is caught up the moment it is back in front.
+  let appearT = 0;
+  const follow = () => {
+    if (document.hidden) return;
     let saved = null;
     try { saved = localStorage.getItem('etofill:theme'); } catch(err){}
-    if (!saved) applyTheme(e.matches ? 'light' : 'dark', false);
-  });
+    const want = mq.matches ? 'light' : 'dark';
+    if (!saved && document.documentElement.dataset.theme !== want) applyTheme(want, false);
+  };
+  mq.addEventListener('change', () => { clearTimeout(appearT); appearT = setTimeout(follow, 1000); });
+  document.addEventListener('visibilitychange', follow);
 })();
 
 /* ================= file loading ================= */
