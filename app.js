@@ -110,6 +110,13 @@ function npShow(el){
   $('#numpadPrev').disabled = !npHasPrev(el);
   $('#numpadSign').classList.toggle('on', el.classList.contains('temp'));
   numpad.classList.add('show');
+  // Whatever the finger did on the way to this box belongs to the tap that
+  // opened it, not to a drag of the page. A tap rarely lands perfectly still —
+  // a pixel of roll, turbulence — and the scroll that follows (this box brought
+  // up above the keypad, below, or WebKit's own) came while that movement was
+  // still counted, and was taken for the crew scrolling the page away: the
+  // keypad closed as they went to type. Only a drag made with it open counts.
+  NP_GESTURE = false; clearTimeout(npGestureT);
   document.body.style.setProperty('--numpad-h', numpad.offsetHeight + 'px');
   document.body.classList.add('numpad-open');
   const suppressScroll = NP_SUPPRESS_SCROLL_NEXT; NP_SUPPRESS_SCROLL_NEXT = false;

@@ -848,6 +848,7 @@ td.diff{text-align:right;font-weight:700}
         <h3>What's new in RC1.8</h3>
         <ul>
           <li>New <b>In this package</b> card lists everything the package carries besides the flight plan, so nothing attached is missed: mandatory reads and every other document stapled behind the brief (de-icing notices, Operations Manual extracts, station briefings), company NOTAMs that belong to no aerodrome (ADMIN, WAYPOINT and the like), and the brief's own contents with page numbers. Each group folds to one line with its count — tap it to expand — and each item opens as printed in the original PDF. The load message also says how many documents are attached.</li>
+          <li>Fixed: the keypad sometimes closed just as you went to type. A tap that moved the finger even slightly — turbulence, a roll of the fingertip — was taken for scrolling the page once the box was brought up above the keypad. Now only dragging the page with the keypad already up closes it.</li>
           <li>Reopening is now one step: when iPadOS has unloaded the app, the flight is rebuilt before the page is first drawn, so after the launch screen the next thing on screen is the flight itself, where you left it — no blank page with "Reopening the open flight…", no jump, and the waypoint table already on its row instead of gliding there. The launch screen and the page colour now match your theme (light or dark) — to get the light launch screen, remove the app from the Home Screen and add it again from Safari, between flights.</li>
           <li>Fixed: a NOTAM headed <b>NEW</b> (issued since the last briefing), one naming two places, or one followed by a FIR heading was run into the end of the NOTAM before it, and went unseen — eighteen of them in one recent package. Each is now listed on its own; one naming two FIRs is under both, and those issued since the last briefing carry a <b>NEW</b> tag.</li>
           <li>NOTAMs about a navigation aid out of use — VOR, DME, NDB, ILS and its localizer, glide path and markers, TACAN, DF, GNSS — marked U/S, NOT AVBL, withdrawn or on test, are highlighted in a <b>rose red</b> of their own with a <b>NAVAID U/S</b> tag, apart from the runway's red, and listed with the runway NOTAMs under <b>Relevant first</b>. An approach or departure procedure merely not available is not marked — the beacon it is named after may be working.</li>
@@ -925,7 +926,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.30 &nbsp;·&nbsp; Build 20261024.8 &nbsp;·&nbsp; 24 Oct 2026</span></p>
+      <span class="build">RC1.8.31 &nbsp;·&nbsp; Build 20261028.1 &nbsp;·&nbsp; 28 Oct 2026</span></p>
 
     </div>
   </div>

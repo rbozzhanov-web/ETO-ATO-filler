@@ -635,6 +635,41 @@ try {
     await page.close();
   }
 
+  /* ---- the keypad stays open for the tap that opened it ----
+     The bug this guards: a tap on a box with the slightest finger movement —
+     turbulence, a roll of the fingertip — counted as a drag of the page, and the
+     scroll that then brings the box up above the keypad was read as the crew
+     scrolling away: the keypad closed as they went to type. A drag made while
+     it is open still closes it, the way scrolling closes the system keyboard. */
+  {
+    const { page } = await open('index.html');
+    const r = await page.evaluate(async a => {
+      await loadBuffer('K.pdf', a.length, new Uint8Array(a).buffer, false);
+      document.body.style.minHeight = '5000px';
+      document.querySelector('.wrap').style.paddingTop = '1500px';      // the box well down the page
+      document.activeElement.blur();
+      const fob = document.querySelector('#fob');
+      const settle = ms => new Promise(res => setTimeout(res, ms));
+      // the box low on the screen, so bringing it above the keypad scrolls the page
+      scrollTo(0, scrollY + fob.getBoundingClientRect().top - innerHeight + 40);
+      await settle(200);
+      const y0 = scrollY;
+      fob.dispatchEvent(new Event('touchmove', { bubbles: true }));    // the tap's own small movement
+      fob.focus();
+      await settle(600);
+      const open = { scrolled: scrollY !== y0, open: document.querySelector('#numpad').classList.contains('show') };
+      // now a real drag of the page with the keypad up
+      document.body.dispatchEvent(new Event('touchmove', { bubbles: true }));
+      scrollBy(0, 200);
+      await settle(300);
+      return { ...open, closedByDrag: !document.querySelector('#numpad').classList.contains('show') };
+    }, ofpPdf([0, 20, 40, 60]));
+    check(r.scrolled && r.open, 'a tap that moves the finger slightly still leaves the keypad open once the box is brought up'
+          + ` (${JSON.stringify(r)})`);
+    check(r.closedByDrag, 'while dragging the page with the keypad up still closes it');
+    await page.close();
+  }
+
   /* ---- framed by another site ----
      No frame-ancestors can be sent from GitHub Pages, so the page hides itself
      when it finds it is not the top-level document. */
