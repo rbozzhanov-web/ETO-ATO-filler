@@ -847,6 +847,41 @@ try {
     await page.close();
   }
 
+  /* ---- the theme does not flip for iPadOS's app-switcher picture ----
+     The bug this guards, seen in a screen recording: switching back from
+     ForeFlight at night, the app came back as a light picture first. iPadOS
+     photographs an app for the switcher in both appearances as it goes to the
+     background, telling the page the opposite one for a moment — and the page,
+     following the device's appearance, repainted itself light for it. A
+     change is followed only once it has held for a second on screen, and one
+     made while the app was away is caught up as soon as it is back. */
+  for (const file of ['index.html', 'journey-log.html']){
+    const { page } = await open(file);
+    await page.evaluate(() => { try { localStorage.removeItem('etofill:theme'); } catch(e){} });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.reload({ waitUntil: 'load' });
+    const theme = () => page.evaluate(() => document.documentElement.dataset.theme || 'dark');
+    const start = await theme();
+    // in the background: the picture-taking flip comes and goes
+    await page.evaluate(() => Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }));
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.waitForTimeout(1300);
+    const whileAway = await theme();
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.waitForTimeout(200);
+    await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); });
+    const back = await theme();
+    // on screen: a real change of the iPad's appearance is followed
+    await page.emulateMedia({ colorScheme: 'light' });
+    const atOnce = await theme();
+    await page.waitForTimeout(1300);
+    const held = await theme();
+    check(start === 'dark' && whileAway === 'dark' && back === 'dark',
+          `${file}: the page stays dark through iPadOS’s app-switcher flip to light` + ` (${start}/${whileAway}/${back})`);
+    check(atOnce === 'dark' && held === 'light', `${file}: and still follows a real change of the iPad’s appearance` + ` (${atOnce}/${held})`);
+    await page.close();
+  }
+
   /* ---- a reopened flight's table is already in place ----
      The waypoint table follows the flight: with no touch for a while it scrolls
      itself to the tracked row, smoothly. On a reopened flight there has been no

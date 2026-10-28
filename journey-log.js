@@ -1174,11 +1174,21 @@ addEventListener('storage', e=>{ if(e.key === 'etofill:theme') applyTheme(); });
 // No explicit choice saved yet keeps following the device's own theme live,
 // the same way the companion does — flipping the system switch flips this
 // page too, whether or not the companion happens to be the one open right now.
-matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+// Taken only once a change has held for a second with the page on screen:
+// iPadOS tells the page the opposite appearance for a moment while it takes its
+// app-switcher picture, and following that at once painted a dark page light
+// for the picture the crew then saw on the way back (app.js has the whole story).
+let appearT = 0;
+const followDevice = () => {
+  if(document.hidden) return;
   let saved = null;
   try{ saved = localStorage.getItem('etofill:theme'); }catch(e){}
   if(!saved) applyTheme();
+};
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+  clearTimeout(appearT); appearT = setTimeout(followDevice, 1000);
 });
+document.addEventListener('visibilitychange', followDevice);
 
 /* The companion's header travels with its page, so it is only under this button
    while that page is at the top. Crossing back asks for the top, or the return
