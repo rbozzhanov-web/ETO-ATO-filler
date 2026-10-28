@@ -144,6 +144,11 @@ h1{font-size:20px;margin:0 0 3px;letter-spacing:.3px}
 .step i{display:grid;place-items:center;min-width:20px;height:20px;padding:0 6px;
   border-radius:10px;background:var(--acc2);color:#fff;font-style:normal;
   font-size:11px;font-weight:700;line-height:1;letter-spacing:0;flex:0 0 auto}
+/* A check fallen due and not yet recorded: its step's badge flashes blue and red
+   until the figures are in (app.js, stepDue) — "4" the altimeter cross-checks,
+   "3" the fuel checks. */
+.step i.due{animation:stepDue 1s steps(1,end) infinite}
+@keyframes stepDue{0%{background:var(--acc2)}50%,100%{background:var(--dangerbtn)}}
 
 #drop{border:2px dashed var(--line);border-radius:8px;padding:32px 20px;text-align:center;
   cursor:pointer;transition:.15s;background:var(--panel2)}
@@ -715,7 +720,7 @@ td.diff{text-align:right;font-weight:700}
   </div>
 
   <div class="card hide" id="c2">
-    <div class="step"><i>3</i> Takeoff time (airborne), UTC</div>
+    <div class="step"><i id="step3">3</i> Takeoff time (airborne), UTC</div>
     <div class="row">
       <div><label>HHMM</label><input type="text" id="etd" class="big numkey" placeholder="----" maxlength="5"
         inputmode="none" pattern="[0-9]*" autocomplete="off" autocorrect="off" spellcheck="false"
@@ -763,17 +768,11 @@ td.diff{text-align:right;font-weight:700}
   </div>
 
   <div class="card hide" id="c6">
-    <div class="step"><i>4</i> Altimeter cross-checks</div>
+    <div class="step"><i id="step4">4</i> Altimeter cross-checks</div>
     <p class="disc">Hourly comparison of ALTM1 / STBY / ALTM2, printed next to the waypoint
       reached at each full hour after takeoff. Under two hours total, where that never falls,
       one check is raised at TOC instead.</p>
-    <!-- The clock is deliberately outside the label: a label toggles its checkbox from
-         anywhere inside it, so a glance-and-tap at the clock used to silence the alert. -->
-    <div class="chkrow">
-      <label class="chk"><input type="checkbox" id="altAlert" checked>
-        Alert me when a check falls due</label>
-      <span class="clock" id="utc"></span>
-    </div>
+    <div class="chkrow"><span class="clock" id="utc"></span></div>
     <div class="msg" id="m4"></div>
     <div class="alt" id="altrows"></div>
   </div>
@@ -856,6 +855,7 @@ td.diff{text-align:right;font-weight:700}
         <h3>What's new in RC1.8</h3>
         <ul>
           <li>New <b>In this package</b> card lists everything the package carries besides the flight plan, so nothing attached is missed: mandatory reads and every other document stapled behind the brief (de-icing notices, Operations Manual extracts, station briefings), company NOTAMs that belong to no aerodrome (ADMIN, WAYPOINT and the like), and the brief's own contents with page numbers. Each group folds to one line with its count — tap it to expand — and each item opens as printed in the original PDF. The load message also says how many documents are attached.</li>
+          <li>The "Alert me when a check falls due" box and its beep are gone. Instead, a check that has fallen due flashes its step badge blue and red until its figures are in: <b>4</b> for the altimeter cross-checks, <b>3</b> for the fuel checks.</li>
           <li>Night flights, from your screen recordings: switching back to the app no longer shows a light picture of it first. iPadOS photographs the app for the app switcher in both light and dark as it goes to the background, and the app — following the iPad's appearance — briefly repainted itself light for that picture. It now ignores those momentary flips and follows only a real change of the iPad's appearance.</li>
           <li>Night flights: reopening the app no longer switches a bright page on in a dark cockpit. The launch screen is dark again whatever the iPad's appearance, and the page fades up out of it in under half a second instead of appearing at once. In the dark theme the menus and pickers (the aerodrome list, the NOTAM order, the check boxes) are dark too instead of white. If you re-added the app for a light launch screen after RC1.8.30, remove it and add it again once, between flights, to get the dark one back.</li>
           <li>Fixed: the keypad sometimes closed just as you went to type. A tap that moved the finger even slightly — turbulence, a roll of the fingertip — was taken for scrolling the page once the box was brought up above the keypad. Now only dragging the page with the keypad already up closes it.</li>
@@ -914,7 +914,7 @@ td.diff{text-align:right;font-weight:700}
         <li>Enter actual <b>ATO</b> and remaining fuel at each waypoint. <b>Next</b> and <b>Previous</b> move through the entry fields. The table highlights only the one waypoint you're running to next and keeps it at the top of the list, everything still ahead reading down from it — an ATO or fuel figure already entered carries no highlight of its own, just the number in the box.</li>
         <li>To log actual wind and temperature, tick <b>Wind / temp</b>; enter them over the greyed OFP wind. Temperature is minus unless you tap <b>±</b> on the keypad.</li>
         <li>Record fuel checks at an overflown waypoint or at least every 30 minutes. Amber means due soon; red means overdue.</li>
-        <li>Complete the altimeter cross-checks when due — the first is always at TOC, then hourly. The app highlights overdue items and asks before saving with missing checks.</li>
+        <li>Complete the altimeter cross-checks when due — the first is always at TOC, then hourly. When an altimeter check falls due, the <b>4</b> badge flashes blue and red until its figures are entered; when a fuel check falls due, the <b>3</b> badge does the same until the fuel is entered. The app also asks before saving with missing checks.</li>
         <li>For a clearance direct, use <b>Direct to…</b>; it updates the live highlight only and never rewrites the planned ETOs. The waypoints it cuts out stay on the table as normal rows — only the one you're currently abeam carries an <b>ABEAM</b> tag. A new direct replaces the one before it rather than stacking on top of it.</li>
       </ul>
 
@@ -936,7 +936,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.33 &nbsp;·&nbsp; Build 20261028.3 &nbsp;·&nbsp; 28 Oct 2026</span></p>
+      <span class="build">RC1.8.34 &nbsp;·&nbsp; Build 20261028.4 &nbsp;·&nbsp; 28 Oct 2026</span></p>
 
     </div>
   </div>

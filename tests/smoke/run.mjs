@@ -813,6 +813,33 @@ try {
     await page.close();
   }
 
+  /* ---- a check fallen due flashes its step ----
+     No more "alert me" checkbox and beep: a check that has fallen due and is not
+     recorded makes its step's badge flash blue and red until the figures are in —
+     "4" for the altimeter cross-checks, "3" for the fuel checks. */
+  {
+    const { page, problems } = await open('index.html');
+    const r = await page.evaluate(async a => {
+      await loadBuffer('D.pdf', a.length, new Uint8Array(a).buffer, false);
+      const t = new Date(Date.now() - 150 * 60000);           // airborne two and a half hours ago
+      document.querySelector('#etd').value = String(t.getUTCHours()).padStart(2, '0') + String(t.getUTCMinutes()).padStart(2, '0');
+      document.querySelector('#calc').click();
+      const flashing = id => { const b = document.querySelector(id);
+        return b.classList.contains('due') && getComputedStyle(b).animationName === 'stepDue'; };
+      const out = { box: !!document.querySelector('#altAlert'), alt: flashing('#step4'), fuel: flashing('#step3') };
+      for (const inp of document.querySelectorAll('#altrows input')){ inp.value = '35000'; inp.dispatchEvent(new Event('input')); }
+      out.altAfter = flashing('#step4');
+      for (const inp of document.querySelectorAll('#tbl input.fuel')){ inp.value = '20000'; inp.dispatchEvent(new Event('input')); }
+      out.fuelAfter = flashing('#step3');
+      return out;
+    }, ofpPdf([0, 30, 30, 30, 30, 30]));
+    check(!r.box, 'the "alert me when a check falls due" box is gone');
+    check(r.alt && !r.altAfter, '"4" flashes while an altimeter check is due and stops once its figures are in' + ` (${JSON.stringify(r)})`);
+    check(r.fuel && !r.fuelAfter, '"3" flashes while a fuel check is due and stops once the fuel is in');
+    check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
+    await page.close();
+  }
+
   /* ---- coming up out of the launch screen ----
      A cold start of the installed app went from iPadOS's dark launch screen
      straight to the page: in the light theme, at night, a bright page switched

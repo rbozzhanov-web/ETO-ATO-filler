@@ -628,9 +628,9 @@ async function loadBuffer(name, size, buf, resumed, known = {}){
   // only rebuilt by the next Calculate, and until then Save PDF — shown as soon
   // as a plan is loaded — would write the old flight's ETOs onto this one, the
   // takeoff box would still hold the old takeoff time, and the old altimeter
-  // checks would go on falling due and beeping.
+  // checks would go on falling due.
   RESULT = []; CHECKS = []; FUEL = []; T0 = null;
-  alerted.clear();
+  stepDue();
   $('#etd').value = ''; $('#fob').value = '';
   try {
     const kept = known.parsed && known.parsed.build === BUILD ? known.parsed : null;
@@ -664,9 +664,6 @@ async function loadBuffer(name, size, buf, resumed, known = {}){
       $('#fob').value = st.fob || '';
       Object.assign(ACT, st.act || {}); Object.assign(TXT, st.txt || {});
       Object.assign(ALT, st.alt2 || {});
-      // Checks already announced before the app was evicted must not beep again.
-      alerted.clear(); for (const m of st.alerted || []) alerted.add(m);
-      if (st.alarm !== undefined) $('#altAlert').checked = st.alarm;
       DCT.marks = Array.isArray(st.dct) ? st.dct : []; syncDct();
     }
     renderFields();
@@ -2071,37 +2068,26 @@ const chkState = c => {
   return d >= 0 ? 'late' : d >= -10 ? 'soon' : 'wait';
 };
 
-let AC = null, alerted = new Set();
-function beep(){
-  const Ctx = (typeof AudioContext !== 'undefined' && AudioContext)
-           || (typeof webkitAudioContext !== 'undefined' && webkitAudioContext);
-  if (!Ctx) return;
-  try {
-    AC = AC || new Ctx();
-    if (AC.state === 'suspended') AC.resume();
-    for (let i = 0; i < 2; i++){
-      const o = AC.createOscillator(), g = AC.createGain();
-      o.connect(g); g.connect(AC.destination);
-      o.type = 'sine'; o.frequency.value = 880;
-      const t = AC.currentTime + i * 0.35;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.22, t + 0.03);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
-      o.start(t); o.stop(t + 0.32);
-    }
-  } catch(e){}
+// A check that has fallen due and is still not recorded makes its step's badge
+// flash, blue and red, until its figures are in: the altimeter cross-checks on
+// "4", the fuel checks on "3" — the card the fuel goes into. No sound: a beep
+// went off in a cockpit with no way to tell what it was for.
+function stepDue(){
+  const altDue = CHECKS.some(c => sinceDue(c.due) >= 0 && chkState(c) !== 'done');
+  const off = RESULT.length ? currentOffset() : 0;
+  const fuelDue = FUEL.some(c => fuelState(c, off) === 'late');
+  $('#step4').classList.toggle('due', altDue);
+  $('#step3').classList.toggle('due', fuelDue);
 }
 
 function refreshAlt(){
+  stepDue();
   if (!CHECKS.length){ hide('#m4'); return; }
-  let late = 0, fresh = false;
+  let late = 0;
   for (const c of CHECKS){
     const st = chkState(c), row = document.getElementById('altrow' + c.mark),
           tag = document.getElementById('altst' + c.mark);
-    if (st === 'late'){
-      late++;
-      if (!alerted.has(c.mark)){ alerted.add(c.mark); fresh = true; }
-    } else if (st === 'done' || st === 'part') alerted.delete(c.mark);
+    if (st === 'late') late++;
     if (row) row.classList.toggle('late', st === 'late');
     if (tag){
       const d = sinceDue(c.due);
@@ -2117,9 +2103,7 @@ function refreshAlt(){
           ? 'One altimeter cross-check is due and not recorded.'
           : `${late} altimeter cross-checks are due and not recorded.`, 'err')
        : hide('#m4');
-  if (fresh && $('#altAlert').checked) beep();
 }
-$('#altAlert').onchange = save;
 /* ---- Direct To ----------------------------------------------------------------
    ATC shortcuts the route and the paper form no longer matches what is being
    flown. Nothing here reaches the PDF and no ETO is rewritten — the point is only
@@ -2318,7 +2302,7 @@ function afterDct(){
   renderDctChips();
   lastNext = null;
   refreshProgress();
-  renderAlt(true);                 // checks follow the waypoints a direct removed
+  renderAlt();                     // checks follow the waypoints a direct removed
   renderFuel();                    // windows follow the waypoints a direct removed
   refreshInputValidity();          // fuel-trend warnings follow the flown route too
   save();
@@ -2483,18 +2467,15 @@ document.addEventListener('visibilitychange', () => {
 addEventListener('pageshow', e => { if (e.persisted) settleAfterResume(); });
 
 // waypoints reached at each full hour after takeoff
-function renderAlt(preserveAlerts = false){
-  const announced = preserveAlerts ? new Set(alerted) : null;
+function renderAlt(){
   CHECKS = hourlyChecks(flown(), T0);
-  // A direct can change which waypoint a given hourly mark falls on. A reading or
-  // an "already alerted" flag recorded before that change belongs to the old
-  // waypoint, not the new one now sitting on the same mark — an untagged entry
+  // A direct can change which waypoint a given hourly mark falls on. A reading
+  // recorded before that change belongs to the old waypoint, not the new one now sitting on the same mark — an untagged entry
   // (saved before this check existed) is trusted until it is next edited.
   for (const c of CHECKS){
     const v = ALT[c.mark];
     if (v && v.wp !== undefined && v.wp !== c.wp.i){
       delete ALT[c.mark];
-      if (announced) announced.delete(c.mark);
     }
   }
   $('#c6').classList.toggle('hide', !CHECKS.length);
@@ -2545,9 +2526,6 @@ function renderAlt(preserveAlerts = false){
   }
   const altInputs = [...box.querySelectorAll('input')];
   altInputs.forEach((inp, i) => { inp.enterKeyHint = i === altInputs.length - 1 ? 'done' : 'next'; });
-  alerted.clear();
-  if (announced)
-    for (const mark of announced) if (CHECKS.some(c => c.mark === mark)) alerted.add(mark);
   refreshAlt();
 }
 
@@ -2592,6 +2570,7 @@ function refreshFuel(){
   // with the offset, and the offset changes every time an ATO is entered.
   const off = RESULT.length ? currentOffset() : 0;
   FUEL = checksFor(off);
+  stepDue();
   document.querySelectorAll('#tbl td.fu.due').forEach(td => td.classList.remove('due', 'late'));
   const tile = $('#stFuel');
   if (!FUEL.length){
@@ -2997,7 +2976,7 @@ function writeState(){
   try {
     localStorage.setItem(KEY, JSON.stringify({
       etd: $('#etd').value, alt: $('#alt').checked, fob: $('#fob').value, act: ACT, txt: TXT, alt2: ALT,
-      alerted: [...alerted], alarm: $('#altAlert').checked, dct: DCT.marks,
+      dct: DCT.marks,
       at: nowUtc(), savedAt: Date.now() }));
     OFPStorage.touchSession();
     const d = new Date();
@@ -3252,7 +3231,7 @@ $('#reset').onclick = () => {
   HDRS = []; CHECKS = []; FUEL = []; T0 = null;
   NAME = ''; SIZE = 0; HASH = null; KEY = '';
   showStoredCount();
-  alerted.clear();
+  stepDue();
   DCT.marks = []; syncDct(); setPick(false); renderDctChips();
   for (const k in ACT) delete ACT[k];
   for (const k in TXT) delete TXT[k];
