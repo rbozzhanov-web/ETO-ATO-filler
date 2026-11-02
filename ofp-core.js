@@ -417,10 +417,101 @@ function navaidOut(text){
   return !RE_PROCEDURE.test(t) || RE_EQUIP_OUT.test(t);
 }
 
+/* ---- a NOTAM's schedule within its validity ----
+   Item D of a NOTAM — printed at the head of its text in these packages — says on
+   which days and at which times it applies inside the period of B) and C): a
+   runway closed "01 08 15 22 29 1130-1300" is open on every other day of that
+   month, and one closed "DLY 0800-1200 EXC SUN" is open all afternoon. Read as it
+   is printed in the packages:
+     DLY 0400-1300 · 0600-1400 · 1515-1545 1715-1745 · 1600-0100 (past midnight)
+     DLY BTN 1700/0300 · TUE 0600-0700 · SUN-THU 0300-0700 · MON 1100-1400 2000-2045
+     14 27 2130-2215 · 23 26 0430-1300 · OCT 16 17 18 NOV 01 08 0300-1500
+     OCT 01-02 05-09 12-16 0300-1859 · OCT 05 0600-1400, OCT 06 - DEC 10 0200-1400
+     MON 0500-2359, TUE 0000-0100 · 0400-1100 EXC SAT SUN · DLY 0800-1200 EXC SUN
+   Returns a test of an instant (ms, UTC), or null where the text opens with no
+   schedule it can read — the NOTAM then applies through its whole period, as it
+   did before: wording not understood is never read as "not in effect". */
+const SCH_DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const SCH_MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const schDay = t => { const k = SCH_DAYS.indexOf(t.slice(0, 3)); return k >= 0 && /^(SUN|MON|TUE|WED|THU|FRI|SAT)(DAY|S)?$/.test(t) ? k : -1; };
+function notamSchedule(text){
+  const tok = String(text || '').toUpperCase().replace(/,/g, ' , ').replace(/[\u2013\u2014]/g, '-')
+    .replace(/(\b[A-Z]{3}) - ([A-Z]{3}\b)/g, '$1-$2').split(/\s+/).filter(Boolean);
+  const groups = [];
+  let g = null, month = null, i = 0;
+  const fresh = () => ({ days: [], dates: [], times: [], exc: [] });
+  const open = () => { if (!g || g.times.length) { if (g) groups.push(g); g = fresh(); } return g; };
+  const hm = s => +s.slice(0, 2) * 60 + +s.slice(2);
+  const clock = s => /^\d{4}$/.test(s) && +s.slice(0, 2) <= 24 && +s.slice(2) <= 59;
+  for (; i < tok.length; i++){
+    const t = tok[i];
+    let m;
+    if (t === ','){ if (g && g.times.length){ groups.push(g); g = null; } continue; }
+    if (t === 'DLY' || t === 'DAILY') { open(); continue; }
+    if ((m = /^(\d{4})-(\d{4})$/.exec(t)) && clock(m[1]) && clock(m[2])){
+      (g || open()).times.push([hm(m[1]), hm(m[2])]); continue;
+    }
+    if (t === 'BTN' && (m = /^(\d{4})\/(\d{4})$/.exec(tok[i + 1] || '')) && clock(m[1]) && clock(m[2])){
+      (g || open()).times.push([hm(m[1]), hm(m[2])]); i++; continue;
+    }
+    if (t === 'EXC' && g){
+      let n = 0;
+      while (i + 1 < tok.length){
+        const parts = tok[i + 1].split('/'), ks = parts.map(schDay);
+        if (!parts.every((p, j) => ks[j] >= 0 || /^HOL(IDAY)?S?$/.test(p))) break;
+        ks.forEach(k => { if (k >= 0) g.exc.push(k); });
+        i++; n++;
+      }
+      if (!n) break;
+      continue;
+    }
+    if ((m = /^([A-Z]{3})-([A-Z]{3})$/.exec(t)) && schDay(m[1]) >= 0 && schDay(m[2]) >= 0){
+      const a = schDay(m[1]), b = schDay(m[2]), cur = open();
+      for (let k = a; ; k = (k + 1) % 7){ cur.days.push(k); if (k === b) break; }
+      continue;
+    }
+    if (schDay(t) >= 0){ open().days.push(schDay(t)); continue; }
+    if (SCH_MONTHS.includes(t)){ month = SCH_MONTHS.indexOf(t); open(); continue; }
+    if ((m = /^(\d{2})-(\d{2})$/.exec(t)) && +m[1] >= 1 && +m[2] <= 31){
+      open().dates.push([month, +m[1], month, +m[2]]); continue;
+    }
+    if (/^\d{2}$/.test(t) && +t >= 1 && +t <= 31){
+      // "OCT 06 - DEC 10": a run of dates from one month into another
+      if (tok[i + 1] === '-' && SCH_MONTHS.includes(tok[i + 2]) && /^\d{2}$/.test(tok[i + 3] || '')){
+        const m2 = SCH_MONTHS.indexOf(tok[i + 2]);
+        open().dates.push([month, +t, m2, +tok[i + 3]]); month = m2; i += 3; continue;
+      }
+      open().dates.push([month, +t, month, +t]); continue;
+    }
+    break;                                       // the NOTAM's own words begin here
+  }
+  if (g && g.times.length) groups.push(g);
+  if (!groups.length) return null;
+  const onDay = (gr, d) => {
+    if (gr.exc.includes(d.getUTCDay())) return false;
+    if (gr.days.length && !gr.days.includes(d.getUTCDay())) return false;
+    if (!gr.dates.length) return true;
+    const mo = d.getUTCMonth(), da = d.getUTCDate(), at = mo * 32 + da;
+    return gr.dates.some(([m1, d1, m2, d2]) => m1 === null
+      ? da >= d1 && da <= d2
+      : (m1 * 32 + d1 <= m2 * 32 + d2 ? at >= m1 * 32 + d1 && at <= m2 * 32 + d2
+                                       : at >= m1 * 32 + d1 || at <= m2 * 32 + d2));    // over the year's end
+  };
+  return ms => {
+    const d = new Date(ms), prev = new Date(ms - 86400000);
+    const min = d.getUTCHours() * 60 + d.getUTCMinutes();
+    return groups.some(gr => gr.times.some(([a, b]) => {
+      if (b === 23 * 60 + 59) b = 24 * 60;                   // "2359": to the end of the day
+      return b > a ? onDay(gr, d) && min >= a && min < b
+                   : (onDay(gr, d) && min >= a) || (onDay(gr, prev) && min < b);   // past midnight
+    }));
+  };
+}
+
 // In the browser this file is a classic script and these are simply globals.
 // Under Node — the test runner — it is a CommonJS module, and this is its export.
 if (typeof module !== 'undefined' && module.exports)
   module.exports = { norm, fmt, hhmm, parseTime, validFuelEntry, wrapMin, sinceDueAt, sinceDueFrom, computeResult,
                      hourlyChecks, fuelBox, fuelChecks, directSkips, abeamAt,
-                     manPage, mandatoryReads, briefPage, attachmentTitle, groupAttachments, briefSections, navaidOut,
+                     manPage, mandatoryReads, briefPage, attachmentTitle, groupAttachments, briefSections, navaidOut, notamSchedule,
                      PLAN_PREFIX, SETTING_KEYS, legacyKeyFor, planKeyFor, planKeysIn, prunePlans };
