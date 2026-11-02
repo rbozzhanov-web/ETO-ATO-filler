@@ -475,7 +475,13 @@ outright and holds until the next change; BECMG's new conditions stand from the 
 window until superseded; TEMPO and PROB30/PROB40 are highlighted only for the window printed on
 their own line, alongside whichever of those governs at that moment. NOTAMs get the same
 treatment against the same instant: one in force when the flight is actually there is ringed in
-the list rather than left to be found by reading all of them. An aerodrome named for no role of
+the list rather than left to be found by reading all of them. In force means its schedule too,
+not only its dates: a NOTAM's text opens with the days and hours it applies inside its period
+(item D) — "01 08 15 22 29 1130-1300", "DLY 0800-1200 EXC SUN", "TUE 0600-0700", "SUN-THU
+0300-0700", "OCT 19-22 26-29 0730-1030, NOV 02-05 …", "1600-0100" past midnight, "DLY BTN
+1700/0300" — and it is ringed only when the flight is there on one of those days and inside
+those hours. Wording the app cannot read as a schedule is never taken to mean "not in effect":
+that NOTAM is judged by its dates alone, as before. An aerodrome named for no role of
 its own, or a plan carrying no date of flight, gets no highlight — there is no instant here worth
 guessing at.
 

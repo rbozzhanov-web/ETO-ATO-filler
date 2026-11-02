@@ -900,11 +900,20 @@ function resolveNotamDate(s, anchorMs){
 // PERM has no end to resolve; WIE and UFN carry no date of their own either — already
 // in effect, or in effect until told otherwise. A validity this app cannot parse gets
 // no highlight, the same as an aerodrome with no defensible instant.
+// Inside its validity a NOTAM may still apply only on some days and at some times —
+// its schedule, at the head of its text (notamSchedule, ofp-core.js): a runway closed
+// "01 08 15 22 29 1130-1300" is open the rest of the month.
+// Kept beside the NOTAMs rather than on them: they are saved as they are for the
+// reopen, and a function cannot be stored.
+const NOTAM_SCHED = new WeakMap();
 function notamActive(n, atMs){
   if (atMs == null) return false;
   const from = n.from === 'WIE' || n.from === 'UFN' ? -Infinity : resolveNotamDate(n.from, atMs);
   const to = n.to === 'PERM' || n.to === 'UFN' ? Infinity : resolveNotamDate(n.to, atMs);
-  return from != null && to != null && atMs >= from && atMs < to;
+  if (from == null || to == null || atMs < from || atMs >= to) return false;
+  if (!NOTAM_SCHED.has(n)) NOTAM_SCHED.set(n, notamSchedule(n.text));
+  const sched = NOTAM_SCHED.get(n);
+  return !sched || sched(atMs);
 }
 
 /* ---- what a NOTAM is about ----

@@ -1274,14 +1274,28 @@ try {
           n('E5', 'AD CLSD DUE WX', ...now),
           n('F6', 'BIRD ACTIVITY', ...later),
           n('G7', 'RWY 28 LLZ U/S', ...later)] }] });
+      // In effect by its dates, but scheduled on other days and hours than the flight's
+      // (departure 24 OCT 2026, a Saturday, at 1000): not marked as applying now.
+      const sched = () => { showWx({ airports: [{ icao: 'UAAA', group: 'flight', role: 'departure', name: null,
+        metar: [], taf: [], co: [], notams: [
+          n('S1', '24 0900-1100 RWY 05L/23R CLSD.', ...now), n('S2', '25 0900-1100 RWY 05L/23R CLSD.', ...now),
+          n('S3', 'DLY 0800-1200 EXC SAT RWY 05R/23L NOT AVBL', ...now), n('S4', '1300-1500 TWY C CLSD', ...now)] }] });
+        return [...document.querySelectorAll('#wxOut .ntm')].map(e => e.querySelector('.id').textContent
+          + (e.classList.contains('now') ? '+' : '-')).join(' '); };
       const g7 = [...document.querySelectorAll('#wxOut .ntm')].find(e => e.querySelector('.id').textContent === 'G7');
       const d4 = [...document.querySelectorAll('#wxOut .ntm')].find(e => e.querySelector('.id').textContent === 'D4');
       const navOut = { cls: g7.className, tag: (g7.querySelector('.navtag') || {}).textContent,
                        red: getComputedStyle(g7.querySelector('.id')).color, rwyRed: getComputedStyle(d4.querySelector('.id')).color };
+      const schedOut = sched();
       const ids = () => [...document.querySelectorAll('#wxOut .ntms > *')]
         .map(e => e.classList.contains('ntmsep') ? '|' : e.querySelector('.id').textContent).join(' ');
       const sel = document.querySelector('#wxOrder');
-      const out = { printed: ids(), defaultOrder: sel.value, navOut };
+      showWx({ airports: [{ icao: 'UAAA', group: 'flight', role: 'departure', name: null,
+        metar: [], taf: [], co: [], notams: [
+          n('A1', 'APRON STAND 5 NOT AVBL', ...now), n('B2', 'TWY C CLSD', ...later), n('C3', 'OBST CRANE ERECTED', ...later),
+          n('D4', 'RWY 05R CLSD', ...later), n('E5', 'AD CLSD DUE WX', ...now), n('F6', 'BIRD ACTIVITY', ...later),
+          n('G7', 'RWY 28 LLZ U/S', ...later)] }] });
+      const out = { printed: ids(), defaultOrder: sel.value, navOut, schedOut };
       sel.value = 'relevant'; sel.dispatchEvent(new Event('change'));
       out.relevant = ids();
       out.kept = localStorage.getItem('etofill:ntmorder');
@@ -1297,6 +1311,8 @@ try {
     check(r.relevant === 'E5 A1 D4 G7 B2 | C3 F6', 'relevant first: in effect, then marked, then the rest as printed'
           + (r.relevant === 'E5 A1 D4 G7 B2 | C3 F6' ? '' : ` (${r.relevant})`));
     check(r.kept === 'relevant', 'the order chosen is kept for the device');
+    check(r.schedOut === 'S1+ S2- S3- S4-', 'a NOTAM in effect by its dates is marked only on the days and hours its schedule gives'
+          + ` (${r.schedOut})`);
     check(/\bnav\b/.test(r.navOut.cls) && r.navOut.tag === 'NAVAID U/S' && r.navOut.red !== r.navOut.rwyRed,
           'a navaid out of use is tagged and marked in a red of its own, not the runway\u2019s'
           + ` (${r.navOut.cls} / ${r.navOut.red} vs ${r.navOut.rwyRed})`);
