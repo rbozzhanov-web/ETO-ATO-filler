@@ -794,7 +794,9 @@ try {
     check(back.cleared, 'and the mark is cleared once the flight is back');
     check(back.parses === 0, 'the flight comes back from its stored reading, without parsing the PDF again'
           + (back.parses ? ` (parsed ${back.parses}x)` : ''));
-    check(back.y === 600, 'the page comes back where it was scrolled' + (back.y === 600 ? '' : ` (at ${back.y})`));
+    // To the pixel, give or take the one a browser may round a restored offset by.
+    const where = y => Math.abs(y - 600) <= 1;
+    check(where(back.y), 'the page comes back where it was scrolled' + (where(back.y) ? '' : ` (at ${back.y})`));
     check(back.early, 'the flight is back before the page has finished loading, so its first frame is the flight');
     check(etos.join(' ') === '1000 1020 1100 1200', 'a reopened flight still saves its ETOs into the PDF');
     check(released, 'closing the chart viewer lets its decoded images go');
@@ -807,7 +809,7 @@ try {
       dispatchEvent(new Event('pagehide'));
     });
     const slow = await reopen();
-    check(slow.resumed && slow.parses === 0 && slow.y === 600,
+    check(slow.resumed && slow.parses === 0 && where(slow.y),
           'without that copy the flight still comes back from IndexedDB, unparsed and where it was'
           + ` (${JSON.stringify(slow)})`);
     await page.close();
