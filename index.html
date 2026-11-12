@@ -855,6 +855,7 @@ td.diff{text-align:right;font-weight:700}
         <h3>What's new in RC1.8</h3>
         <ul>
           <li>New <b>In this package</b> card lists everything the package carries besides the flight plan, so nothing attached is missed: mandatory reads and every other document stapled behind the brief (de-icing notices, Operations Manual extracts, station briefings), company NOTAMs that belong to no aerodrome (ADMIN, WAYPOINT and the like), and the brief's own contents with page numbers. Each group folds to one line with its count — tap it to expand — and each item opens as printed in the original PDF. The load message also says how many documents are attached.</li>
+          <li>Direct to: once the waypoint you were cleared direct to is behind you, the direct clears itself — the chip, the DCT mark and ABEAM all go — and the flight is back on the route. Fixed: taking a second direct after (or in place of) the first no longer breaks things — it used to move the altimeter and fuel checks back onto waypoints you never flew over and delete altimeter readings already entered.</li>
           <li>NOTAMs that apply only on certain days or hours inside their period — "01 08 15 22 29 1130-1300", "DLY 0800-1200 EXC SUN", "TUE 0600-0700" and the like — are now marked as applying to your flight only when you are there on one of those days and inside those hours, not whenever your time falls between their start and end dates.</li>
           <li>The "Alert me when a check falls due" box and its beep are gone. Instead, a check that has fallen due flashes its step badge blue and red until its figures are in: <b>4</b> for the altimeter cross-checks, <b>3</b> for the fuel checks.</li>
           <li>Night flights, from your screen recordings: switching back to the app no longer shows a light picture of it first. iPadOS photographs the app for the app switcher in both light and dark as it goes to the background, and the app — following the iPad's appearance — briefly repainted itself light for that picture. It now ignores those momentary flips and follows only a real change of the iPad's appearance.</li>
@@ -916,7 +917,7 @@ td.diff{text-align:right;font-weight:700}
         <li>To log actual wind and temperature, tick <b>Wind / temp</b>; enter them over the greyed OFP wind. Temperature is minus unless you tap <b>±</b> on the keypad.</li>
         <li>Record fuel checks at an overflown waypoint or at least every 30 minutes. Amber means due soon; red means overdue.</li>
         <li>Complete the altimeter cross-checks when due — the first is always at TOC, then hourly. When an altimeter check falls due, the <b>4</b> badge flashes blue and red until its figures are entered; when a fuel check falls due, the <b>3</b> badge does the same until the fuel is entered. The app also asks before saving with missing checks.</li>
-        <li>For a clearance direct, use <b>Direct to…</b>; it updates the live highlight only and never rewrites the planned ETOs. The waypoints it cuts out stay on the table as normal rows — only the one you're currently abeam carries an <b>ABEAM</b> tag. A new direct replaces the one before it rather than stacking on top of it.</li>
+        <li>For a clearance direct, use <b>Direct to…</b>; it updates the live highlight only and never rewrites the planned ETOs. The waypoints it cuts out stay on the table as normal rows — only the one you're currently abeam carries an <b>ABEAM</b> tag. A new direct replaces the one before it rather than stacking on top of it. Once the waypoint you were cleared to is behind you, the direct clears itself: its chip, the DCT mark and ABEAM go, and you are back on the route.</li>
       </ul>
 
       <h3>Weather, charts and saving</h3>
@@ -937,7 +938,7 @@ td.diff{text-align:right;font-weight:700}
 
       <p class="credit">Created by <b>Ramil Bozzhanov 9871</b> with AI coding.<br>
       For bug fixes or feature requests, please contact Ramil on WhatsApp.<br>
-      <span class="build">RC1.8.35 &nbsp;·&nbsp; Build 20261102.1 &nbsp;·&nbsp; 2 Nov 2026</span></p>
+      <span class="build">RC1.8.36 &nbsp;·&nbsp; Build 20261112.1 &nbsp;·&nbsp; 12 Nov 2026</span></p>
 
     </div>
   </div>

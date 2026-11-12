@@ -72,6 +72,7 @@ try {
     check(layout.cardRight <= layout.width + 2, `${name}: cards stay inside the viewport`);
 
     const first = page.locator('#tbl tbody input.ato:visible').first();
+    await page.evaluate(() => { window.__docked = 0; });   // not the count left by the case before
     await first.tap();
     // Wait for the actual docked geometry, not a guessed animation duration.
     // This makes slow WebKit CI scheduling visible as a timeout while still
@@ -80,7 +81,9 @@ try {
     // not one frame passed on the way through.
     await page.waitForFunction(() => {
       const e = document.querySelector('#numpad');
-      const at = !!e && e.classList.contains('show')
+      // ...and at rest there: a panel still sliding in can read as docked for a
+      // few frames in WebKit before its transition has moved it at all.
+      const at = !!e && e.classList.contains('show') && e.getAnimations().length === 0
         && Math.abs(e.getBoundingClientRect().bottom - innerHeight) <= 2;
       window.__docked = at ? (window.__docked || 0) + 1 : 0;
       return window.__docked >= 3;
