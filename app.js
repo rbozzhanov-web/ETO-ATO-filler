@@ -2118,10 +2118,21 @@ function refreshAlt(){
    flown. Nothing here reaches the PDF and no ETO is rewritten — the point is only
    to keep the highlight on the waypoint that is actually next to write down.
 
-   Only one direct is ever tracked: a fresh clearance replaces whatever was there
+   Only one direct is ever in effect: a fresh clearance replaces whatever was there
    before rather than stacking onto it, and its own skipped range is measured from
    wherever the flight actually is on the plain route right now — not from
    whatever edge the direct being replaced happened to leave behind.
+
+   A direct is over once the waypoint it ran to is behind the aeroplane: the
+   flight is back on the route, and every sign of the direct — its chip, the DCT
+   badge, ABEAM — goes. What it cut out stays cut out, though, quietly: those
+   waypoints were passed abeam, not overflown, and the fuel windows, the altimeter
+   checks and the running offset were all worked on that footing. Forgetting it —
+   which a new direct used to do to the one before — moved checks back onto
+   waypoints never flown over and threw away the readings recorded against the
+   ones that were. So a finished direct is kept as history (done), and so is the
+   part of a replaced one already flown; only what still lies ahead is given back
+   to the route.
 
    The waypoints a direct cuts out are not gone from the sky — the aeroplane still
    goes past them, so they keep their own place on the clock as abeam positions.
@@ -2130,6 +2141,9 @@ function refreshAlt(){
 let DCT = { marks: [] }, DCTSKIP = new Set(), dctPick = false;
 const syncDct = () => { DCTSKIP = new Set(DCT.marks.flatMap(m => m.skipped)); };
 const isSkipped = i => DCTSKIP.has(+i);
+// The one direct in effect, if any: the rest are history.
+const activeDct = () => DCT.marks.find(m => !m.done) || null;
+const isAbeamNow = i => { const m = activeDct(); return !!m && m.skipped.includes(+i); };
 
 // The time written against a waypoint, or null where there is none to read.
 const atoOf = p => {
@@ -2231,7 +2245,8 @@ const abeamIdx = off => abeamAt(RESULT,
 function paintDct(i){
   const tr = rowOf(i);
   if (!tr) return;
-  const cell = tr.cells[0], want = DCT.marks.some(m => m.to === +i);
+  const act = activeDct();
+  const cell = tr.cells[0], want = !!act && act.to === +i;
   const badge = cell.querySelector('.dctbadge');
   if (want && !badge){
     const b = document.createElement('span');
@@ -2244,15 +2259,15 @@ function renderDctChips(){
   const box = $('#dctChips');
   if (!box) return;
   clear(box);
-  DCT.marks.forEach((m, k) => {
-    const p = RESULT.find(x => x.i === m.to);
-    const chip = mk('span', 'dctchip', `DIRECT → ${p ? p.wp : '?'} `);
-    const x = mk('b', null, '✕');
-    x.title = 'Undo';
-    x.onclick = () => undoDirect(k);
-    chip.appendChild(x);
-    box.appendChild(chip);
-  });
+  const m = activeDct();
+  if (!m) return;
+  const p = RESULT.find(x => x.i === m.to);
+  const chip = mk('span', 'dctchip', `DIRECT → ${p ? p.wp : '?'} `);
+  const x = mk('b', null, '✕');
+  x.title = 'Undo';
+  x.onclick = () => undoDirect();
+  chip.appendChild(x);
+  box.appendChild(chip);
 }
 
 function setPick(on){
@@ -2270,7 +2285,16 @@ function applyDirect(target){
   // from the plain route rather than from any skip the old one left behind.
   const { ci } = routeIdx(currentOffset());
   if (n <= ci){ msg('#m7', 'That waypoint is not ahead of you.', 'err'); return; }
-  DCT.marks = [{ to: RESULT[n].i, skipped: directSkips(RESULT, ci, n, () => false) }];
+  // What the direct being replaced had already put behind the aeroplane stays
+  // cut out, as history; what it cut out further ahead is this one's to decide.
+  const old = activeDct();
+  const history = DCT.marks.filter(m => m.done);
+  if (old){
+    const behind = old.skipped.filter(i => RESULT.findIndex(p => p.i === i) <= ci);
+    if (behind.length) history.push({ to: null, skipped: behind, done: true });
+  }
+  const kept = new Set(history.flatMap(m => m.skipped));
+  DCT.marks = [...history, { to: RESULT[n].i, skipped: directSkips(RESULT, ci, n, i => kept.has(i)) }];
   syncDct();
   setPick(false);
   afterDct();
@@ -2300,10 +2324,25 @@ function applyDirect(target){
   }
 }
 
-function undoDirect(k){
-  DCT.marks.splice(k, 1);
+function undoDirect(){
+  DCT.marks = DCT.marks.filter(m => m.done);
   syncDct();
   afterDct();
+}
+
+// Back on the route: the waypoint the direct ran to is behind — its time is
+// written and has come, or tracking has moved past it — so the direct is over
+// and its signs go. Its cut-out waypoints stay as history (see above).
+function finishDirect(trackCi){
+  const m = activeDct();
+  if (!m) return;
+  const n = RESULT.findIndex(p => p.i === m.to);
+  const ato = n >= 0 ? atoOf(RESULT[n]) : null;
+  if (n >= 0 && !(trackCi >= n || (ato !== null && sinceDue(ato) >= 0))) return;
+  m.done = true;
+  RESULT.forEach(p => paintDct(p.i));
+  renderDctChips();
+  save();
 }
 
 function afterDct(){
@@ -2379,9 +2418,10 @@ function markAbeam(row, want){
 function refreshProgress(){
   if (!RESULT.length) return;
   const off = currentOffset();
-  const { ni: trackAt } = trackIdx();
+  const { ci: trackCi, ni: trackAt } = trackIdx();
+  finishDirect(trackCi);
   const target = trackAt >= 0 ? RESULT[trackAt] : null;
-  const isAbeam = !!target && isSkipped(target.i);
+  const isAbeam = !!target && isAbeamNow(target.i);
 
   RESULT.forEach((p, n) => {
     const row = rowOf(p.i);

@@ -402,6 +402,14 @@ outright, and the waypoints it cuts out are worked out fresh from wherever the f
 at the moment it is entered, not from whatever the direct it replaces left behind. The chip in the
 toolbar undoes the one direct in effect.
 
+A direct is over once the waypoint it ran to is behind — its time written and reached, or tracking
+past it. The chip, the DCT mark and ABEAM all go and the flight is back on the route. What the
+direct cut out stays cut out, quietly: those waypoints were passed abeam, not overflown, and the
+fuel windows, altimeter checks and running offset were worked on that footing. The same goes for
+the part of a direct already flown when another replaces it. (A new direct used to forget the one
+before it altogether, which moved checks back onto waypoints never flown over and discarded the
+altimeter readings recorded against the ones that were.)
+
 Nothing about any of this reaches the document and no ETO is rewritten; it only moves the highlight.
 
 The highlight also follows the **ATO** figures you enter, worked out in the background and never

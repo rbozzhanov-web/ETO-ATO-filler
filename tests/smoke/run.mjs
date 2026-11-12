@@ -813,6 +813,59 @@ try {
     await page.close();
   }
 
+  /* ---- one direct after another, and back on the route ----
+     The bug this guards: a new direct forgot everything the one before it had
+     cut out. Taken after the first direct's waypoint was passed, it moved the
+     altimeter and fuel checks back onto waypoints never flown over and threw
+     away the readings already recorded. A direct is over once its waypoint is
+     behind — its chip, DCT badge and ABEAM go — but what it cut out stays cut
+     out, and so does the flown part of a direct replaced part-way. */
+  {
+    const { page, problems } = await open('index.html');
+    const r = await page.evaluate(async a => {
+      await loadBuffer('DD.pdf', a.length, new Uint8Array(a).buffer, false);
+      const Real = Date, base = Real.now();
+      const at = mins => { window.Date = class extends Real {
+        constructor(...x){ if (x.length) return new Real(...x); return new Real(base + mins * 60000); }
+        static now(){ return base + mins * 60000; } }; refreshProgress(); refreshFuel(); refreshAlt(); };
+      const hhmm = mins => { const d = new Real(base + mins * 60000);
+        return String(d.getUTCHours()).padStart(2, '0') + String(d.getUTCMinutes()).padStart(2, '0'); };
+      document.querySelector('#etd').value = hhmm(0); document.querySelector('#calc').click();
+      const I = n => RESULT[n].i;
+      const ato = (n, mins) => { const inp = rowOf(I(n)).querySelector('input.ato'); inp.value = hhmm(mins); inp.dispatchEvent(new Event('input')); };
+      const signs = () => document.querySelector('#dctChips').textContent
+        + '/' + document.querySelectorAll('#tbl .dctbadge').length + '/' + document.querySelectorAll('#tbl .abbadge').length;
+      const skipped = () => [...DCTSKIP].map(i => RESULT.findIndex(p => p.i === i)).sort((x, y) => x - y).join(',');
+      const out = {};
+      at(12); ato(1, 10);
+      applyDirect(I(6));                       // W01 direct W06
+      at(22); applyDirect(I(9));               // replaced part-way: abeam W02 is already behind
+      out.replaced = skipped(); out.replacedSigns = signs();
+      at(62);
+      for (const inp of [...document.querySelectorAll('#altrows input')].slice(0, 3)){ inp.value = '35000'; inp.dispatchEvent(new Event('input')); }
+      out.check = CHECKS.map(c => c.wp.wp).join();
+      at(70); ato(9, 68);                      // the waypoint it ran to, reached
+      out.backSigns = signs(); out.backSkipped = skipped();
+      at(75); applyDirect(I(12));              // the next direct
+      out.nextSkipped = skipped(); out.nextSigns = signs();
+      out.checkAfter = CHECKS.map(c => c.wp.wp).join(); out.readings = JSON.stringify(ALT);
+      at(76); document.querySelector('#dctChips b').click();          // undo: only the one in effect
+      out.undone = skipped();
+      window.Date = Real;
+      return out;
+    }, ofpPdf(Array.from({ length: 16 }, (_, k) => k ? 10 : 0)));
+    check(r.replaced === '2,3,4,5,6,7,8' && /W9XX/.test(r.replacedSigns),
+          'a direct replaced part-way keeps what was already abeam cut out, and shows only the new one' + ` (${r.replaced} ${r.replacedSigns})`);
+    check(r.backSigns === '/0/0' && r.backSkipped === '2,3,4,5,6,7,8',
+          'once its waypoint is behind, every sign of the direct goes and the flight is back on the route' + ` (${r.backSigns})`);
+    check(r.nextSkipped === '2,3,4,5,6,7,8,10,11' && /W12/.test(r.nextSigns), 'the next direct adds to what was flown, it does not forget it');
+    check(r.check === r.checkAfter && /35000/.test(r.readings),
+          'and the altimeter check stays on its waypoint with its readings' + ` (${r.check} -> ${r.checkAfter} ${r.readings})`);
+    check(r.undone === '2,3,4,5,6,7,8', 'Undo takes back only the direct in effect');
+    check(problems.length === 0, 'no console errors' + (problems.length ? ': ' + problems.join(' | ') : ''));
+    await page.close();
+  }
+
   /* ---- a check fallen due flashes its step ----
      No more "alert me" checkbox and beep: a check that has fallen due and is not
      recorded makes its step's badge flash blue and red until the figures are in —
